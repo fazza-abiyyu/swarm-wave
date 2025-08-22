@@ -20,7 +20,7 @@ An educational web application built with Vue 3 + Nuxt 4 and Tailwind CSS for ma
 - **Responsive Toolbar**: Grid layout for mobile, flex for desktop
 
 ### Algorithm Simulation
-- **Swarm Algorithms**: Run Ant Colony Optimization (ACO), Particle Swarm Optimization (PSO), and Genetic Algorithms (GA)
+- **Swarm Algorithms**: Run Ant Colony Optimization (ACO) and Particle Swarm Optimization (PSO)
 - **Real-time Visualization**: See algorithm performance metrics update in real-time
 - **Parameter Tuning**: Adjust algorithm parameters directly in the table
 - **Performance Tracking**: Monitor iterations, best scores, and convergence
