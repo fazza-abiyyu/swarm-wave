@@ -137,8 +137,8 @@ JSON/CSV Input ↔ Table Display ↔ Export Options ↔ Algorithm Simulation
         ↓            ↓                ↓                    ↓
     Import JSON    Edit Cells     JSON Export          ACO Algorithm
     Import CSV     Add/Remove     CSV Export          PSO Algorithm
-    Validate       Columns        Sample Data          GA Algorithm
-    Sync           Inline Edit    Real-time Sync       Performance Tracking
+    Validate       Columns        Sample Data         Performance Tracking
+    Sync           Inline Edit    Real-time Sync       
 ```
 
 ## 🎨 Color Scheme
