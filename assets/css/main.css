@@ -1,0 +1,118 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 自定义颜色主题 */
+:root {
+  --primary-blue: #3b82f6;
+  --primary-yellow: #f59e0b;
+  --secondary-blue: #1e40af;
+  --secondary-yellow: #d97706;
+  --background-light: #f8fafc;
+  --text-dark: #1f2937;
+}
+
+/* 自定义组件样式 */
+@layer components {
+  .btn-primary {
+    @apply px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200;
+  }
+  
+  .btn-secondary {
+    @apply px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors duration-200;
+  }
+  
+  .card {
+    @apply bg-white rounded-lg shadow-md p-6;
+  }
+  
+  .input-field {
+    @apply w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500;
+  }
+}
+
+/* 自定义工具类 */
+@layer utilities {
+  .text-gradient {
+    @apply bg-gradient-to-r from-blue-600 to-yellow-500 bg-clip-text text-transparent;
+  }
+  
+  .shadow-custom {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+}
+
+/* 响应式表格样式 */
+@media (max-width: 768px) {
+  .responsive-table {
+    @apply block overflow-x-auto;
+  }
+  
+  .responsive-table table {
+    @apply min-w-full;
+  }
+}
+
+/* 动画效果 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out;
+}
+
+/* 教育主题样式 */
+.edu-theme {
+  @apply bg-gradient-to-br from-blue-50 via-white to-yellow-50;
+}
+
+.edu-card {
+  @apply bg-white rounded-xl shadow-lg border border-blue-100;
+}
+
+.edu-header {
+  @apply bg-gradient-to-r from-blue-600 to-yellow-500 text-white;
+}
+
+/* 按钮悬停效果 */
+.btn-hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.btn-hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* 表格样式增强 */
+.table-enhanced th {
+  @apply bg-blue-50 text-blue-900 font-semibold;
+}
+
+.table-enhanced tr:hover {
+  @apply bg-yellow-50 transition-colors duration-200;
+}
+
+/* 加载动画 */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-spinner {
+  animation: spin 1s linear infinite;
+}
+
+/* 焦点样式增强 */
+.focus-ring {
+  @apply focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500;
+}
