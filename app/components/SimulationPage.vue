@@ -417,12 +417,14 @@
               Ant Colony Optimization (ACO) Results
             </h2>
             <div class="flex items-center gap-2">
-              <span 
+              <span
                 :class="[
                   'px-3 py-1 rounded-full text-xs font-medium',
-                  status.ACO === 'Idle' ? 'bg-gray-100 text-gray-800' :
-                  status.ACO === 'Running...' ? 'bg-blue-100 text-blue-800' :
-                  'bg-green-100 text-green-800'
+                  status.ACO === 'Idle'
+                    ? 'bg-gray-100 text-gray-800'
+                    : status.ACO === 'Running...'
+                    ? 'bg-blue-100 text-blue-800'
+                    : 'bg-green-100 text-green-800',
                 ]"
               >
                 Status: {{ status.ACO }}
@@ -465,14 +467,13 @@
           </div>
 
           <!-- ACO Assignment -->
-          <div
-            v-if="selectedAlgorithms.includes('ACO')"
-            class="mt-6"
-          >
+          <div v-if="selectedAlgorithms.includes('ACO')" class="mt-6">
             <div class="flex justify-between items-center mb-2">
               <h3 class="text-lg font-medium text-gray-900">
-                ACO Final Assignment 
-                <span v-if="bestMakespan.ACO">(Best Makespan: {{ bestMakespan.ACO }}s)</span>
+                ACO Final Assignment
+                <span v-if="bestMakespan.ACO"
+                  >(Best Makespan: {{ bestMakespan.ACO }}s)</span
+                >
               </h3>
               <div class="flex gap-2">
                 <button
@@ -512,22 +513,29 @@
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
                   <!-- Preview Mode -->
-                  <tr v-if="simulationStatus !== 'completed' && (!finalAssignment.ACO || finalAssignment.ACO.length === 0)">
+                  <tr
+                    v-if="
+                      simulationStatus !== 'completed' &&
+                      (!finalAssignment.ACO || finalAssignment.ACO.length === 0)
+                    "
+                  >
                     <td
                       class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"
                     >
                       Agent 1
                     </td>
-                    <td class="px-6 py-4 text-sm text-gray-500">
-                      Preview...
-                    </td>
-                    <td class="px-6 py-4 text-sm text-gray-500 text-right font-mono">
+                    <td class="px-6 py-4 text-sm text-gray-500">Preview...</td>
+                    <td
+                      class="px-6 py-4 text-sm text-gray-500 text-right font-mono"
+                    >
                       Preview...
                     </td>
                   </tr>
                   <!-- Actual Data -->
                   <tr
-                    v-for="assignment in (simulationStatus === 'completed' ? acoFinalAssignment : finalAssignment.ACO)"
+                    v-for="assignment in simulationStatus === 'completed'
+                      ? acoFinalAssignment
+                      : finalAssignment.ACO"
                     :key="assignment.agent"
                   >
                     <td
@@ -537,22 +545,43 @@
                     </td>
                     <td class="px-6 py-4 text-sm text-gray-500">
                       <div class="max-w-xs">
-                        <div v-if="!expandedTasks.ACO[assignment.agent] && assignment.tasks.length > 10">
-                          {{ assignment.tasks.slice(0, 10).join(', ') }}
+                        <div
+                          v-if="
+                            !expandedTasks.ACO[assignment.agent] &&
+                            assignment.tasks.length > 10
+                          "
+                        >
+                          {{ assignment.tasks.slice(0, 10).join(", ") }}
                           <button
-                            @click="toggleTaskExpansion('ACO', assignment.agent)"
+                            @click="
+                              toggleTaskExpansion('ACO', assignment.agent)
+                            "
                             class="text-blue-600 hover:text-blue-800 ml-1"
                           >
                             ... (+{{ assignment.tasks.length - 10 }} more)
                           </button>
                         </div>
-                        <div v-else-if="expandedTasks.ACO[assignment.agent] || assignment.tasks.length <= 10">
+                        <div
+                          v-else-if="
+                            expandedTasks.ACO[assignment.agent] ||
+                            assignment.tasks.length <= 10
+                          "
+                        >
                           <div class="max-h-32 overflow-y-auto">
-                            {{ Array.isArray(assignment.tasks) ? assignment.tasks.join(', ') : assignment.tasks }}
+                            {{
+                              Array.isArray(assignment.tasks)
+                                ? assignment.tasks.join(", ")
+                                : assignment.tasks
+                            }}
                           </div>
                           <button
-                            v-if="assignment.tasks.length > 10 && expandedTasks.ACO[assignment.agent]"
-                            @click="toggleTaskExpansion('ACO', assignment.agent)"
+                            v-if="
+                              assignment.tasks.length > 10 &&
+                              expandedTasks.ACO[assignment.agent]
+                            "
+                            @click="
+                              toggleTaskExpansion('ACO', assignment.agent)
+                            "
                             class="text-blue-600 hover:text-blue-800 text-xs mt-1"
                           >
                             Show less
@@ -560,12 +589,21 @@
                         </div>
                       </div>
                     </td>
-                    <td class="px-6 py-4 text-sm text-gray-500 text-right font-mono">
-                      <span v-if="assignment.total_time === 'Preview...'" class="text-gray-500">
+                    <td
+                      class="px-6 py-4 text-sm text-gray-500 text-right font-mono"
+                    >
+                      <span
+                        v-if="assignment.total_time === 'Preview...'"
+                        class="text-gray-500"
+                      >
                         {{ assignment.total_time }}
                       </span>
                       <span v-else>
-                        {{ typeof assignment.total_time === 'number' ? assignment.total_time.toFixed(2) : assignment.total_time }}s
+                        {{
+                          typeof assignment.total_time === "number"
+                            ? assignment.total_time.toFixed(2)
+                            : assignment.total_time
+                        }}s
                       </span>
                     </td>
                   </tr>
@@ -585,12 +623,14 @@
               Particle Swarm Optimization (PSO) Results
             </h2>
             <div class="flex items-center gap-2">
-              <span 
+              <span
                 :class="[
                   'px-3 py-1 rounded-full text-xs font-medium',
-                  status.PSO === 'Idle' ? 'bg-gray-100 text-gray-800' :
-                  status.PSO === 'Running...' ? 'bg-blue-100 text-blue-800' :
-                  'bg-green-100 text-green-800'
+                  status.PSO === 'Idle'
+                    ? 'bg-gray-100 text-gray-800'
+                    : status.PSO === 'Running...'
+                    ? 'bg-blue-100 text-blue-800'
+                    : 'bg-green-100 text-green-800',
                 ]"
               >
                 Status: {{ status.PSO }}
@@ -633,14 +673,13 @@
           </div>
 
           <!-- PSO Assignment -->
-          <div
-            v-if="selectedAlgorithms.includes('PSO')"
-            class="mt-6"
-          >
+          <div v-if="selectedAlgorithms.includes('PSO')" class="mt-6">
             <div class="flex justify-between items-center mb-2">
               <h3 class="text-lg font-medium text-gray-900">
-                PSO Final Assignment 
-                <span v-if="bestMakespan.PSO">(Best Makespan: {{ bestMakespan.PSO }}s)</span>
+                PSO Final Assignment
+                <span v-if="bestMakespan.PSO"
+                  >(Best Makespan: {{ bestMakespan.PSO }}s)</span
+                >
               </h3>
               <div class="flex gap-2">
                 <button
@@ -680,22 +719,29 @@
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
                   <!-- Preview Mode -->
-                  <tr v-if="simulationStatus !== 'completed' && (!finalAssignment.PSO || finalAssignment.PSO.length === 0)">
+                  <tr
+                    v-if="
+                      simulationStatus !== 'completed' &&
+                      (!finalAssignment.PSO || finalAssignment.PSO.length === 0)
+                    "
+                  >
                     <td
                       class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"
                     >
                       Agent 1
                     </td>
-                    <td class="px-6 py-4 text-sm text-gray-500">
-                      Preview...
-                    </td>
-                    <td class="px-6 py-4 text-sm text-gray-500 text-right font-mono">
+                    <td class="px-6 py-4 text-sm text-gray-500">Preview...</td>
+                    <td
+                      class="px-6 py-4 text-sm text-gray-500 text-right font-mono"
+                    >
                       Preview...
                     </td>
                   </tr>
                   <!-- Actual Data -->
                   <tr
-                    v-for="assignment in (simulationStatus === 'completed' ? psoFinalAssignment : finalAssignment.PSO)"
+                    v-for="assignment in simulationStatus === 'completed'
+                      ? psoFinalAssignment
+                      : finalAssignment.PSO"
                     :key="assignment.agent"
                   >
                     <td
@@ -705,22 +751,43 @@
                     </td>
                     <td class="px-6 py-4 text-sm text-gray-500">
                       <div class="max-w-xs">
-                        <div v-if="!expandedTasks.PSO[assignment.agent] && assignment.tasks.length > 10">
-                          {{ assignment.tasks.slice(0, 10).join(', ') }}
+                        <div
+                          v-if="
+                            !expandedTasks.PSO[assignment.agent] &&
+                            assignment.tasks.length > 10
+                          "
+                        >
+                          {{ assignment.tasks.slice(0, 10).join(", ") }}
                           <button
-                            @click="toggleTaskExpansion('PSO', assignment.agent)"
+                            @click="
+                              toggleTaskExpansion('PSO', assignment.agent)
+                            "
                             class="text-blue-600 hover:text-blue-800 ml-1"
                           >
                             ... (+{{ assignment.tasks.length - 10 }} more)
                           </button>
                         </div>
-                        <div v-else-if="expandedTasks.PSO[assignment.agent] || assignment.tasks.length <= 10">
+                        <div
+                          v-else-if="
+                            expandedTasks.PSO[assignment.agent] ||
+                            assignment.tasks.length <= 10
+                          "
+                        >
                           <div class="max-h-32 overflow-y-auto">
-                            {{ Array.isArray(assignment.tasks) ? assignment.tasks.join(', ') : assignment.tasks }}
+                            {{
+                              Array.isArray(assignment.tasks)
+                                ? assignment.tasks.join(", ")
+                                : assignment.tasks
+                            }}
                           </div>
                           <button
-                            v-if="assignment.tasks.length > 10 && expandedTasks.PSO[assignment.agent]"
-                            @click="toggleTaskExpansion('PSO', assignment.agent)"
+                            v-if="
+                              assignment.tasks.length > 10 &&
+                              expandedTasks.PSO[assignment.agent]
+                            "
+                            @click="
+                              toggleTaskExpansion('PSO', assignment.agent)
+                            "
                             class="text-blue-600 hover:text-blue-800 text-xs mt-1"
                           >
                             Show less
@@ -728,12 +795,21 @@
                         </div>
                       </div>
                     </td>
-                    <td class="px-6 py-4 text-sm text-gray-500 text-right font-mono">
-                      <span v-if="assignment.total_time === 'Preview...'" class="text-gray-500">
+                    <td
+                      class="px-6 py-4 text-sm text-gray-500 text-right font-mono"
+                    >
+                      <span
+                        v-if="assignment.total_time === 'Preview...'"
+                        class="text-gray-500"
+                      >
                         {{ assignment.total_time }}
                       </span>
                       <span v-else>
-                        {{ typeof assignment.total_time === 'number' ? assignment.total_time.toFixed(2) : assignment.total_time }}s
+                        {{
+                          typeof assignment.total_time === "number"
+                            ? assignment.total_time.toFixed(2)
+                            : assignment.total_time
+                        }}s
                       </span>
                     </td>
                   </tr>
@@ -847,11 +923,14 @@
       </div>
 
       <!-- Overall Best Result Section -->
-      <div v-if="bestMakespan.ACO && bestMakespan.PSO" class="bg-white rounded-xl shadow-sm p-6 mt-6">
+      <div
+        v-if="bestMakespan.ACO && bestMakespan.PSO"
+        class="bg-white rounded-xl shadow-sm p-6 mt-6"
+      >
         <h2 class="text-xl font-semibold text-gray-900 mb-4">
           Overall Best Result
         </h2>
-        
+
         <div class="overflow-x-auto">
           <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
@@ -886,94 +965,412 @@
             <tbody class="bg-white divide-y divide-gray-200">
               <tr
                 :class="[
-                  bestMakespan.ACO <= bestMakespan.PSO 
-                    ? 'bg-blue-50 text-blue-700 font-bold' 
-                    : 'text-gray-900'
+                  bestMakespan.ACO <= bestMakespan.PSO
+                    ? 'bg-blue-50 text-blue-700 font-bold'
+                    : 'text-gray-900',
                 ]"
               >
                 <td
                   class="px-6 py-4 whitespace-nowrap text-sm"
-                  :class="{ 'font-bold': bestMakespan.ACO && bestMakespan.PSO && bestMakespan.ACO <= bestMakespan.PSO }"
+                  :class="{
+                    'font-bold':
+                      bestMakespan.ACO &&
+                      bestMakespan.PSO &&
+                      bestMakespan.ACO <= bestMakespan.PSO,
+                  }"
                 >
                   ACO
                 </td>
                 <td
                   class="px-6 py-4 whitespace-nowrap text-sm text-right font-mono"
-                  :class="{ 'font-bold': bestMakespan.ACO && bestMakespan.PSO && bestMakespan.ACO <= bestMakespan.PSO }"
+                  :class="{
+                    'font-bold':
+                      bestMakespan.ACO &&
+                      bestMakespan.PSO &&
+                      bestMakespan.ACO <= bestMakespan.PSO,
+                  }"
                 >
-                  {{ bestMakespan.ACO ? parseFloat(bestMakespan.ACO).toFixed(2) : 'N/A' }}
+                  {{
+                    bestMakespan.ACO
+                      ? parseFloat(bestMakespan.ACO).toFixed(2)
+                      : "N/A"
+                  }}
                 </td>
                 <td
                   class="px-6 py-4 whitespace-nowrap text-sm text-right font-mono"
-                  :class="{ 'font-bold': bestMakespan.ACO && bestMakespan.PSO && bestMakespan.ACO <= bestMakespan.PSO }"
+                  :class="{
+                    'font-bold':
+                      bestMakespan.ACO &&
+                      bestMakespan.PSO &&
+                      bestMakespan.ACO <= bestMakespan.PSO,
+                  }"
                 >
-                  {{ executionTime.ACO ? parseFloat(executionTime.ACO).toFixed(2) : 'N/A' }}
+                  {{
+                    executionTime.ACO
+                      ? parseFloat(executionTime.ACO).toFixed(2)
+                      : "N/A"
+                  }}
                 </td>
                 <td
                   class="px-6 py-4 whitespace-nowrap text-sm text-right font-mono"
-                  :class="{ 'font-bold': bestMakespan.ACO && bestMakespan.PSO && bestMakespan.ACO <= bestMakespan.PSO }"
+                  :class="{
+                    'font-bold':
+                      bestMakespan.ACO &&
+                      bestMakespan.PSO &&
+                      bestMakespan.ACO <= bestMakespan.PSO,
+                  }"
                 >
-                  {{ loadBalanceIndex.ACO ? parseFloat(loadBalanceIndex.ACO).toFixed(4) : 'N/A' }}
+                  {{
+                    loadBalanceIndex.ACO
+                      ? parseFloat(loadBalanceIndex.ACO).toFixed(4)
+                      : "N/A"
+                  }}
                 </td>
                 <td
                   class="px-6 py-4 whitespace-nowrap text-sm text-right font-mono"
-                  :class="{ 'font-bold': bestMakespan.ACO && bestMakespan.PSO && bestMakespan.ACO <= bestMakespan.PSO }"
+                  :class="{
+                    'font-bold':
+                      bestMakespan.ACO &&
+                      bestMakespan.PSO &&
+                      bestMakespan.ACO <= bestMakespan.PSO,
+                  }"
                 >
-                  {{ computationTime.ACO ? parseFloat(computationTime.ACO).toFixed(2) : 'N/A' }}
+                  {{
+                    computationTime.ACO
+                      ? parseFloat(computationTime.ACO).toFixed(2)
+                      : "N/A"
+                  }}
                 </td>
               </tr>
               <tr
                 :class="[
-                  bestMakespan.ACO && bestMakespan.PSO && bestMakespan.PSO < bestMakespan.ACO 
-                    ? 'bg-blue-50 text-blue-700 font-bold' 
-                    : 'text-gray-900'
+                  bestMakespan.ACO &&
+                  bestMakespan.PSO &&
+                  bestMakespan.PSO < bestMakespan.ACO
+                    ? 'bg-blue-50 text-blue-700 font-bold'
+                    : 'text-gray-900',
                 ]"
               >
                 <td
                   class="px-6 py-4 whitespace-nowrap text-sm"
-                  :class="{ 'font-bold': bestMakespan.ACO && bestMakespan.PSO && bestMakespan.PSO < bestMakespan.ACO }"
+                  :class="{
+                    'font-bold':
+                      bestMakespan.ACO &&
+                      bestMakespan.PSO &&
+                      bestMakespan.PSO < bestMakespan.ACO,
+                  }"
                 >
                   PSO
                 </td>
                 <td
                   class="px-6 py-4 whitespace-nowrap text-sm text-right font-mono"
-                  :class="{ 'font-bold': bestMakespan.ACO && bestMakespan.PSO && bestMakespan.PSO < bestMakespan.ACO }"
+                  :class="{
+                    'font-bold':
+                      bestMakespan.ACO &&
+                      bestMakespan.PSO &&
+                      bestMakespan.PSO < bestMakespan.ACO,
+                  }"
                 >
-                  {{ bestMakespan.PSO ? parseFloat(bestMakespan.PSO).toFixed(2) : 'N/A' }}
+                  {{
+                    bestMakespan.PSO
+                      ? parseFloat(bestMakespan.PSO).toFixed(2)
+                      : "N/A"
+                  }}
                 </td>
                 <td
                   class="px-6 py-4 whitespace-nowrap text-sm text-right font-mono"
-                  :class="{ 'font-bold': bestMakespan.ACO && bestMakespan.PSO && bestMakespan.PSO < bestMakespan.ACO }"
+                  :class="{
+                    'font-bold':
+                      bestMakespan.ACO &&
+                      bestMakespan.PSO &&
+                      bestMakespan.PSO < bestMakespan.ACO,
+                  }"
                 >
-                  {{ executionTime.PSO ? parseFloat(executionTime.PSO).toFixed(2) : 'N/A' }}
+                  {{
+                    executionTime.PSO
+                      ? parseFloat(executionTime.PSO).toFixed(2)
+                      : "N/A"
+                  }}
                 </td>
                 <td
                   class="px-6 py-4 whitespace-nowrap text-sm text-right font-mono"
-                  :class="{ 'font-bold': bestMakespan.ACO && bestMakespan.PSO && bestMakespan.PSO < bestMakespan.ACO }"
+                  :class="{
+                    'font-bold':
+                      bestMakespan.ACO &&
+                      bestMakespan.PSO &&
+                      bestMakespan.PSO < bestMakespan.ACO,
+                  }"
                 >
-                  {{ loadBalanceIndex.PSO ? parseFloat(loadBalanceIndex.PSO).toFixed(4) : 'N/A' }}
+                  {{
+                    loadBalanceIndex.PSO
+                      ? parseFloat(loadBalanceIndex.PSO).toFixed(4)
+                      : "N/A"
+                  }}
                 </td>
                 <td
                   class="px-6 py-4 whitespace-nowrap text-sm text-right font-mono"
-                  :class="{ 'font-bold': bestMakespan.ACO && bestMakespan.PSO && bestMakespan.PSO < bestMakespan.ACO }"
+                  :class="{
+                    'font-bold':
+                      bestMakespan.ACO &&
+                      bestMakespan.PSO &&
+                      bestMakespan.PSO < bestMakespan.ACO,
+                  }"
                 >
-                  {{ computationTime.PSO ? parseFloat(computationTime.PSO).toFixed(2) : 'N/A' }}
+                  {{
+                    computationTime.PSO
+                      ? parseFloat(computationTime.PSO).toFixed(2)
+                      : "N/A"
+                  }}
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
-        
+
         <div class="mt-6 pt-4 border-t border-gray-200 text-center">
           <span class="text-lg font-bold text-blue-600">
-            Winner: {{ bestMakespan.ACO && bestMakespan.PSO ? (bestMakespan.ACO <= bestMakespan.PSO ? 'ACO' : 'PSO') : 'Pending' }}
+            Winner:
+            {{
+              bestMakespan.ACO && bestMakespan.PSO
+                ? bestMakespan.ACO <= bestMakespan.PSO
+                  ? "ACO"
+                  : "PSO"
+                : "Pending"
+            }}
           </span>
+        </div>
+      </div>
+
+      <!-- AI Chat Assistant - Floating Design -->
+      <div>
+        <!-- Floating Chat Bubble -->
+        <div
+          v-if="!isChatOpen"
+          @click="openChat"
+          class="fixed bottom-6 right-6 w-14 h-14 bg-blue-500 text-white rounded-full shadow-lg hover:bg-blue-600 cursor-pointer flex items-center justify-center z-50 transition-all duration-200 hover:scale-110"
+          title="Ask Swarm Lab AI"
+        >
+          <svg
+            class="w-6 h-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
+            />
+          </svg>
+        </div>
+
+        <!-- Draggable Chat Window -->
+        <div
+          v-if="isChatOpen"
+          class="fixed bottom-6 right-6 w-96 h-[500px] bg-white rounded-xl shadow-2xl z-50 flex flex-col transition-all duration-300 ease-in-out"
+          :class="{
+            'translate-y-0 opacity-100': isChatOpen,
+            'translate-y-full opacity-0': !isChatOpen,
+          }"
+          :style="{
+            transform: `translate(${draggablePosition.x}px, ${draggablePosition.y}px)`,
+          }"
+          ref="chatWindow"
+        >
+          <!-- Draggable Header -->
+          <div
+            class="flex items-center justify-between p-4 border-b border-gray-200 cursor-move"
+            @mousedown="startDrag"
+            @touchstart="startDrag"
+          >
+            <h3 class="text-lg font-semibold text-gray-900">Swarm Lab AI</h3>
+            <div class="flex items-center space-x-2">
+              <!-- Language Selector -->
+              <select
+                v-model="aiLanguage"
+                class="text-sm px-2 py-1 border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 bg-white"
+              >
+                <option value="English">EN</option>
+                <option value="Indonesian">ID</option>
+                <option value="Chinese">CN</option>
+              </select>
+              <!-- Close Button -->
+              <button
+                @click="closeChat"
+                class="text-gray-500 hover:text-gray-700 p-1 rounded-md hover:bg-gray-100"
+              >
+                <svg
+                  class="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Chat Body -->
+          <div ref="messagesContainer" class="flex-1 overflow-y-auto p-4 bg-gray-50">
+            <div
+              v-if="chatHistory.length === 0"
+              class="text-center text-gray-500 py-8"
+            >
+              <svg
+                class="w-12 h-12 mx-auto mb-3 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
+                />
+              </svg>
+              <p class="text-sm">
+                Ask me anything about your simulation results!
+              </p>
+            </div>
+
+            <div v-else class="space-y-3">
+              <div
+                v-for="(message, index) in chatHistory"
+                :key="index"
+                :class="[
+                  'flex',
+                  message.role === 'user' ? 'justify-end' : 'justify-start',
+                ]"
+              >
+                <div
+                  :class="[
+                    'max-w-[280px] px-3 py-2 rounded-lg text-sm',
+                    message.role === 'user'
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-white border border-gray-200 text-gray-900',
+                  ]"
+                >
+                  <div
+                    class="prose prose-sm max-w-none"
+                    v-html="renderMarkdown(message.content)"
+                  ></div>
+
+                  <!-- Copy Button for AI responses -->
+                  <div
+                    v-if="message.role === 'assistant'"
+                    class="mt-2 flex justify-end"
+                  >
+                    <button
+                      @click="copyToClipboard(message.content)"
+                      class="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-100 transition-colors"
+                      title="Copy response"
+                    >
+                      <svg
+                        class="w-3 h-3"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                        />
+                      </svg>
+                      Copy
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Loading Indicator -->
+              <div v-if="aiLoading && !isStreaming" class="flex justify-start">
+                <div
+                  class="bg-white border border-gray-200 text-gray-900 px-3 py-2 rounded-lg"
+                >
+                  <div class="flex items-center space-x-1">
+                    <div
+                      class="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                    ></div>
+                    <div
+                      class="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                      style="animation-delay: 0.1s"
+                    ></div>
+                    <div
+                      class="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                      style="animation-delay: 0.2s"
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Error Message -->
+          <div
+            v-if="aiError"
+            class="px-4 py-2 bg-red-50 border-t border-red-200"
+          >
+            <div class="flex items-center">
+              <svg
+                class="w-4 h-4 text-red-500 mr-2"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+              <span class="text-xs text-red-600">{{ aiError }}</span>
+            </div>
+          </div>
+
+          <!-- Footer Input -->
+          <div class="p-4 border-t border-gray-200 bg-white">
+            <div class="flex gap-2">
+              <textarea
+                v-model="userMessage"
+                @keydown.enter.prevent="sendUserMessage"
+                placeholder="Ask about your simulation..."
+                class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 resize-none"
+                rows="2"
+                :disabled="aiLoading"
+              ></textarea>
+              <div class="flex flex-col gap-1">
+                <button
+                  @click="sendUserMessage"
+                  :disabled="!userMessage.trim() || aiLoading"
+                  class="px-3 py-1 bg-blue-500 text-white text-sm rounded-md hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                >
+                  Send
+                </button>
+                <button
+                  @click="clearChat"
+                  class="px-3 py-1 bg-gray-200 text-gray-700 text-sm rounded-md hover:bg-gray-300"
+                  title="Clear chat"
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
       <!-- Empty State -->
       <div
-        v-else-if="selectedAlgorithms.length === 0"
+        v-if="selectedAlgorithms.length === 0"
         class="bg-white rounded-xl shadow-lg p-6"
       >
         <div class="text-center py-12">
@@ -1039,8 +1436,10 @@
 </template>
 
 <script setup>
-import { ref, reactive, watch, nextTick, onMounted, computed } from "vue";
+import { ref, reactive, watch, nextTick, onMounted, onUnmounted, computed } from "vue";
 import Chart from "chart.js/auto";
+import { marked } from "marked";
+import { useAiChatStream } from "~/composables/useAiChatStream";
 
 // Props
 const props = defineProps({
@@ -1054,7 +1453,19 @@ const props = defineProps({
   },
 });
 
+// Emits
 const emit = defineEmits(["back-to-table"]);
+
+// AI Chat Composable
+const {
+  chatHistory,
+  aiLoading,
+  aiError,
+  aiLanguage,
+  isStreaming,
+  sendMessage,
+  clearChat,
+} = useAiChatStream();
 
 // State
 const selectedAlgorithms = ref([]);
@@ -1072,20 +1483,29 @@ const dataValidation = ref({
   warnings: [],
   summary: {},
 });
+const userMessage = ref("")
 const chartCanvasACO = ref(null);
 const chartCanvasPSO = ref(null);
+const messagesContainer = ref<HTMLElement | null>(null);
 let chartACO = null;
 let chartPSO = null;
 const dummyFinalAssignment = ref(null);
 const showTaskModal = ref(false);
-const modalData = ref({ agent: '', tasks: [] });
-const status = ref({ ACO: 'Idle', PSO: 'Idle' });
+const modalData = ref({ agent: "", tasks: [] });
+const status = ref({ ACO: "Idle", PSO: "Idle" });
 const expandedTasks = ref({ ACO: {}, PSO: {} });
 
 // Reactive state for backend results
 const acoFinalAssignment = ref([]);
 const psoFinalAssignment = ref([]);
-const simulationStatus = ref('idle'); // idle, running, completed
+const simulationStatus = ref("idle"); // idle, running, completed
+
+// Floating Chat State
+const isChatOpen = ref(false);
+const draggablePosition = ref({ x: 0, y: 0 });
+const isDragging = ref(false);
+const dragStart = ref({ x: 0, y: 0 });
+const chatWindow = ref(null);
 
 // Dummy data generators
 const generateDummyACOAssignments = () => {
@@ -1094,7 +1514,7 @@ const generateDummyACOAssignments = () => {
     dummy.push({
       agent: `ACO Agent ${i}`,
       tasks: ["Preview..."],
-      total_time: "Preview..."
+      total_time: "Preview...",
     });
   }
   acoFinalAssignment.value = dummy;
@@ -1106,13 +1526,11 @@ const generateDummyPSOAssignments = () => {
     dummy.push({
       agent: `PSO Agent ${i}`,
       tasks: ["Preview..."],
-      total_time: "Preview..."
+      total_time: "Preview...",
     });
   }
   psoFinalAssignment.value = dummy;
 };
-
-
 
 // Parameters
 const parameters = reactive({
@@ -1135,115 +1553,115 @@ const parameters = reactive({
 // Chart data already declared above
 
 // Initialize charts
-  const initCharts = () => {
-    // ACO Chart
-    if (chartCanvasACO.value) {
-      const ctx = chartCanvasACO.value.getContext("2d");
-      chartACO = new Chart(ctx, {
-        type: "line",
-        data: {
-          labels: [],
-          datasets: [
-            {
-              label: "ACO Best Makespan",
-              data: [],
-              borderColor: "rgb(59, 130, 246)",
-              backgroundColor: "rgba(59, 130, 246, 0.1)",
-              tension: 0.4,
-              fill: true,
-            },
-            {
-              label: "Best Makespan",
-              data: [],
-              backgroundColor: "rgb(59, 130, 246)",
-              borderColor: "rgb(59, 130, 246)",
-              pointRadius: 6,
-              pointHoverRadius: 8,
-              showLine: false,
-            },
-          ],
+const initCharts = () => {
+  // ACO Chart
+  if (chartCanvasACO.value) {
+    const ctx = chartCanvasACO.value.getContext("2d");
+    chartACO = new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: [],
+        datasets: [
+          {
+            label: "ACO Best Makespan",
+            data: [],
+            borderColor: "rgb(59, 130, 246)",
+            backgroundColor: "rgba(59, 130, 246, 0.1)",
+            tension: 0.4,
+            fill: true,
+          },
+          {
+            label: "Best Makespan",
+            data: [],
+            backgroundColor: "rgb(59, 130, 246)",
+            borderColor: "rgb(59, 130, 246)",
+            pointRadius: 6,
+            pointHoverRadius: 8,
+            showLine: false,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: true,
+          },
         },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
+        scales: {
+          y: {
+            beginAtZero: false,
+            title: {
               display: true,
+              text: "Makespan",
             },
           },
-          scales: {
-            y: {
-              beginAtZero: false,
-              title: {
-                display: true,
-                text: "Makespan",
-              },
-            },
-            x: {
-              title: {
-                display: true,
-                text: "Iteration",
-              },
+          x: {
+            title: {
+              display: true,
+              text: "Iteration",
             },
           },
         },
-      });
-    }
+      },
+    });
+  }
 
-    // PSO Chart
-    if (chartCanvasPSO.value) {
-      const ctx = chartCanvasPSO.value.getContext("2d");
-      chartPSO = new Chart(ctx, {
-        type: "line",
-        data: {
-          labels: [],
-          datasets: [
-            {
-              label: "PSO Best Makespan",
-              data: [],
-              borderColor: "rgb(239, 68, 68)",
-              backgroundColor: "rgba(239, 68, 68, 0.1)",
-              tension: 0.4,
-              fill: true,
-            },
-            {
-              label: "Best Makespan",
-              data: [],
-              backgroundColor: "rgb(239, 68, 68)",
-              borderColor: "rgb(239, 68, 68)",
-              pointRadius: 6,
-              pointHoverRadius: 8,
-              showLine: false,
-            },
-          ],
+  // PSO Chart
+  if (chartCanvasPSO.value) {
+    const ctx = chartCanvasPSO.value.getContext("2d");
+    chartPSO = new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: [],
+        datasets: [
+          {
+            label: "PSO Best Makespan",
+            data: [],
+            borderColor: "rgb(239, 68, 68)",
+            backgroundColor: "rgba(239, 68, 68, 0.1)",
+            tension: 0.4,
+            fill: true,
+          },
+          {
+            label: "Best Makespan",
+            data: [],
+            backgroundColor: "rgb(239, 68, 68)",
+            borderColor: "rgb(239, 68, 68)",
+            pointRadius: 6,
+            pointHoverRadius: 8,
+            showLine: false,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: true,
+          },
         },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
+        scales: {
+          y: {
+            beginAtZero: false,
+            title: {
               display: true,
+              text: "Makespan",
             },
           },
-          scales: {
-            y: {
-              beginAtZero: false,
-              title: {
-                display: true,
-                text: "Makespan",
-              },
-            },
-            x: {
-              title: {
-                display: true,
-                text: "Iteration",
-              },
+          x: {
+            title: {
+              display: true,
+              text: "Iteration",
             },
           },
         },
-      });
-    }
-  };
+      },
+    });
+  }
+};
 
 // Data validation and preview
 const validateData = () => {
@@ -1326,53 +1744,53 @@ const validateData = () => {
 };
 
 // Update charts
-  const updateCharts = () => {
-    if (chartACO && chartData.value.ACO.labels.length > 0) {
-      chartACO.data.labels = chartData.value.ACO.labels;
-      chartACO.data.datasets[0].data = chartData.value.ACO.values;
-      
-      // Add best makespan marker
-      const minValue = Math.min(...chartData.value.ACO.values);
-      const minIndex = chartData.value.ACO.values.indexOf(minValue);
-      
-      chartACO.data.datasets[1] = {
-        label: 'Best Makespan',
-        data: chartData.value.ACO.values.map((value, index) => 
-          index === minIndex ? value : null
-        ),
-        backgroundColor: 'rgb(59, 130, 246)',
-        borderColor: 'rgb(59, 130, 246)',
-        pointRadius: 6,
-        pointHoverRadius: 8,
-        showLine: false,
-      };
-      
-      chartACO.update();
-    }
+const updateCharts = () => {
+  if (chartACO && chartData.value.ACO.labels.length > 0) {
+    chartACO.data.labels = chartData.value.ACO.labels;
+    chartACO.data.datasets[0].data = chartData.value.ACO.values;
 
-    if (chartPSO && chartData.value.PSO.labels.length > 0) {
-      chartPSO.data.labels = chartData.value.PSO.labels;
-      chartPSO.data.datasets[0].data = chartData.value.PSO.values;
-      
-      // Add best makespan marker
-      const minValue = Math.min(...chartData.value.PSO.values);
-      const minIndex = chartData.value.PSO.values.indexOf(minValue);
-      
-      chartPSO.data.datasets[1] = {
-        label: 'Best Makespan',
-        data: chartData.value.PSO.values.map((value, index) => 
-          index === minIndex ? value : null
-        ),
-        backgroundColor: 'rgb(239, 68, 68)',
-        borderColor: 'rgb(239, 68, 68)',
-        pointRadius: 6,
-        pointHoverRadius: 8,
-        showLine: false,
-      };
-      
-      chartPSO.update();
-    }
-  };
+    // Add best makespan marker
+    const minValue = Math.min(...chartData.value.ACO.values);
+    const minIndex = chartData.value.ACO.values.indexOf(minValue);
+
+    chartACO.data.datasets[1] = {
+      label: "Best Makespan",
+      data: chartData.value.ACO.values.map((value, index) =>
+        index === minIndex ? value : null
+      ),
+      backgroundColor: "rgb(59, 130, 246)",
+      borderColor: "rgb(59, 130, 246)",
+      pointRadius: 6,
+      pointHoverRadius: 8,
+      showLine: false,
+    };
+
+    chartACO.update();
+  }
+
+  if (chartPSO && chartData.value.PSO.labels.length > 0) {
+    chartPSO.data.labels = chartData.value.PSO.labels;
+    chartPSO.data.datasets[0].data = chartData.value.PSO.values;
+
+    // Add best makespan marker
+    const minValue = Math.min(...chartData.value.PSO.values);
+    const minIndex = chartData.value.PSO.values.indexOf(minValue);
+
+    chartPSO.data.datasets[1] = {
+      label: "Best Makespan",
+      data: chartData.value.PSO.values.map((value, index) =>
+        index === minIndex ? value : null
+      ),
+      backgroundColor: "rgb(239, 68, 68)",
+      borderColor: "rgb(239, 68, 68)",
+      pointRadius: 6,
+      pointHoverRadius: 8,
+      showLine: false,
+    };
+
+    chartPSO.update();
+  }
+};
 
 // Mock simulation function for multiple algorithms
 const runSimulation = async () => {
@@ -1397,9 +1815,9 @@ const runSimulation = async () => {
   dummyFinalAssignment.value = null; // Reset dummy data
 
   // Reset data for selected algorithms and set status to Running
-  simulationStatus.value = 'running';
+  simulationStatus.value = "running";
   selectedAlgorithms.value.forEach((algo) => {
-    status.value[algo] = 'Running...';
+    status.value[algo] = "Running...";
     logs.value[algo] = [];
     finalAssignment.value[algo] = [];
     bestMakespan.value[algo] = null;
@@ -1408,11 +1826,11 @@ const runSimulation = async () => {
     computationTime.value[algo] = null;
     chartData.value[algo] = { labels: [], values: [] };
   });
-  
+
   // Reset backend result arrays and generate dummy assignments
   generateDummyACOAssignments();
   generateDummyPSOAssignments();
-  
+
   // Reset and clear charts - destroy and recreate to ensure proper re-rendering
   if (chartACO) {
     chartACO.destroy();
@@ -1422,7 +1840,7 @@ const runSimulation = async () => {
     chartPSO.destroy();
     chartPSO = null;
   }
-  
+
   // Re-initialize charts after data reset
   await nextTick();
   initCharts();
@@ -1434,91 +1852,106 @@ const runSimulation = async () => {
   // Add minimal logs for each algorithm
   selectedAlgorithms.value.forEach((algorithm) => {
     logs.value[algorithm].push(`${algorithm} - Starting simulation...`);
-    
+
     // Add a few dummy iterations
     for (let i = 1; i <= Math.min(5, parameters.num_iterations); i++) {
-      const currentBest = 1800 + Math.random() * 200 - (i * 10);
-      logs.value[algorithm].push(`${algorithm} - Iteration ${i}: Best Makespan so far = ${currentBest.toFixed(2)}`);
-      
+      const currentBest = 1800 + Math.random() * 200 - i * 10;
+      logs.value[algorithm].push(
+        `${algorithm} - Iteration ${i}: Best Makespan so far = ${currentBest.toFixed(
+          2
+        )}`
+      );
+
       chartData.value[algorithm].labels.push(i);
       chartData.value[algorithm].values.push(currentBest);
     }
-    
+
     logs.value[algorithm].push(`${algorithm} - Simulation completed!`);
   });
 
   // After 2 seconds, complete the simulation and show dummy final assignment
-    setTimeout(() => {
-      isRunning.value = false;
-      
-      // Set status to Completed for all algorithms
-      selectedAlgorithms.value.forEach((algo) => {
-        status.value[algo] = 'Completed';
-      });
-      
-      dummyFinalAssignment.value = {
+  setTimeout(() => {
+    isRunning.value = false;
+
+    // Set status to Completed for all algorithms
+    selectedAlgorithms.value.forEach((algo) => {
+      status.value[algo] = "Completed";
+    });
+
+    dummyFinalAssignment.value = {
       agents: [
         { id: 1, tasks: [1, 3, 5, 7, 9, 11], time: 1826.21 },
-        { id: 2, tasks: [2, 4, 6, 8, 10, 12], time: 1825.90 },
-        { id: 3, tasks: [13, 14, 15, 16], time: 1824.89 }
+        { id: 2, tasks: [2, 4, 6, 8, 10, 12], time: 1825.9 },
+        { id: 3, tasks: [13, 14, 15, 16], time: 1824.89 },
       ],
-      bestMakespan: 1826.21
+      bestMakespan: 1826.21,
     };
-    
+
     // Add final assignment data for each algorithm
     selectedAlgorithms.value.forEach((algorithm) => {
       const tasksPerAgent = Math.floor(numTasks / numAgents);
       const remainingTasks = numTasks % numAgents;
-      
+
       let taskIndex = 0;
       const assignmentData = [];
-      
+
       for (let agent = 1; agent <= numAgents; agent++) {
         const agentTasks = [];
-        const tasksForThisAgent = tasksPerAgent + (agent <= remainingTasks ? 1 : 0);
-        
+        const tasksForThisAgent =
+          tasksPerAgent + (agent <= remainingTasks ? 1 : 0);
+
         for (let j = 0; j < tasksForThisAgent; j++) {
           if (taskIndex < numTasks) {
             agentTasks.push(taskIndex + 1);
             taskIndex++;
           }
         }
-        
-        const totalTime = (algorithm === "ACO" ? 1825 : 1826) + Math.random() * 10;
-        
+
+        const totalTime =
+          (algorithm === "ACO" ? 1825 : 1826) + Math.random() * 10;
+
         const assignment = {
           agent: `${algorithm} Agent ${agent}`,
           tasks: agentTasks,
           total_time: Array.isArray(totalTime) ? totalTime[0] : totalTime,
         };
-        
+
         finalAssignment.value[algorithm].push(assignment);
         assignmentData.push(assignment);
       }
-      
+
       // Replace dummy data with actual backend results
-      if (algorithm === 'ACO') {
-        acoFinalAssignment.value = assignmentData.map(item => ({
+      if (algorithm === "ACO") {
+        acoFinalAssignment.value = assignmentData.map((item) => ({
           agent: item.agent,
           tasks: item.tasks,
-          total_time: parseFloat(item.total_time.toFixed(2))
+          total_time: parseFloat(item.total_time.toFixed(2)),
         }));
-      } else if (algorithm === 'PSO') {
-        psoFinalAssignment.value = assignmentData.map(item => ({
+      } else if (algorithm === "PSO") {
+        psoFinalAssignment.value = assignmentData.map((item) => ({
           agent: item.agent,
           tasks: item.tasks,
-          total_time: parseFloat(item.total_time.toFixed(2))
+          total_time: parseFloat(item.total_time.toFixed(2)),
         }));
       }
-      
-      bestMakespan.value[algorithm] = (algorithm === "ACO" ? 1825.50 : 1826.21).toFixed(2);
-      executionTime.value[algorithm] = (algorithm === "ACO" ? 45.2 : 38.7).toFixed(1);
-      loadBalanceIndex.value[algorithm] = (algorithm === "ACO" ? 0.15 : 0.18).toFixed(3);
-      computationTime.value[algorithm] = (algorithm === "ACO" ? 245 : 189).toFixed(0);
+
+      // Set values based on the actual algorithm being simulated
+      bestMakespan.value[algorithm] = (
+        algorithm === "ACO" ? 1825.5 : 1826.21
+      ).toFixed(2);
+      executionTime.value[algorithm] = (
+        algorithm === "ACO" ? 45.2 : 38.7
+      ).toFixed(1);
+      loadBalanceIndex.value[algorithm] = (
+        algorithm === "ACO" ? 0.15 : 0.18
+      ).toFixed(3);
+      computationTime.value[algorithm] = (
+        algorithm === "ACO" ? 245 : 189
+      ).toFixed(0);
     });
-    
-    simulationStatus.value = 'completed';
-    
+
+    simulationStatus.value = "completed";
+
     updateCharts();
   }, 2000);
 };
@@ -1540,20 +1973,17 @@ watch(
 );
 
 // Watch for simulation completion to update tables
-watch(
-  simulationStatus,
-  (newStatus) => {
-    if (newStatus === 'completed') {
-      console.log('Simulation completed - tables updated with backend data');
-    }
+watch(simulationStatus, (newStatus) => {
+  if (newStatus === "completed") {
+    console.log("Simulation completed - tables updated with backend data");
   }
-);
+});
 
 // Watch for num_agents changes to regenerate dummy assignments
 watch(
   () => parameters.num_agents,
   (newNumAgents) => {
-    if (simulationStatus.value === 'idle') {
+    if (simulationStatus.value === "idle") {
       generateDummyACOAssignments();
       generateDummyPSOAssignments();
     }
@@ -1589,7 +2019,7 @@ onMounted(() => {
   // Initialize dummy assignments
   generateDummyACOAssignments();
   generateDummyPSOAssignments();
-  
+
   validateData();
   initCharts();
 });
@@ -1602,7 +2032,7 @@ const openTaskModal = (assignment) => {
 
 const closeTaskModal = () => {
   showTaskModal.value = false;
-  modalData.value = { agent: '', tasks: [] };
+  modalData.value = { agent: "", tasks: [] };
 };
 
 // Reset simulation function
@@ -1615,15 +2045,15 @@ const resetSimulation = () => {
   loadBalanceIndex.value = {};
   computationTime.value = {};
   chartData.value = {};
-  status.value = { ACO: 'Idle', PSO: 'Idle' };
+  status.value = { ACO: "Idle", PSO: "Idle" };
   expandedTasks.value = { ACO: {}, PSO: {} };
   dummyFinalAssignment.value = null;
-  
+
   // Reset backend result arrays and regenerate dummy assignments
   generateDummyACOAssignments();
   generateDummyPSOAssignments();
-  simulationStatus.value = 'idle';
-  
+  simulationStatus.value = "idle";
+
   // Reset charts
   if (chartACO) {
     chartACO.destroy();
@@ -1633,66 +2063,289 @@ const resetSimulation = () => {
     chartPSO.destroy();
     chartPSO = null;
   }
-  
+
   // Re-initialize charts
   nextTick(() => {
     initCharts();
   });
 };
 
+// AI Chat Methods
+const sendUserMessage = async () => {
+  if (!userMessage.value.trim()) return;
+
+  try {
+    // Debug: Check current values
+    console.log("Current bestMakespan:", bestMakespan.value);
+    console.log("Current executionTime:", executionTime.value);
+    console.log("Current loadBalanceIndex:", loadBalanceIndex.value);
+    console.log("Current computationTime:", computationTime.value);
+    console.log("Selected algorithms:", selectedAlgorithms.value);
+
+    // Always include complete simulation data
+    const simulationData = {
+      aco: {
+        bestMakespan: bestMakespan.value?.ACO ? parseFloat(bestMakespan.value.ACO) : null,
+        executionTime: executionTime.value?.ACO ? parseFloat(executionTime.value.ACO) : null,
+        loadBalanceIndex: loadBalanceIndex.value?.ACO ? parseFloat(loadBalanceIndex.value.ACO) : null,
+        computationTime: computationTime.value?.ACO ? parseInt(computationTime.value.ACO) : null,
+        finalAssignment: acoFinalAssignment.value,
+        selected: selectedAlgorithms.value.includes("ACO"),
+      },
+      pso: {
+        bestMakespan: bestMakespan.value?.PSO ? parseFloat(bestMakespan.value.PSO) : null,
+        executionTime: executionTime.value?.PSO ? parseFloat(executionTime.value.PSO) : null,
+        loadBalanceIndex: loadBalanceIndex.value?.PSO ? parseFloat(loadBalanceIndex.value.PSO) : null,
+        computationTime: computationTime.value?.PSO ? parseInt(computationTime.value.PSO) : null,
+        finalAssignment: psoFinalAssignment.value,
+        selected: selectedAlgorithms.value.includes("PSO"),
+      },
+      algorithms: selectedAlgorithms.value,
+      simulationStatus: simulationStatus.value,
+    };
+
+    console.log("Sending simulation data to AI:", simulationData);
+
+    // Determine swarmType based on selected algorithms
+    let swarmType = "both";
+    if (selectedAlgorithms.value.length === 1) {
+      swarmType = selectedAlgorithms.value[0]; // "ACO" or "PSO"
+    }
+
+    await sendMessage(userMessage.value || "explain results", {
+      userMessage: userMessage.value || "explain results",
+      simulationResults: simulationData,
+      swarmType: swarmType,
+    });
+
+    userMessage.value = "";
+    scrollToBottom();
+  } catch (error) {
+    console.error("Failed to send message:", error);
+  }
+};
+
+const renderMarkdown = (text) => {
+  if (!text) return "";
+  return marked(text);
+};
+
 // Export functions
 const exportJSON = (algorithm) => {
-  const data = algorithm === 'ACO' ? acoFinalAssignment.value : psoFinalAssignment.value;
-  
+  const data =
+    algorithm === "ACO" ? acoFinalAssignment.value : psoFinalAssignment.value;
+
   if (!data || data.length === 0) return;
-  
+
   // Filter out dummy preview data
-  const exportData = data.filter(item => item.total_time !== "Preview...");
+  const exportData = data.filter((item) => item.total_time !== "Preview...");
   if (exportData.length === 0) return;
-  
+
   const jsonString = JSON.stringify(exportData, null, 2);
-  const blob = new Blob([jsonString], { type: 'application/json' });
+  const blob = new Blob([jsonString], { type: "application/json" });
   const url = URL.createObjectURL(blob);
-  
-  const link = document.createElement('a');
+
+  const link = document.createElement("a");
   link.href = url;
   link.download = `${algorithm}_final_assignment.json`;
   link.click();
-  
+
   URL.revokeObjectURL(url);
 };
 
 const exportCSV = (algorithm) => {
-  const data = algorithm === 'ACO' ? acoFinalAssignment.value : psoFinalAssignment.value;
-  
+  const data =
+    algorithm === "ACO" ? acoFinalAssignment.value : psoFinalAssignment.value;
+
   if (!data || data.length === 0) return;
-  
+
   // Filter out dummy preview data
-  const exportData = data.filter(item => item.total_time !== "Preview...");
+  const exportData = data.filter((item) => item.total_time !== "Preview...");
   if (exportData.length === 0) return;
-  
-  const headers = ['Agent', 'Tasks', 'Total Time'];
-  const rows = exportData.map(row => [
+
+  const headers = ["Agent", "Tasks", "Total Time"];
+  const rows = exportData.map((row) => [
     `"${row.agent}"`,
-    `"${Array.isArray(row.tasks) ? row.tasks.join('; ') : row.tasks}"`,
-    `"${row.total_time}"`
+    `"${Array.isArray(row.tasks) ? row.tasks.join("; ") : row.tasks}"`,
+    `"${row.total_time}"`,
   ]);
-  
-  const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+
+  const csvContent = [
+    headers.join(","),
+    ...rows.map((row) => row.join(",")),
+  ].join("\n");
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
-  
-  const link = document.createElement('a');
+
+  const link = document.createElement("a");
   link.href = url;
   link.download = `${algorithm}_final_assignment.csv`;
   link.click();
-  
+
   URL.revokeObjectURL(url);
 };
 
 // Toggle task expansion
 const toggleTaskExpansion = (algorithm, index) => {
-  expandedTasks.value[algorithm][index] = !expandedTasks.value[algorithm][index];
+  expandedTasks.value[algorithm][index] =
+    !expandedTasks.value[algorithm][index];
+};
+
+// Floating Chat Methods
+const openChat = () => {
+  isChatOpen.value = true;
+};
+
+const closeChat = () => {
+  isChatOpen.value = false;
+};
+
+const copyToClipboard = async (text) => {
+  try {
+    await navigator.clipboard.writeText(text);
+    // You could add a toast notification here
+    console.log("Copied to clipboard");
+  } catch (err) {
+    console.error("Failed to copy text: ", err);
+  }
+};
+
+// Auto-scroll functionality
+const scrollToBottom = () => {
+  console.log('Scrolling to bottom...');
+  nextTick(() => {
+    setTimeout(() => {
+      if (messagesContainer.value) {
+        console.log('Container found, scrolling...');
+        // Cari pesan terakhir dan scroll ke sana
+        const messages = messagesContainer.value.querySelectorAll('.message-container, .bg-blue-50, .bg-gray-50');
+        if (messages.length > 0) {
+          const lastMessage = messages[messages.length - 1];
+          lastMessage.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        } else {
+          // Fallback ke scroll tradisional
+          messagesContainer.value.scrollTo({
+            top: messagesContainer.value.scrollHeight,
+            behavior: 'smooth'
+          });
+        }
+      } else {
+        console.log('Container not found');
+      }
+    }, 100);
+  });
+};
+
+// MutationObserver untuk auto-scroll yang lebih akurat
+let observer = null;
+
+const setupAutoScrollObserver = () => {
+  if (messagesContainer.value && !observer) {
+    observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+          // Scroll dengan delay untuk memastikan DOM sudah selesai update
+          setTimeout(scrollToBottom, 50);
+        }
+      });
+    });
+    
+    observer.observe(messagesContainer.value, {
+      childList: true,
+      subtree: true
+    });
+  }
+};
+
+const cleanupAutoScrollObserver = () => {
+  if (observer) {
+    observer.disconnect();
+    observer = null;
+  }
+};
+
+// Watch for new messages and scroll to bottom
+watch(
+  () => chatHistory.value.length,
+  () => {
+    scrollToBottom();
+  }
+);
+
+// Also scroll when streaming completes
+watch(
+  () => isStreaming.value,
+  (newVal, oldVal) => {
+    if (!newVal && oldVal) {
+      scrollToBottom();
+    }
+  }
+);
+
+// Scroll when chat opens
+watch(
+  () => isChatOpen.value,
+  (newVal) => {
+    if (newVal) {
+      setTimeout(scrollToBottom, 100);
+    }
+  }
+);
+
+// Setup observer on mount
+onMounted(() => {
+  nextTick(() => {
+    setupAutoScrollObserver();
+  });
+  
+  // Listen for scroll events from streaming
+  if (typeof window !== 'undefined') {
+    window.addEventListener('chat-scroll', scrollToBottom);
+  }
+});
+
+// Cleanup on unmount
+onUnmounted(() => {
+  cleanupAutoScrollObserver();
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('chat-scroll', scrollToBottom);
+  }
+});
+
+const startDrag = (event) => {
+  isDragging.value = true;
+  const clientX = event.clientX || (event.touches && event.touches[0].clientX);
+  const clientY = event.clientY || (event.touches && event.touches[0].clientY);
+
+  dragStart.value = {
+    x: clientX - draggablePosition.value.x,
+    y: clientY - draggablePosition.value.y,
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDragging.value) return;
+
+    const moveX = e.clientX || (e.touches && e.touches[0].clientX);
+    const moveY = e.clientY || (e.touches && e.touches[0].clientY);
+
+    draggablePosition.value = {
+      x: moveX - dragStart.value.x,
+      y: moveY - dragStart.value.y,
+    };
+  };
+
+  const handleMouseUp = () => {
+    isDragging.value = false;
+    document.removeEventListener("mousemove", handleMouseMove);
+    document.removeEventListener("mouseup", handleMouseUp);
+    document.removeEventListener("touchmove", handleMouseMove);
+    document.removeEventListener("touchend", handleMouseUp);
+  };
+
+  document.addEventListener("mousemove", handleMouseMove);
+  document.addEventListener("mouseup", handleMouseUp);
+  document.addEventListener("touchmove", handleMouseMove);
+  document.addEventListener("touchend", handleMouseUp);
 };
 
 // Expose for parent component

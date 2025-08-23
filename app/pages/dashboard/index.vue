@@ -35,7 +35,7 @@
               >
                 Home
               </a>
-              <a href="#" class="text-gray-600 hover:text-gray-900 px-4 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-gray-50">About</a>
+              <NuxtLink to="/about" class="text-gray-600 hover:text-gray-900 px-4 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-gray-50">About</NuxtLink>
             </nav>
 
           <!-- Mobile Menu Button -->
@@ -61,7 +61,7 @@
             >
               Home
             </a>
-            <a href="#" class="block px-3 py-2 text-gray-700 hover:text-blue-600 transition-colors">About</a>
+            <NuxtLink to="/about" @click="isMobileMenuOpen = false" class="block px-3 py-2 text-gray-700 hover:text-blue-600 transition-colors">About</NuxtLink>
           </div>
         </div>
     </nav>
@@ -77,7 +77,7 @@
           </div>
 
           <!-- DynamicTable Component -->
-          <DynamicTable :initial-data="tableData" @data-updated="onDataUpdated" @run-simulation="onRunSimulation" />
+        <DynamicTable :initial-data="tableData" @data-updated="onDataUpdated" @run-simulation="onRunSimulation" />
         </div>
 
         <!-- Simulation View -->

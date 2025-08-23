@@ -286,15 +286,32 @@
 import { ref, computed, watch } from 'vue'
 
 // Props and Emits
+const props = defineProps({
+  initialData: {
+    type: Array,
+    default: () => []
+  }
+})
 const emit = defineEmits(['data-updated', 'run-simulation'])
 
 // Reactive data
 const headers = ref(['TaskID', 'Weight', 'Duration', 'Cost'])
-const tableData = ref([
-    { TaskID: 1, Weight: 10, Duration: 25, Cost: 100 },
-    { TaskID: 2, Weight: 15, Duration: 30, Cost: 150 },
-    { TaskID: 3, Weight: 8, Duration: 20, Cost: 80 }
-])
+const tableData = ref([])
+
+// Initialize data from props
+const initializeData = () => {
+  if (props.initialData && props.initialData.length > 0) {
+    tableData.value = [...props.initialData]
+    headers.value = Object.keys(props.initialData[0])
+  } else {
+    // Default sample data
+    tableData.value = [
+      { TaskID: 1, Weight: 10, Duration: 25, Cost: 100 },
+      { TaskID: 2, Weight: 15, Duration: 30, Cost: 150 },
+      { TaskID: 3, Weight: 8, Duration: 20, Cost: 80 }
+    ]
+  }
+}
 const jsonInput = ref('')
 const jsonError = ref(false)
 const showJsonEditor = ref(false)
@@ -345,6 +362,15 @@ const jsonOutput = computed(() => {
 const initializeJson = () => {
     jsonInput.value = jsonOutput.value
 }
+
+// Watch for initialData changes
+watch(() => props.initialData, (newData) => {
+  if (newData && newData.length > 0) {
+    tableData.value = [...newData]
+    headers.value = Object.keys(newData[0])
+    updateJson()
+  }
+}, { immediate: true, deep: true })
 
 // Import JSON data
 const importJson = () => {
@@ -685,6 +711,7 @@ watch(tableData, () => {
 }, { deep: true })
 
 // Initialize
+initializeData()
 initializeJson()
 </script>
 

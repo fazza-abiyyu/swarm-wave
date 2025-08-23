@@ -5,20 +5,20 @@
         Swarm Lab
       </h1>
       <p class="text-lg text-gray-600 mb-8">
-        群体智能实验室 - 基于Vue 3 + Tailwind CSS的教育主题应用
+        Swarm Intelligence Lab - An educational app built with Nuxt 4 + Tailwind CSS
       </p>
       <NuxtLink 
         to="/dashboard"
         class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
       >
-        进入数据表格
+        Enter Data Table
       </NuxtLink>
     </div>
   </div>
 </template>
 
 <script setup>
-// 首页重定向到dashboard
+// Redirect homepage to dashboard
 onMounted(() => {
   navigateTo('/dashboard')
 })
