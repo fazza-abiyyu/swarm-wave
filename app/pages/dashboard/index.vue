@@ -22,65 +22,48 @@
                 <line x1="13.5" y1="10" x2="10" y2="17" stroke="currentColor" stroke-width="0.5"/>
               </svg>
             </div>
-            <span class="text-xl font-bold text-gray-900">Swarm Lab</span>
+            <span @click="showSimulation = false"  class="text-xl font-bold text-gray-900">Swarm Lab</span>
           </div>
 
           <!-- Navigation Links -->
           <nav class="hidden md:flex items-center space-x-1">
-            <a href="#" class="text-gray-600 hover:text-gray-900 px-4 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-gray-50">Home</a>
-            <a 
-              href="#" 
-              @click="showSimulation = false" 
-              :class="!showSimulation ? 'text-blue-600 bg-blue-50/50' : 'text-gray-600 hover:text-gray-900'"
-              class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-            >
-              Data Table
-            </a>
-            <a 
-              href="#" 
-              @click="showSimulation = true" 
-              :class="showSimulation ? 'text-blue-600 bg-blue-50/50' : 'text-gray-600 hover:text-gray-900'"
-              class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-            >
-              Simulation
-            </a>
-            <a href="#" class="text-gray-600 hover:text-gray-900 px-4 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-gray-50">About</a>
-          </nav>
+              <a 
+                href="#" 
+                @click="showSimulation = false" 
+                :class="!showSimulation ? 'text-blue-600 bg-blue-50/50' : 'text-gray-600 hover:text-gray-900'"
+                class="px-4 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-gray-50"
+              >
+                Home
+              </a>
+              <a href="#" class="text-gray-600 hover:text-gray-900 px-4 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-gray-50">About</a>
+            </nav>
 
           <!-- Mobile Menu Button -->
           <div class="md:hidden">
-            <button @click="isMobileMenuOpen = !isMobileMenuOpen" class="text-gray-600 hover:text-gray-900 p-2 rounded-lg transition-colors hover:bg-gray-50">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-              </svg>
-            </button>
+            <button @click="isMobileMenuOpen = !isMobileMenuOpen" 
+                  class="text-gray-600 hover:text-gray-900 p-2 rounded-lg transition-colors hover:bg-gray-50">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+            </svg>
+          </button>
           </div>
         </div>
       </div>
 
       <!-- Mobile Menu -->
-      <div v-if="isMobileMenuOpen" class="md:hidden fixed inset-0 top-16 bg-white/95 backdrop-blur-sm border-t border-gray-200 z-40">
-        <div class="px-4 py-3 space-y-2">
-          <a href="#" class="block px-3 py-2 text-gray-700 hover:text-blue-600 transition-colors">Home</a>
-          <a 
-            href="#" 
-            @click="showSimulation = false; isMobileMenuOpen = false" 
-            :class="!showSimulation ? 'text-blue-600 bg-blue-50/50' : 'text-gray-700 hover:text-blue-600'"
-            class="block px-3 py-2 rounded-lg transition-colors"
-          >
-            Data Table
-          </a>
-          <a 
-            href="#" 
-            @click="showSimulation = true; isMobileMenuOpen = false" 
-            :class="showSimulation ? 'text-blue-600 bg-blue-50/50' : 'text-gray-700 hover:text-blue-600'"
-            class="block px-3 py-2 rounded-lg transition-colors"
-          >
-            Simulation
-          </a>
-          <a href="#" class="block px-3 py-2 text-gray-700 hover:text-blue-600 transition-colors">About</a>
+      <div v-if="isMobileMenuOpen" class="md:hidden fixed inset-0 top-16 bg-white backdrop-blur-sm border-t border-gray-200 z-40">
+          <div class="px-4 py-3 space-y-2 bg-white/90">
+            <a 
+              href="#" 
+              @click="showSimulation = false; isMobileMenuOpen = false" 
+              :class="!showSimulation ? 'text-blue-600 bg-blue-50/50' : 'text-gray-700 hover:text-blue-600'"
+              class="block px-3 py-2 rounded-lg transition-colors"
+            >
+              Home
+            </a>
+            <a href="#" class="block px-3 py-2 text-gray-700 hover:text-blue-600 transition-colors">About</a>
+          </div>
         </div>
-      </div>
     </nav>
 
     <!-- Main Content -->
