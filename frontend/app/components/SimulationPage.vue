@@ -13,7 +13,13 @@
 
       <!-- Data Preview -->
       <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
-        <h3 class="text-lg font-medium text-gray-900 mb-4">Data Preview</h3>
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-lg font-medium text-gray-900">Data Preview</h3>
+          <button @click="editData"
+            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">
+            Edit
+          </button>
+        </div>
         <div
           v-if="props.tasks.length === 0"
           class="text-center py-8 text-gray-500"
@@ -38,7 +44,7 @@
                 <th
                   v-for="header in Object.keys(props.tasks[0] || {})"
                   :key="header"
-                  class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  class="px-4 py-2 text-left text-xs font-medium text-gray-500 tracking-wider"
                 >
                   {{ header }}
                 </th>
@@ -1454,7 +1460,7 @@ const props = defineProps({
 });
 
 // Emits
-const emit = defineEmits(["back-to-table"]);
+const emit = defineEmits(["back-to-table", "edit-data"]);
 
 // AI Chat Composable
 const {
@@ -1530,6 +1536,12 @@ const generateDummyPSOAssignments = () => {
     });
   }
   psoFinalAssignment.value = dummy;
+};
+
+// Edit data function
+const editData = () => {
+  emit("edit-data", props.tasks);
+  emit("back-to-table");
 };
 
 // Parameters
