@@ -97,10 +97,23 @@
                             <th v-for="(header, index) in headers" :key="index"
                                 class="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                                 <div class="flex items-center space-x-2">
-                                    <input v-model="headers[index]" @blur="updateHeader(index, headers[index])"
-                                        @keyup.enter="updateHeader(index, headers[index])"
-                                        class="bg-transparent border-none outline-none w-full font-medium"
-                                        :placeholder="`Column ${index + 1}`" />
+                                    <div class="relative flex-1 flex items-center">
+                                        <input v-model="headers[index]" @blur="updateHeader(index, headers[index])"
+                                            @keyup.enter="updateHeader(index, headers[index])"
+                                            :class="{ 'border-red-300': !header || header.trim() === '' }"
+                                            class="bg-transparent border-none outline-none w-full font-medium px-2 py-1 rounded focus:bg-blue-50 focus:ring-1 focus:ring-blue-300"
+                                            :placeholder="`Column ${index + 1}`" />
+                                        <div v-if="!header || header.trim() === ''" class="ml-2">
+                                            <div class="relative group">
+                                                <div class="w-4 h-4 bg-pink-400 rounded-full flex items-center justify-center cursor-help">
+                                                    <span class="text-white text-xs font-bold">!</span>
+                                                </div>
+                                                <div class="absolute right-full top-1/2 -translate-y-1/2 mr-1 w-32 p-2 bg-pink-500 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-20 normal-case">
+                                                    Required
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                     <button @click="removeColumn(index)"
                                         class="text-red-500 hover:text-red-700 text-xs font-bold" title="Delete column">
                                         ×
@@ -114,14 +127,29 @@
                     </thead>
                     <!-- Table Body -->
                     <tbody class="bg-white divide-y divide-gray-200">
-                        <tr v-for="(row, rowIndex) in tableData" :key="rowIndex"
+                        <tr v-for="(_, rowIndex) in (columnData[0] || [])" :key="rowIndex"
                             class="hover:bg-gray-50 transition-colors">
                             <td v-for="(header, colIndex) in headers" :key="colIndex"
-                                class="px-4 py-3 text-sm text-gray-900">
-                                <input v-model="tableData[rowIndex][header]"
-                                    @input="updateCell(rowIndex, header, tableData[rowIndex][header])"
-                                    class="w-full bg-transparent border-none outline-none px-2 py-1 rounded focus:bg-blue-50 focus:ring-1 focus:ring-blue-300"
-                                    :placeholder="`Cell ${rowIndex + 1}-${colIndex + 1}`" />
+                                class="px-4 py-3 text-sm text-gray-900 relative">
+                                <div class="flex items-center">
+                                    <input 
+                                        :value="getValidatedValue(columnData[colIndex]?.[rowIndex])"
+                                        @input="handleCellInput(rowIndex, colIndex, $event.target.value)"
+                                        @blur="validateAndUpdateCell(rowIndex, colIndex, $event.target.value)"
+                                        class="w-full bg-transparent border-none outline-none px-2 py-1 rounded focus:bg-blue-50 focus:ring-1 focus:ring-blue-300"
+                                        :class="{ 'border-red-300': hasCellError(rowIndex, colIndex) }"
+                                        :placeholder="`Cell ${rowIndex + 1}-${colIndex + 1}`" />
+                                    <div v-if="hasCellError(rowIndex, colIndex)" class="ml-2">
+                                        <div class="relative group">
+                                            <div class="w-4 h-4 bg-pink-400 rounded-full flex items-center justify-center cursor-help">
+                                                <span class="text-white text-xs font-bold">!</span>
+                                            </div>
+                                            <div class="absolute right-full top-1/2 -translate-y-1/2 mr-1 w-48 p-2 bg-pink-500 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-20 normal-case">
+                                                {{ getCellErrorMessage(rowIndex, colIndex) }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </td>
                             <td class="px-4 py-3 text-sm text-gray-900">
                                 <button @click="removeRow(rowIndex)"
@@ -135,7 +163,7 @@
             </div>
 
             <!-- Empty State -->
-            <div v-if="tableData.length === 0" class="text-center py-12 bg-gray-50">
+            <div v-if="(columnData[0] || []).length === 0" class="text-center py-12 bg-gray-50">
                 <div class="text-gray-500">
                     <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24"
                         stroke="currentColor">
@@ -150,11 +178,30 @@
 
         <!-- Simulation Button -->
         <div class="simulation-section mt-6 text-center">
-            <button @click="openSimulationModal"
-                class="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
-                Run Simulation
+            <button ref="simulationButton" @click="openSimulationModal"
+                :disabled="!isTableValid"
+                class="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                :class="{ 'opacity-50 cursor-not-allowed': !isTableValid }">
+                {{ isTableValid ? 'Run Simulation' : 'Please Correct the Input' }}
             </button>
         </div>
+
+        <!-- Floating Scroll Button -->
+        <transition enter-active-class="transform ease-out duration-300 transition"
+            enter-from-class="translate-y-2 opacity-0"
+            enter-to-class="translate-y-0 opacity-100"
+            leave-active-class="transform ease-in duration-200 transition"
+            leave-from-class="translate-y-0 opacity-100"
+            leave-to-class="translate-y-2 opacity-0">
+            <button v-if="showFloatingButton"
+                @click="scrollToSimulationButton"
+                class="fixed bottom-6 right-6 z-40 p-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full shadow-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 transform hover:scale-110"
+                style="transform: translateX(-50%);">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+                </svg>
+            </button>
+        </transition>
 
         <!-- Simulation Modal -->
         <div v-if="showSimulationModal"
@@ -283,7 +330,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 
 // Props and Emits
 const props = defineProps({
@@ -296,22 +343,41 @@ const emit = defineEmits(['data-updated', 'run-simulation'])
 
 // Reactive data
 const headers = ref(['TaskID', 'Weight', 'Duration', 'Cost'])
-const tableData = ref([])
+const cellErrors = ref({}) // Track validation errors for individual cells
+
+// Store data by column index instead of header name
+const columnData = ref([])
 
 // Initialize data from props
 const initializeData = () => {
   if (props.initialData && props.initialData.length > 0) {
-    tableData.value = [...props.initialData]
-    headers.value = Object.keys(props.initialData[0])
+    const initialTableData = props.initialData.map(row => 
+      Object.fromEntries(Object.entries(row).map(([key, value]) => [key, String(value)])));
+    headers.value = Object.keys(props.initialData[0]);
+    // Convert to column-based structure
+    columnData.value = headers.value.map(header => 
+      initialTableData.map(row => row[header] || '')
+    );
   } else {
     // Default sample data
-    tableData.value = [
-      { TaskID: 1, Weight: 10, Duration: 25, Cost: 100 },
-      { TaskID: 2, Weight: 15, Duration: 30, Cost: 150 },
-      { TaskID: 3, Weight: 8, Duration: 20, Cost: 80 }
+    const defaultData = [
+      { TaskID: '1', Weight: '10', Duration: '25', Cost: '100' },
+      { TaskID: '2', Weight: '15', Duration: '30', Cost: '150' },
+      { TaskID: '3', Weight: '8', Duration: '20', Cost: '80' }
     ]
+    headers.value = Object.keys(defaultData[0]);
+    columnData.value = headers.value.map(header => 
+      defaultData.map(row => row[header] || '')
+    );
   }
+  
+  validateAllCells()
 }
+
+
+
+
+
 const jsonInput = ref('')
 const jsonError = ref(false)
 const showJsonEditor = ref(false)
@@ -323,421 +389,509 @@ const showDeleteRowModal = ref(false)
 const showDeleteColumnModal = ref(false)
 const pendingDeleteColumnIndex = ref(null)
 const currentDatasetIndex = ref(0)
+const simulationButton = ref(null)
+const showFloatingButton = ref(false)
+
+// Validation
+const validationErrors = computed(() => {
+  const errors = []
+  
+  // Check for empty headers
+  headers.value.forEach((header, index) => {
+    if (!header || header.trim() === '') {
+      errors.push(`Column ${index + 1} header is required`)
+    }
+  })
+  
+  // Check for empty cells
+  headers.value.forEach((header, colIndex) => {
+    columnData.value[colIndex]?.forEach((value, rowIndex) => {
+      if (!value || value.trim() === '') {
+        errors.push(`Row ${rowIndex + 1}, Column "${header}" is empty`)
+      }
+    })
+  })
+
+  // Check for non-numeric values
+  headers.value.forEach((header, colIndex) => {
+    columnData.value[colIndex]?.forEach((value, rowIndex) => {
+      if (value && value.trim() !== '') {
+        const numValue = parseFloat(value)
+        if (isNaN(numValue)) {
+          errors.push(`Row ${rowIndex + 1}, Column "${header}" must be a number`)
+        }
+      }
+    })
+  })
+
+  return errors
+})
+
+const getTableData = () => {
+  return Array.from({ length: columnData.value[0]?.length || 0 }, (_, rowIndex) => {
+    const row = {}
+    headers.value.forEach((header, colIndex) => {
+      row[header] = columnData.value[colIndex]?.[rowIndex] || ''
+    })
+    return row
+  })
+}
+
+const isTableValid = computed(() => {
+  return validationErrors.value.length === 0 && (columnData.value[0]?.length || 0) > 0
+})
+
+// Validation functions
+const validateCell = (value, header = '') => {
+  if (value === null || value === undefined) return false
+  if (typeof value !== 'string') return false
+  if (value.trim() === '') return false
+  
+  // All columns must be numeric
+    const numValue = parseFloat(value)
+    if (isNaN(numValue)) return false
+  
+  return true
+}
+
+const getValidatedValue = (value) => {
+  return value !== null && value !== undefined ? String(value) : ''
+}
+
+const hasCellError = (rowIndex, colIndex) => {
+  const header = headers.value[colIndex]
+  const key = `${rowIndex}-${header}`
+  return cellErrors.value[key] || false
+}
+
+const getCellErrorMessage = (rowIndex, colIndex) => {
+  const value = columnData.value[colIndex]?.[rowIndex] || ''
+  if (value === null || value === undefined || value.trim() === '') return 'Required'
+  
+  // All columns must be numeric
+  const numValue = parseFloat(value)
+  if (isNaN(numValue)) return 'Must be a number'
+  
+  return ''
+}
+
+const validateAndUpdateCell = (rowIndex, colIndex, value) => {
+  const header = headers.value[colIndex]
+  const key = `${rowIndex}-${header}`
+  
+  // Ensure string type and validate
+  const stringValue = String(value)
+  
+  // Validate - reject non-string inputs, empty strings, and invalid content
+  if (typeof value !== 'string' || !validateCell(stringValue, header)) {
+    cellErrors.value[key] = true
+  } else {
+    delete cellErrors.value[key]
+  }
+  
+  // Update the actual data
+  if (columnData.value[colIndex]) {
+    columnData.value[colIndex][rowIndex] = stringValue
+    emit('data-updated', getTableData())
+  }
+}
+
+const handleCellInput = (rowIndex, colIndex, value) => {
+  const header = headers.value[colIndex]
+  
+  // Real-time validation feedback - reject non-string inputs
+  if (typeof value !== 'string') {
+    const key = `${rowIndex}-${header}`
+    cellErrors.value[key] = true
+    return
+  }
+  
+  const stringValue = String(value)
+  const key = `${rowIndex}-${header}`
+  
+  // Validate content based on column type
+  if (!validateCell(stringValue, header)) {
+    cellErrors.value[key] = true
+  } else {
+    delete cellErrors.value[key]
+  }
+  
+  // Update immediately but don't emit yet (wait for blur)
+  if (colIndex >= 0 && columnData.value[colIndex]) {
+    columnData.value[colIndex][rowIndex] = stringValue
+  }
+}
+
+const validateAllCells = () => {
+  cellErrors.value = {}
+  headers.value.forEach((header, colIndex) => {
+    columnData.value[colIndex]?.forEach((value, rowIndex) => {
+      if (!validateCell(value, header)) {
+        const key = `${rowIndex}-${header}`
+        cellErrors.value[key] = true
+      }
+    })
+  })
+}
 
 // Generic sample datasets for different domains
 const sampleDatasets = {
     cloud: [
-        {"Task_ID": 1, "CPU_Usage (%)": 37, "RAM_Usage (MB)": 2612, "Disk_IO (MB/s)": 55, "Network_IO (MB/s)": 40, "Priority": 2, "VM_ID": 107, "Execution_Time (s)": 1.27, "Target": 1},
-        {"Task_ID": 2, "CPU_Usage (%)": 86, "RAM_Usage (MB)": 11761, "Disk_IO (MB/s)": 120, "Network_IO (MB/s)": 85, "Priority": 5, "VM_ID": 108, "Execution_Time (s)": 3.71, "Target": 1},
-        {"Task_ID": 3, "CPU_Usage (%)": 44, "RAM_Usage (MB)": 4610, "Disk_IO (MB/s)": 65, "Network_IO (MB/s)": 25, "Priority": 3, "VM_ID": 109, "Execution_Time (s)": 8.53, "Target": 1}
+        {"Task_ID": "1", "CPU_Usage (%)": "37", "RAM_Usage (MB)": "2612", "Disk_IO (MB/s)": "55", "Network_IO (MB/s)": "40", "Priority": "2", "VM_ID": "107", "Execution_Time (s)": "1.27", "Target": "1"},
+        {"Task_ID": "2", "CPU_Usage (%)": "86", "RAM_Usage (MB)": "11761", "Disk_IO (MB/s)": "120", "Network_IO (MB/s)": "85", "Priority": "5", "VM_ID": "108", "Execution_Time (s)": "3.71", "Target": "1"},
+        {"Task_ID": "3", "CPU_Usage (%)": "44", "RAM_Usage (MB)": "4610", "Disk_IO (MB/s)": "65", "Network_IO (MB/s)": "25", "Priority": "3", "VM_ID": "109", "Execution_Time (s)": "8.53", "Target": "1"}
     ],
     manufacturing: [
-        {"Job_ID": 1, "Processing_Time": 45, "Setup_Time": 5, "Material_Cost": 250, "Labor_Hours": 8, "Machine_Type": "CNC", "Priority": 3, "Deadline": 120, "Quality_Score": 95},
-        {"Job_ID": 2, "Processing_Time": 120, "Setup_Time": 15, "Material_Cost": 800, "Labor_Hours": 20, "Machine_Type": "Lathe", "Priority": 5, "Deadline": 200, "Quality_Score": 88},
-        {"Job_ID": 3, "Processing_Time": 30, "Setup_Time": 2, "Material_Cost": 150, "Labor_Hours": 4, "Machine_Type": "Mill", "Priority": 2, "Deadline": 72, "Quality_Score": 92}
+        {"Job_ID": "1", "Processing_Time": "45", "Setup_Time": "5", "Material_Cost": "250", "Labor_Hours": "8", "Machine_Type": "CNC", "Priority": "3", "Deadline": "120", "Quality_Score": "95"},
+        {"Job_ID": "2", "Processing_Time": "120", "Setup_Time": "15", "Material_Cost": "800", "Labor_Hours": "20", "Machine_Type": "Lathe", "Priority": "5", "Deadline": "200", "Quality_Score": "88"},
+        {"Job_ID": "3", "Processing_Time": "30", "Setup_Time": "2", "Material_Cost": "150", "Labor_Hours": "4", "Machine_Type": "Mill", "Priority": "2", "Deadline": "72", "Quality_Score": "92"}
     ],
     logistics: [
-        {"Order_ID": 1, "Distance_km": 250, "Weight_kg": 1500, "Volume_m3": 8.5, "Urgency": 4, "Fuel_Cost": 180, "Delivery_Time": 4.2, "Customer_Rating": 4.8, "Priority": 3},
-        {"Order_ID": 2, "Distance_km": 800, "Weight_kg": 3500, "Volume_m3": 15.2, "Urgency": 5, "Fuel_Cost": 420, "Delivery_Time": 12.5, "Customer_Rating": 4.2, "Priority": 5},
-        {"Order_ID": 3, "Distance_km": 120, "Weight_kg": 800, "Volume_m3": 4.1, "Urgency": 2, "Fuel_Cost": 95, "Delivery_Time": 2.1, "Customer_Rating": 4.9, "Priority": 2}
+        {"Order_ID": "1", "Distance_km": "250", "Weight_kg": "1500", "Volume_m3": "8.5", "Urgency": "4", "Fuel_Cost": "180", "Delivery_Time": "4.2", "Customer_Rating": "4.8", "Priority": "3"},
+        {"Order_ID": "2", "Distance_km": "800", "Weight_kg": "3500", "Volume_m3": "15.2", "Urgency": "5", "Fuel_Cost": "420", "Delivery_Time": "12.5", "Customer_Rating": "4.2", "Priority": "5"},
+        {"Order_ID": "3", "Distance_km": "120", "Weight_kg": "800", "Volume_m3": "4.1", "Urgency": "2", "Fuel_Cost": "95", "Delivery_Time": "2.1", "Customer_Rating": "4.9", "Priority": "2"}
     ],
     finance: [
-        {"Investment_ID": 1, "Amount": 50000, "Risk_Score": 7.5, "Expected_Return": 12.5, "Duration_Months": 24, "Market_Volatility": 15.2, "Sector": "Tech", "Liquidity": 8.5, "Priority": 4},
-        {"Investment_ID": 2, "Amount": 75000, "Risk_Score": 4.2, "Expected_Return": 8.8, "Duration_Months": 12, "Market_Volatility": 8.7, "Sector": "Healthcare", "Liquidity": 9.2, "Priority": 3},
-        {"Investment_ID": 3, "Amount": 30000, "Risk_Score": 9.8, "Expected_Return": 18.5, "Duration_Months": 36, "Market_Volatility": 22.1, "Sector": "Crypto", "Liquidity": 6.1, "Priority": 5}
+        {"Investment_ID": "1", "Amount": "50000", "Risk_Score": "7.5", "Expected_Return": "12.5", "Duration_Months": "24", "Market_Volatility": "15.2", "Sector": "Tech", "Liquidity": "8.5", "Priority": "4"},
+        {"Investment_ID": "2", "Amount": "75000", "Risk_Score": "4.2", "Expected_Return": "8.8", "Duration_Months": "12", "Market_Volatility": "8.7", "Sector": "Healthcare", "Liquidity": "9.2", "Priority": "3"},
+        {"Investment_ID": "3", "Amount": "30000", "Risk_Score": "9.8", "Expected_Return": "18.5", "Duration_Months": "36", "Market_Volatility": "22.3", "Sector": "Crypto", "Liquidity": "6.8", "Priority": "5"}
     ],
     healthcare: [
-        {"Patient_ID": 1, "Age": 45, "Treatment_Duration": 14, "Medication_Cost": 2500, "Recovery_Score": 8.5, "Risk_Factor": 3.2, "Priority": 4, "Resource_Usage": 85, "Success_Probability": 0.92},
-        {"Patient_ID": 2, "Age": 67, "Treatment_Duration": 28, "Medication_Cost": 7500, "Recovery_Score": 6.8, "Risk_Factor": 7.5, "Priority": 5, "Resource_Usage": 95, "Success_Probability": 0.78},
-        {"Patient_ID": 3, "Age": 32, "Treatment_Duration": 7, "Medication_Cost": 1200, "Recovery_Score": 9.2, "Risk_Factor": 1.8, "Priority": 2, "Resource_Usage": 65, "Success_Probability": 0.98}
+        {"Patient_ID": "1", "Age": "45", "Treatment_Duration": "14", "Medication_Cost": "2500", "Severity": "3", "Insurance_Coverage": "0.8", "Recovery_Rate": "0.85", "Risk_Factor": "2.1", "Priority": "2"},
+        {"Patient_ID": "2", "Age": "67", "Treatment_Duration": "28", "Medication_Cost": "7500", "Severity": "5", "Insurance_Coverage": "0.9", "Recovery_Rate": "0.65", "Risk_Factor": "4.2", "Priority": "5"},
+        {"Patient_ID": "3", "Age": "34", "Treatment_Duration": "7", "Medication_Cost": "1200", "Severity": "2", "Insurance_Coverage": "0.7", "Recovery_Rate": "0.95", "Risk_Factor": "1.3", "Priority": "1"}
     ]
 }
 
-// Computed property for JSON output
-const jsonOutput = computed(() => {
-    return JSON.stringify(tableData.value, null, 2)
-})
-
-// Initialize JSON input
-const initializeJson = () => {
-    jsonInput.value = jsonOutput.value
-}
-
-// Watch for initialData changes
-watch(() => props.initialData, (newData) => {
-  if (newData && newData.length > 0) {
-    tableData.value = [...newData]
-    headers.value = Object.keys(newData[0])
-    updateJson()
-  }
-}, { immediate: true, deep: true })
-
-// Import JSON data
-const importJson = () => {
-    try {
-        const parsedData = JSON.parse(jsonInput.value)
-        if (Array.isArray(parsedData) && parsedData.length > 0) {
-            tableData.value = parsedData
-            headers.value = Object.keys(parsedData[0])
-            jsonError.value = false
-        }
-    } catch (error) {
-        jsonError.value = true
-        setTimeout(() => jsonError.value = false, 3000)
-    }
-}
-
-// Update from JSON input
-const updateFromJson = () => {
-    try {
-        const parsedData = JSON.parse(jsonInput.value)
-        if (Array.isArray(parsedData) && parsedData.length > 0) {
-            tableData.value = parsedData
-            headers.value = Object.keys(parsedData[0])
-            jsonError.value = false
-        }
-    } catch (error) {
-        jsonError.value = true
-    }
-}
-
-// Add new row
+// Methods
 const addRow = () => {
-    const newRow = {}
-    headers.value.forEach(header => {
-        // Initialize all fields as empty strings (will be converted to numbers if needed)
-        newRow[header] = ''
-    })
-    tableData.value.push(newRow)
-    updateJson()
-}
-
-// Remove row
-const removeRow = (index) => {
-    pendingDeleteRowIndex.value = index
-    showDeleteRowModal.value = true
-}
-
-// Confirm delete row
-const confirmDeleteRow = () => {
-    if (pendingDeleteRowIndex.value !== null) {
-        tableData.value.splice(pendingDeleteRowIndex.value, 1)
-        updateJson()
-        showDeleteRowModal.value = false
-        pendingDeleteRowIndex.value = null
-        showToastNotification('Row deleted successfully')
+  headers.value.forEach((_, colIndex) => {
+    if (!columnData.value[colIndex]) {
+      columnData.value[colIndex] = []
     }
+    columnData.value[colIndex].push('')
+  })
+  validateAllCells()
+  emit('data-updated', getTableData())
+  showToastMessage('Row added successfully')
 }
 
-// Add new column
 const addColumn = () => {
-    const newColumnName = `New Column ${headers.value.length + 1}`
-    headers.value.push(newColumnName)
-    tableData.value.forEach(row => {
-        row[newColumnName] = ''
-    })
-    updateJson()
+  const newHeader = `Column${headers.value.length + 1}`
+  headers.value.push(newHeader)
+  columnData.value.push(Array(columnData.value[0]?.length || 0).fill(''))
+  validateAllCells()
+  emit('data-updated', getTableData())
+  showToastMessage('Column added successfully')
 }
 
-// Remove column
+const removeRow = (index) => {
+  pendingDeleteRowIndex = index
+  showDeleteRowModal.value = true
+}
+
 const removeColumn = (index) => {
-    pendingDeleteColumnIndex.value = index
-    showDeleteColumnModal.value = true
+  pendingDeleteColumnIndex.value = index
+  showDeleteColumnModal.value = true
 }
 
-// Confirm delete column
+const confirmDeleteRow = () => {
+  if (pendingDeleteRowIndex !== null) {
+    headers.value.forEach((_, colIndex) => {
+      columnData.value[colIndex].splice(pendingDeleteRowIndex, 1)
+    })
+    validateAllCells()
+    emit('data-updated', getTableData())
+    showToastMessage('Row deleted successfully')
+  }
+  showDeleteRowModal.value = false
+  pendingDeleteRowIndex = null
+}
+
 const confirmDeleteColumn = () => {
-    if (pendingDeleteColumnIndex.value !== null) {
-        const columnName = headers.value[pendingDeleteColumnIndex.value]
-        headers.value.splice(pendingDeleteColumnIndex.value, 1)
-        tableData.value.forEach(row => {
-            delete row[columnName]
-        })
-        updateJson()
-        showDeleteColumnModal.value = false
-        pendingDeleteColumnIndex.value = null
-        showToastNotification('Column deleted successfully')
-    }
+  if (pendingDeleteColumnIndex.value !== null) {
+    headers.value.splice(pendingDeleteColumnIndex.value, 1)
+    columnData.value.splice(pendingDeleteColumnIndex.value, 1)
+    validateAllCells()
+    emit('data-updated', getTableData())
+    showToastMessage('Column deleted successfully')
+  }
+  showDeleteColumnModal.value = false
+  pendingDeleteColumnIndex.value = null
 }
 
-// Update header
-const updateHeader = (index, newValue) => {
-    const oldValue = headers.value[index]
-    if (oldValue !== newValue && newValue.trim() !== '') {
-        headers.value[index] = newValue.trim()
-        tableData.value.forEach(row => {
-            if (row[oldValue] !== undefined) {
-                row[newValue.trim()] = row[oldValue]
-                delete row[oldValue]
-            }
-        })
-        updateJson()
-    }
-}
-
-// Update cell
-const updateCell = (rowIndex, columnName, value) => {
-    tableData.value[rowIndex][columnName] = value
-    updateJson()
-}
-
-// Update JSON input
-const updateJson = () => {
-    jsonInput.value = jsonOutput.value
-}
-
-// Export JSON
-const exportJson = () => {
-    const blob = new Blob([jsonOutput.value], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'swarm-lab-data.json'
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-}
-
-// Export CSV
-const exportCsv = () => {
-    if (tableData.value.length === 0) {
-        showToastNotification('No data to export', 'warning')
-        return
-    }
-
-    const csvHeaders = headers.value.join(',')
-    const csvRows = tableData.value.map(row =>
-        headers.value.map(header => {
-            const value = row[header] || ''
-            // Escape commas and quotes in CSV
-            return `"${String(value).replace(/"/g, '""')}"`
-        }).join(',')
+const updateHeader = (index, newHeader) => {
+  const oldHeader = headers.value[index]
+  
+  // Allow empty headers but show warning
+  if (typeof newHeader !== 'string') {
+    showToastMessage('Column header must be a string')
+    headers.value[index] = oldHeader // Revert to original
+    return
+  }
+  
+  const trimmedNewHeader = newHeader.trim()
+  
+  // Check if header already exists (case-insensitive) - only for non-empty headers
+  if (trimmedNewHeader !== '') {
+    const headerExists = headers.value.some((h, i) => 
+      i !== index && h.toLowerCase() === trimmedNewHeader.toLowerCase()
     )
-
-    const csvContent = [csvHeaders, ...csvRows].join('\n')
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'swarm-lab-data.csv'
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-    showToastNotification('CSV exported successfully')
+    
+    if (headerExists) {
+      showToastMessage('Column header already exists')
+      headers.value[index] = oldHeader // Revert to original
+      return
+    }
+  }
+  
+  if (oldHeader !== trimmedNewHeader) {
+    headers.value[index] = trimmedNewHeader
+    // Data remains in columnData structure, no need to move data between headers
+    validateAllCells()
+    emit('data-updated', getTableData())
+  }
 }
 
-// Import CSV
+const importJson = () => {
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.accept = '.json'
+  input.onchange = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        try {
+          const data = JSON.parse(e.target.result)
+          if (Array.isArray(data) && data.length > 0) {
+            // Ensure all values are strings
+            headers.value = Object.keys(data[0])
+            // Convert to column-based structure
+            columnData.value = headers.value.map(header => 
+              data.map(row => String(row[header] || ''))
+            )
+            jsonError.value = false
+            validateAllCells()
+            emit('data-updated', getTableData())
+            showToastMessage('JSON imported successfully')
+          } else {
+            showToastMessage('Invalid JSON format or empty array')
+          }
+        } catch (error) {
+          jsonError.value = true
+          showToastMessage('Error parsing JSON file')
+        }
+      }
+      reader.readAsText(file)
+    }
+  }
+  input.click()
+}
+
 const importCsv = () => {
-    const input = document.createElement('input')
-    input.type = 'file'
-    input.accept = '.csv'
-    input.onchange = (event) => {
-        const file = event.target.files[0]
-        if (!file) return
-
-        const reader = new FileReader()
-        reader.onload = (e) => {
-            try {
-                const csvContent = e.target.result
-                const parsedData = parseCsv(csvContent)
-                if (parsedData.length > 0) {
-                    headers.value = Object.keys(parsedData[0])
-                    tableData.value = parsedData
-                    updateJson()
-                    showToastNotification(`CSV imported successfully! ${parsedData.length} rows loaded.`)
-                }
-            } catch (error) {
-                showToastNotification('Error importing CSV: ' + error.message, 'warning')
-            }
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.accept = '.csv'
+  input.onchange = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        try {
+          const csv = e.target.result
+          const lines = csv.split('\n').filter(line => line.trim() !== '')
+          if (lines.length > 1) {
+            const headersRow = lines[0].split(',').map(h => h.trim())
+            const dataRows = lines.slice(1)
+            
+            headers.value = headersRow
+            // Convert to column-based structure
+            columnData.value = headersRow.map((header, colIndex) => 
+              dataRows.map(row => {
+                const values = row.split(',').map(v => v.trim())
+                return values[colIndex] || ''
+              })
+            )
+            validateAllCells()
+            emit('data-updated', getTableData())
+            showToastMessage('CSV imported successfully')
+          }
+        } catch (error) {
+          showToastMessage('Error parsing CSV file')
         }
-        reader.readAsText(file)
+      }
+      reader.readAsText(file)
     }
-    input.click()
+  }
+  input.click()
 }
 
-// Parse CSV content
-const parseCsv = (csvContent) => {
-    const lines = csvContent.trim().split('\n')
-    if (lines.length < 2) {
-        throw new Error('CSV must have at least a header row and one data row')
-    }
-
-    // Parse headers from first row
-    const headersRow = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''))
-
-    // Parse data rows
-    const data = []
-    for (let i = 1; i < lines.length; i++) {
-        if (!lines[i].trim()) continue
-
-        const values = parseCsvLine(lines[i])
-        const row = {}
-        headersRow.forEach((header, index) => {
-            const value = values[index] || ''
-            // Convert all values to numbers where possible, otherwise keep as-is
-            const numValue = Number(value)
-            row[header] = !isNaN(numValue) ? numValue : value
-        })
-        data.push(row)
-    }
-
-    return data
+const exportJson = () => {
+  if (!isTableValid.value) {
+    showToastMessage('Please fix validation errors before exporting')
+    return
+  }
+  
+  const dataStr = JSON.stringify(getTableData(), null, 2)
+  const dataBlob = new Blob([dataStr], { type: 'application/json' })
+  const url = URL.createObjectURL(dataBlob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = 'table-data.json'
+  link.click()
+  URL.revokeObjectURL(url)
+  showToastMessage('JSON exported successfully')
 }
 
-// Parse CSV line handling quoted fields
-const parseCsvLine = (line) => {
-    const result = []
-    let current = ''
-    let inQuotes = false
-
-    for (let i = 0; i < line.length; i++) {
-        const char = line[i]
-
-        if (char === '"') {
-            if (inQuotes && line[i + 1] === '"') {
-                current += '"'
-                i++ // Skip next quote
-            } else {
-                inQuotes = !inQuotes
-            }
-        } else if (char === ',' && !inQuotes) {
-            result.push(current.trim())
-            current = ''
-        } else {
-            current += char
-        }
-    }
-
-    result.push(current.trim())
-    return result.map(value => value.replace(/^"|"$/g, ''))
+const exportCsv = () => {
+  if (!isTableValid.value) {
+    showToastMessage('Please fix validation errors before exporting')
+    return
+  }
+  
+  if (headers.value.length === 0 || (columnData.value[0]?.length || 0) === 0) return
+  
+  const tableData = getTableData()
+  const csvContent = [
+    headers.value.join(','),
+    ...tableData.map(row => 
+      headers.value.map(header => row[header] || '').join(',')
+    )
+  ].join('\n')
+  
+  const blob = new Blob([csvContent], { type: 'text/csv' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = 'table-data.csv'
+  link.click()
+  URL.revokeObjectURL(url)
+  showToastMessage('CSV exported successfully')
 }
 
-// Toggle JSON editor visibility
-const toggleJsonEditor = () => {
-    showJsonEditor.value = !showJsonEditor.value
+const updateFromJson = () => {
+  if (!jsonInput.value.trim()) {
+    jsonError.value = false
+    return
+  }
+  
+  try {
+    const data = JSON.parse(jsonInput.value)
+    if (Array.isArray(data) && data.length > 0) {
+        headers.value = Object.keys(data[0])
+        // Convert to column-based structure
+        columnData.value = headers.value.map(header => 
+          data.map(row => String(row[header] || ''))
+        )
+        jsonError.value = false
+        validateAllCells()
+        emit('data-updated', getTableData())
+      } else {
+        jsonError.value = true
+      }
+  } catch (error) {
+    jsonError.value = true
+  }
 }
 
-// Load sample data - cycle through different dataset types
 const loadSampleData = () => {
-    const datasetTypes = Object.keys(sampleDatasets)
-    currentDatasetIndex.value = (currentDatasetIndex.value + 1) % datasetTypes.length
-    const currentType = datasetTypes[currentDatasetIndex.value]
-    
-    tableData.value = [...sampleDatasets[currentType]]
-    headers.value = Object.keys(sampleDatasets[currentType][0])
-    
-    const typeNames = {
-        cloud: 'Cloud Computing',
-        manufacturing: 'Manufacturing',
-        logistics: 'Logistics',
-        finance: 'Finance',
-        healthcare: 'Healthcare'
-    }
-    
-    showToastNotification(`${typeNames[currentType]} sample data loaded successfully`)
-    updateJson()
+  const domains = Object.keys(sampleDatasets)
+  const domain = domains[currentDatasetIndex.value % domains.length]
+  const sampleData = sampleDatasets[domain]
+  
+  headers.value = Object.keys(sampleData[0])
+  // Convert to column-based structure
+  columnData.value = headers.value.map(header => 
+    sampleData.map(row => String(row[header] || ''))
+  )
+  currentDatasetIndex.value++
+  
+  validateAllCells()
+  emit('data-updated', getTableData())
+  showToastMessage(`Loaded ${domain} sample data`)
 }
 
-// Simulation modal controls
+const toggleJsonEditor = () => {
+  showJsonEditor.value = !showJsonEditor.value
+  if (showJsonEditor.value) {
+    jsonInput.value = JSON.stringify(getTableData(), null, 2)
+    jsonError.value = false
+  }
+}
+
 const openSimulationModal = () => {
+  if (isTableValid.value) {
     showSimulationModal.value = true
+  } else {
+    showToastMessage('Please fix all validation errors before running simulation')
+  }
 }
 
-// Simulation methods
+const closeSimulationModal = () => {
+  showSimulationModal.value = false
+  selectedAlgorithms.value = []
+}
+
 const runSimulation = () => {
   if (selectedAlgorithms.value.length === 0) {
-    showToastNotification('Please select at least one algorithm', 'warning')
+    showToastMessage('Please select at least one algorithm')
     return
   }
-
-  if (tableData.value.length === 0) {
-    showToastNotification('Please add some data to run simulation', 'warning')
-    return
-  }
-
-  // Format data for simulation - preserve all original fields
-  const simulationData = tableData.value.map((row, index) => {
-    const task = {}
-    headers.value.forEach(header => {
-      // Convert numeric values when possible, otherwise keep as-is
-      const value = row[header]
-      const numValue = Number(value)
-      task[header] = !isNaN(numValue) ? numValue : value
-    })
-    return task
-  })
-
-  // Store simulation data and navigate
-  const simulationStore = {
-    tasks: simulationData,
-    algorithms: selectedAlgorithms.value
-  }
-
-  // Log the data being sent
-  console.log('DynamicTable - Emitting simulation data:', {
-    tasks: simulationData.length,
+  
+  emit('run-simulation', {
+    tasks: getTableData(),
     algorithms: selectedAlgorithms.value
   })
-
-  // Close modal and emit event to parent
   closeSimulationModal()
-  emit('run-simulation', simulationStore)
-  showToastNotification(`Preparing ${selectedAlgorithms.value.join(' and ')} simulation...`, 'info')
+  showToastMessage('Simulation started')
 }
 
-// Close simulation modal
-const closeSimulationModal = () => {
-    showSimulationModal.value = false
-    selectedAlgorithms.value = []
+const showToastMessage = (message) => {
+  toastMessage.value = message
+  showToast.value = true
+  setTimeout(() => {
+    showToast.value = false
+  }, 3000)
 }
 
-// Toast notification helper
-const showToastNotification = (message, type = 'info') => {
-    toastMessage.value = message
-    showToast.value = true
-    
-    setTimeout(() => {
-        showToast.value = false
-    }, 3000) // Auto-hide after 3 seconds
+const initializeJson = () => {
+   jsonInput.value = JSON.stringify(getTableData(), null, 2)
+   jsonError.value = false
+ }
+
+const updateJson = () => {
+  jsonInput.value = JSON.stringify(getTableData(), null, 2)
 }
-
-
 
 // Watch for data changes
-watch(tableData, () => {
-    updateJson()
+watch(columnData, () => {
+  updateJson()
 }, { deep: true })
+
+// Intersection Observer untuk floating button
+onMounted(() => {
+  if (simulationButton.value) {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach(entry => {
+          showFloatingButton.value = !entry.isIntersecting
+        })
+      },
+      { threshold: 0.1 }
+    )
+    observer.observe(simulationButton.value)
+  }
+})
+
+const scrollToSimulationButton = () => {
+  if (simulationButton.value) {
+    simulationButton.value.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+}
 
 // Initialize
 initializeData()
 initializeJson()
+
 </script>
-
-<style scoped>
-.dynamic-table-container {
-    max-width: 100%;
-    margin: 0 auto;
-}
-
-input:focus {
-    outline: none;
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
-}
-
-@media (max-width: 768px) {
-    .controls-section {
-        padding: 1rem;
-    }
-
-    .controls-section button {
-        width: 100%;
-        margin-bottom: 0.5rem;
-    }
-
-    .table-section {
-        overflow-x: auto;
-    }
-}
-</style>

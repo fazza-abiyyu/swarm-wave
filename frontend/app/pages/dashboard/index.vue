@@ -86,6 +86,7 @@
             :tasks="currentTasks" 
             :algorithms="selectedAlgorithms" 
             @back-to-table="showSimulation = false" 
+            @edit-data="onEditData"
           />
         </div>
       </div>
@@ -148,6 +149,13 @@ const onDataUpdated = (data) => {
     return processedTask
   })
 }
+
+// Handle edit data request from SimulationPage
+const onEditData = (data) => {
+  tableData.value = data;
+  onDataUpdated(data);
+  showSimulation.value = false;
+};
 
 // Handle simulation request from DynamicTable
 const onRunSimulation = (simulationData) => {
