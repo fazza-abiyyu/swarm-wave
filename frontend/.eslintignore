@@ -1,7 +1,0 @@
-.nuxt/
-dist/
-node_modules/
-*.min.js
-coverage/
-.DS_Store
-*.log
