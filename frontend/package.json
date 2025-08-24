@@ -9,10 +9,7 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare",
-    "typecheck": "nuxt typecheck",
-    "lint": "eslint .",
-    "test": "echo \"Tests would run here\" && exit 0"
+    "postinstall": "nuxt prepare"
   },
   "dependencies": {
     "@google/genai": "^1.15.0",
@@ -23,10 +20,8 @@
     "vue-router": "^4.5.1"
   },
   "devDependencies": {
-    "@nuxtjs/eslint-config-typescript": "^12.1.0",
     "@nuxtjs/tailwindcss": "^6.12.1",
     "@tailwindcss/forms": "^0.5.9",
-    "eslint": "^9.34.0",
     "tailwindcss": "^3.4.14"
   }
 }
