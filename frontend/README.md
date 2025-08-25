@@ -58,18 +58,38 @@ Navigate to http://localhost:3000/dashboard
 
 ```
 swarm-lab/
-├── app.vue                 # Root application component
-├── app/
-│   ├── components/         # Reusable Vue components
-│   │   └── DynamicTable.vue    # Main table component with CRUD operations
-|   |   └── SimulationPage      # Main simulation component with visualization graph
-│   ├── pages/              # Nuxt pages (file-based routing)
-│   │   ├── index.vue       # Home page with redirect
-│   │   └── dashboard/      # Dashboard with table
-│   │       └── index.vue   # Main dashboard page
-├── nuxt.config.ts         # Nuxt configuration
-├── tailwind.config.js     # Tailwind CSS configuration
-└── package.json           # Project dependencies
+└── frontend
+    ├── .gitignore
+    ├── AI_CHAT_SETUP.md
+    ├── README.md
+    ├── app.vue
+    ├── app
+        ├── app.vue
+        ├── components
+        │   ├── DynamicTable.vue
+        │   └── SimulationPage.vue
+        ├── composables
+        │   └── useAiChatStream.ts
+        └── pages
+        │   ├── about.vue
+        │   ├── dashboard
+        │       └── index.vue
+        │   └── index.vue
+    ├── assets
+        └── css
+        │   └── main.css
+    ├── nuxt.config.ts
+    ├── package.json
+    ├── public
+        ├── afavicon.ico
+        ├── favicon.ico
+        └── robots.txt
+    ├── server
+        └── api
+        │   ├── chat-stream.post.ts
+        │   └── test.get.ts
+    ├── tailwind.config.js
+    └── tsconfig.json
 ```
 
 ## 🎨 UI Components

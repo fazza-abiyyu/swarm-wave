@@ -12,13 +12,43 @@ This project follows a modern microservices architecture with clear separation b
 
 ```
 swarm-lab/
-├── frontend/          # Nuxt 4 application
-│   ├── app/          # Application code
-│   └── server/      # Server-side API routes
-└── backend/         # Flask REST API
-    ├── app/         # Flask application
-    ├── models/      # Database models
-    └── routes/      # API endpoints
+├── .gitignore
+├── LICENSE
+├── README.md
+├── backend
+    └── app.py
+└── frontend
+    ├── .gitignore
+    ├── AI_CHAT_SETUP.md
+    ├── README.md
+    ├── app.vue
+    ├── app
+        ├── app.vue
+        ├── components
+        │   ├── DynamicTable.vue
+        │   └── SimulationPage.vue
+        ├── composables
+        │   └── useAiChatStream.ts
+        └── pages
+        │   ├── about.vue
+        │   ├── dashboard
+        │       └── index.vue
+        │   └── index.vue
+    ├── assets
+        └── css
+        │   └── main.css
+    ├── nuxt.config.ts
+    ├── package.json
+    ├── public
+        ├── afavicon.ico
+        ├── favicon.ico
+        └── robots.txt
+    ├── server
+        └── api
+        │   ├── chat-stream.post.ts
+        │   └── test.get.ts
+    ├── tailwind.config.js
+    └── tsconfig.json
 ```
 
 ## 🛠️ Technology Stack
