@@ -387,6 +387,7 @@ const toastMessage = ref('')
 const showToast = ref(false)
 const showDeleteRowModal = ref(false)
 const showDeleteColumnModal = ref(false)
+const pendingDeleteRowIndex = ref(null)
 const pendingDeleteColumnIndex = ref(null)
 const currentDatasetIndex = ref(0)
 const simulationButton = ref(null)
@@ -587,7 +588,7 @@ const addColumn = () => {
 }
 
 const removeRow = (index) => {
-  pendingDeleteRowIndex = index
+  pendingDeleteRowIndex.value = index
   showDeleteRowModal.value = true
 }
 
@@ -597,16 +598,16 @@ const removeColumn = (index) => {
 }
 
 const confirmDeleteRow = () => {
-  if (pendingDeleteRowIndex !== null) {
+  if (pendingDeleteRowIndex.value !== null) {
     headers.value.forEach((_, colIndex) => {
-      columnData.value[colIndex].splice(pendingDeleteRowIndex, 1)
+      columnData.value[colIndex].splice(pendingDeleteRowIndex.value, 1)
     })
     validateAllCells()
     emit('data-updated', getTableData())
     showToastMessage('Row deleted successfully')
   }
   showDeleteRowModal.value = false
-  pendingDeleteRowIndex = null
+  pendingDeleteRowIndex.value = null
 }
 
 const confirmDeleteColumn = () => {
