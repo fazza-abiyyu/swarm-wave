@@ -1,37 +1,93 @@
 <template>
   <div class="min-h-screen bg-gradient-to-br from-blue-50 to-yellow-50">
-    <!-- Header -->
-    <header class="bg-white shadow-sm border-b border-gray-200">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center space-x-4">
-            <div class="bg-blue-500 text-white p-2 rounded-lg">
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+    <!-- Navigation -->
+    <nav class="bg-white/95 backdrop-blur-sm shadow-sm border-b border-gray-200 sticky top-0 z-50">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center h-16">
+          <!-- Logo -->
+          <div class="flex items-center space-x-3">
+            <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-yellow-500 rounded-lg flex items-center justify-center">
+              <svg class="w-5 h-5 text-white" viewBox="0 0 20 20" fill="currentColor">
+                <circle cx="3" cy="3" r="1"/>
+                <circle cx="10" cy="3" r="1"/>
+                <circle cx="17" cy="3" r="1"/>
+                <circle cx="6.5" cy="10" r="1"/>
+                <circle cx="13.5" cy="10" r="1"/>
+                <circle cx="10" cy="17" r="1"/>
+                <line x1="3" y1="3" x2="6.5" y2="10" stroke="currentColor" stroke-width="0.5"/>
+                <line x1="10" y1="3" x2="6.5" y2="10" stroke="currentColor" stroke-width="0.5"/>
+                <line x1="10" y1="3" x2="13.5" y2="10" stroke="currentColor" stroke-width="0.5"/>
+                <line x1="17" y1="3" x2="13.5" y2="10" stroke="currentColor" stroke-width="0.5"/>
+                <line x1="6.5" y1="10" x2="10" y2="17" stroke="currentColor" stroke-width="0.5"/>
+                <line x1="13.5" y1="10" x2="10" y2="17" stroke="currentColor" stroke-width="0.5"/>
               </svg>
             </div>
-            <h1 class="text-2xl font-bold text-gray-900">Swarm Lab</h1>
+            <span @click="showSimulation = false"  class="text-xl font-bold text-gray-900">Swarm Lab</span>
           </div>
-          <nav class="flex space-x-4">
-            <NuxtLink to="/dashboard" class="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">
-              Dashboard
-            </NuxtLink>
-            <NuxtLink to="/about" class="text-blue-600 bg-blue-50 px-3 py-2 rounded-md text-sm font-medium">
-              About
-            </NuxtLink>
-          </nav>
+
+          <!-- Navigation Links -->
+          <nav class="hidden md:flex items-center space-x-1">
+              <NuxtLink to="/dashboard" class="text-gray-600 hover:text-gray-900 px-4 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-gray-50">Home</NuxtLink>
+              <a 
+                href="#" 
+                @click="showSimulation = false" 
+                :class="!showSimulation ? 'text-blue-600 bg-blue-50/50' : 'text-gray-600 hover:text-gray-900'"
+                class="px-4 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-gray-50"
+              >
+                About
+              </a>
+            </nav>
+
+          <!-- Mobile Menu Button -->
+          <div class="md:hidden">
+            <button @click="isMobileMenuOpen = !isMobileMenuOpen" 
+                  class="text-gray-600 hover:text-gray-900 p-2 rounded-lg transition-colors hover:bg-gray-50">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+            </svg>
+          </button>
+          </div>
         </div>
       </div>
-    </header>
+
+      <!-- Mobile Menu -->
+      <div v-if="isMobileMenuOpen" class="md:hidden fixed inset-0 top-16 bg-white backdrop-blur-sm border-t border-gray-200 z-40">
+          <div class="px-4 py-3 space-y-2 bg-white/90">
+            
+            <NuxtLink to="/dashboard" @click="isMobileMenuOpen = false" class="block px-3 py-2 text-gray-700 hover:text-blue-600 transition-colors">Home</NuxtLink>
+            <a 
+              href="#" 
+              @click="showSimulation = false; isMobileMenuOpen = false" 
+              :class="!showSimulation ? 'text-blue-600 bg-blue-50/50' : 'text-gray-700 hover:text-blue-600'"
+              class="block px-3 py-2 rounded-lg transition-colors"
+            >
+              About
+            </a>
+          </div>
+        </div>
+    </nav>
 
     <!-- Main Content -->
     <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <!-- Hero Section -->
       <div class="text-center mb-12">
-        <div class="bg-blue-500 text-white w-24 h-24 rounded-full mx-auto mb-6 flex items-center justify-center">
-          <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-          </svg>
+        <div class="bg-blue-500 text-white w-24 h-24 rounded-full mx-auto mb-6 flex items-center bg-gradient-to-br from-blue-500 to-yellow-500 justify-center">
+          <!-- <div class="w-100 h-100 bg-gradient-to-br from-blue-500 to-yellow-500 rounded-lg flex items-center justify-center"> -->
+              <svg class="w-16 h-16 text-white" viewBox="0 0 20 20" fill="currentColor">
+                <circle cx="3" cy="3" r="1"/>
+                <circle cx="10" cy="3" r="1"/>
+                <circle cx="17" cy="3" r="1"/>
+                <circle cx="6.5" cy="10" r="1"/>
+                <circle cx="13.5" cy="10" r="1"/>
+                <circle cx="10" cy="17" r="1"/>
+                <line x1="3" y1="3" x2="6.5" y2="10" stroke="currentColor" stroke-width="0.5"/>
+                <line x1="10" y1="3" x2="6.5" y2="10" stroke="currentColor" stroke-width="0.5"/>
+                <line x1="10" y1="3" x2="13.5" y2="10" stroke="currentColor" stroke-width="0.5"/>
+                <line x1="17" y1="3" x2="13.5" y2="10" stroke="currentColor" stroke-width="0.5"/>
+                <line x1="6.5" y1="10" x2="10" y2="17" stroke="currentColor" stroke-width="0.5"/>
+                <line x1="13.5" y1="10" x2="10" y2="17" stroke="currentColor" stroke-width="0.5"/>
+              </svg>
+            <!-- </div> -->
         </div>
         <h1 class="text-4xl font-bold text-gray-900 mb-4">About Swarm Lab</h1>
         <p class="text-xl text-gray-600 max-w-2xl mx-auto">
@@ -216,14 +272,29 @@
     </main>
 
     <!-- Footer -->
-    <footer class="bg-white border-t border-gray-200 mt-16">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <footer class="bg-white border-t border-gray-200/50 mt-16">
+      <div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         <div class="text-center">
-          <p class="text-gray-600">
-            © 2024 Swarm Lab. Built with ❤️ for educational purposes.
-          </p>
-          <p class="text-sm text-gray-500 mt-2">
-            Telkom University Purwokerto - Tugas Akhir Sarjana 1
+          <div class="flex justify-center mb-4">
+            <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-yellow-500 rounded-lg flex items-center justify-center">
+              <svg class="w-5 h-5 text-white" viewBox="0 0 20 20" fill="currentColor">
+                <circle cx="3" cy="3" r="1"/>
+                <circle cx="10" cy="3" r="1"/>
+                <circle cx="17" cy="3" r="1"/>
+                <circle cx="6.5" cy="10" r="1"/>
+                <circle cx="13.5" cy="10" r="1"/>
+                <circle cx="10" cy="17" r="1"/>
+                <line x1="3" y1="3" x2="6.5" y2="10" stroke="currentColor" stroke-width="0.5"/>
+                <line x1="10" y1="3" x2="6.5" y2="10" stroke="currentColor" stroke-width="0.5"/>
+                <line x1="10" y1="3" x2="13.5" y2="10" stroke="currentColor" stroke-width="0.5"/>
+                <line x1="17" y1="3" x2="13.5" y2="10" stroke="currentColor" stroke-width="0.5"/>
+                <line x1="6.5" y1="10" x2="10" y2="17" stroke="currentColor" stroke-width="0.5"/>
+                <line x1="13.5" y1="10" x2="10" y2="17" stroke="currentColor" stroke-width="0.5"/>
+              </svg>
+            </div>
+          </div>
+          <p class="text-gray-500 text-sm">
+            © 2024 Swarm Lab. Experimental data platform for swarm intelligence research.
           </p>
         </div>
       </div>
@@ -232,6 +303,8 @@
 </template>
 
 <script setup>
+const isMobileMenuOpen = ref(false)
+const showSimulation = ref(false)
 useHead({
   title: 'About - Swarm Lab',
   meta: [
