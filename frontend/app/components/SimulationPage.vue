@@ -21,7 +21,7 @@
           </button>
         </div>
         <div
-          v-if="props.tasks.length === 0"
+          v-if="filteredTasks.length === 0"
           class="text-center py-8 text-gray-500"
         >
           <svg
@@ -42,7 +42,7 @@
             <thead class="bg-gray-50">
               <tr>
                 <th
-                  v-for="header in Object.keys(props.tasks[0] || {})"
+                  v-for="header in Object.keys(filteredTasks[0] || {})"
                   :key="header"
                   class="px-4 py-2 text-left text-xs font-medium text-gray-500 tracking-wider"
                 >
@@ -52,12 +52,12 @@
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
               <tr
-                v-for="(task, index) in props.tasks.slice(0, 5)"
+                v-for="(task, index) in filteredTasks.slice(0, 5)"
                 :key="index"
                 class="hover:bg-gray-50"
               >
                 <td
-                  v-for="header in Object.keys(props.tasks[0] || {})"
+                  v-for="header in Object.keys(filteredTasks[0] || {})"
                   :key="header"
                   class="px-4 py-2 whitespace-nowrap text-sm text-gray-900"
                 >
@@ -67,10 +67,49 @@
             </tbody>
           </table>
           <div
-            v-if="props.tasks.length > 5"
+            v-if="filteredTasks.length > 5"
             class="text-center py-2 text-sm text-gray-500"
           >
-            Showing first 5 of {{ props.tasks.length }} rows
+            Showing first 5 of {{ filteredTasks.length }} rows
+          </div>
+        </div>
+
+        <!-- Data Filtering Controls -->
+        <div v-if="props.tasks.length > 10" class="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+          <h4 class="text-sm font-medium text-gray-700 mb-3">Filter Data for Simulation</h4>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                Limit Data Rows
+              </label>
+              <input
+                v-model.number="dataLimit"
+                type="number"
+                :min="1"
+                :max="props.tasks.length"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Enter number of rows"
+              />
+              <p class="text-xs text-gray-500 mt-1">
+                Showing {{ Math.min(dataLimit, props.tasks.length) }} of {{ props.tasks.length }} rows
+              </p>
+            </div>
+            
+            <div>
+              <label class="flex items-center cursor-pointer">
+                <input
+                  v-model="showAllData"
+                  type="checkbox"
+                  class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <span class="ml-2 text-sm text-gray-700">Show all data</span>
+              </label>
+            </div>
+
+            <div class="text-sm text-gray-600">
+              <p>Preview: {{ filteredTasks.length }} rows</p>
+              <p class="text-xs">This affects simulation input only</p>
+            </div>
           </div>
         </div>
       </div>
@@ -1501,6 +1540,18 @@ const modalData = ref({ agent: "", tasks: [] });
 const status = ref({ ACO: "Idle", PSO: "Idle" });
 const expandedTasks = ref({ ACO: {}, PSO: {} });
 
+// Data filtering state
+const dataLimit = ref(props.tasks.length);
+const showAllData = ref(false);
+
+// Computed filtered tasks
+const filteredTasks = computed(() => {
+  if (showAllData.value) {
+    return props.tasks;
+  }
+  return props.tasks.slice(0, dataLimit.value);
+});
+
 // Reactive state for backend results
 const acoFinalAssignment = ref([]);
 const psoFinalAssignment = ref([]);
@@ -1858,7 +1909,7 @@ const runSimulation = async () => {
   initCharts();
 
   // Simple simulation with dummy data - prevent stack overflow
-  const numTasks = props.tasks.length;
+  const numTasks = filteredTasks.value.length;
   const numAgents = parameters.num_agents;
 
   // Add minimal logs for each algorithm
