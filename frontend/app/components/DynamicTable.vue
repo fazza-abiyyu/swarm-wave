@@ -413,16 +413,19 @@ const validationErrors = computed(() => {
   })
 
   // Check for non-numeric values
-  headers.value.forEach((header, colIndex) => {
+headers.value.forEach((header, colIndex) => {
     columnData.value[colIndex]?.forEach((value, rowIndex) => {
-      if (value && value.trim() !== '') {
-        const numValue = parseFloat(value)
-        if (isNaN(numValue)) {
-          errors.push(`Row ${rowIndex + 1}, Column "${header}" must be a number`)
-        }
-      }
+      const trimmed = typeof value === 'string' ? value.trim() : String(value ?? '')
+      if (!trimmed) return
+
+      // Hanya gunakan satu regex validation yang kuat
+      if (!/^-?(?:\d+(?:\.\d*)?|\.\d+)$/.test(trimmed)) {
+    errors.push(`Row ${rowIndex + 1}, Column "${header}" must be a number`)
+    return
+  }
     })
   })
+
 
   return errors
 })
@@ -448,8 +451,7 @@ const validateCell = (value, header = '') => {
   if (value.trim() === '') return false
   
   // All columns must be numeric
-    const numValue = parseFloat(value)
-    if (isNaN(numValue)) return false
+  if (!/^-?(?:\d+(?:\.\d*)?|\.\d+)$/.test(value.trim())) return false
   
   return true
 }
@@ -469,8 +471,7 @@ const getCellErrorMessage = (rowIndex, colIndex) => {
   if (value === null || value === undefined || value.trim() === '') return 'Required'
   
   // All columns must be numeric
-  const numValue = parseFloat(value)
-  if (isNaN(numValue)) return 'Must be a number'
+  if (!/^-?(?:\d+(?:\.\d*)?|\.\d+)$/.test(value.trim())) return 'Must be a number'
   
   return ''
 }
@@ -542,9 +543,9 @@ const sampleDatasets = {
         {"Task_ID": "3", "CPU_Usage (%)": "44", "RAM_Usage (MB)": "4610", "Disk_IO (MB/s)": "65", "Network_IO (MB/s)": "25", "Priority": "3", "VM_ID": "109", "Execution_Time (s)": "8.53", "Target": "1"}
     ],
     manufacturing: [
-        {"Job_ID": "1", "Processing_Time": "45", "Setup_Time": "5", "Material_Cost": "250", "Labor_Hours": "8", "Machine_Type": "CNC", "Priority": "3", "Deadline": "120", "Quality_Score": "95"},
-        {"Job_ID": "2", "Processing_Time": "120", "Setup_Time": "15", "Material_Cost": "800", "Labor_Hours": "20", "Machine_Type": "Lathe", "Priority": "5", "Deadline": "200", "Quality_Score": "88"},
-        {"Job_ID": "3", "Processing_Time": "30", "Setup_Time": "2", "Material_Cost": "150", "Labor_Hours": "4", "Machine_Type": "Mill", "Priority": "2", "Deadline": "72", "Quality_Score": "92"}
+        {"Job_ID": "1", "Processing_Time": "45", "Setup_Time": "5", "Material_Cost": "250", "Labor_Hours": "8", "Priority": "3", "Deadline": "120", "Quality_Score": "95"},
+        {"Job_ID": "2", "Processing_Time": "120", "Setup_Time": "15", "Material_Cost": "800", "Labor_Hours": "20", "Priority": "5", "Deadline": "200", "Quality_Score": "88"},
+        {"Job_ID": "3", "Processing_Time": "30", "Setup_Time": "2", "Material_Cost": "150", "Labor_Hours": "4", "Priority": "2", "Deadline": "72", "Quality_Score": "92"}
     ],
     logistics: [
         {"Order_ID": "1", "Distance_km": "250", "Weight_kg": "1500", "Volume_m3": "8.5", "Urgency": "4", "Fuel_Cost": "180", "Delivery_Time": "4.2", "Customer_Rating": "4.8", "Priority": "3"},
@@ -552,9 +553,9 @@ const sampleDatasets = {
         {"Order_ID": "3", "Distance_km": "120", "Weight_kg": "800", "Volume_m3": "4.1", "Urgency": "2", "Fuel_Cost": "95", "Delivery_Time": "2.1", "Customer_Rating": "4.9", "Priority": "2"}
     ],
     finance: [
-        {"Investment_ID": "1", "Amount": "50000", "Risk_Score": "7.5", "Expected_Return": "12.5", "Duration_Months": "24", "Market_Volatility": "15.2", "Sector": "Tech", "Liquidity": "8.5", "Priority": "4"},
-        {"Investment_ID": "2", "Amount": "75000", "Risk_Score": "4.2", "Expected_Return": "8.8", "Duration_Months": "12", "Market_Volatility": "8.7", "Sector": "Healthcare", "Liquidity": "9.2", "Priority": "3"},
-        {"Investment_ID": "3", "Amount": "30000", "Risk_Score": "9.8", "Expected_Return": "18.5", "Duration_Months": "36", "Market_Volatility": "22.3", "Sector": "Crypto", "Liquidity": "6.8", "Priority": "5"}
+        {"Investment_ID": "1", "Amount": "50000", "Risk_Score": "7.5", "Expected_Return": "12.5", "Duration_Months": "24", "Market_Volatility": "15.2", "Liquidity": "8.5", "Priority": "4"},
+        {"Investment_ID": "2", "Amount": "75000", "Risk_Score": "4.2", "Expected_Return": "8.8", "Duration_Months": "12", "Market_Volatility": "8.7", "Liquidity": "9.2", "Priority": "3"},
+        {"Investment_ID": "3", "Amount": "30000", "Risk_Score": "9.8", "Expected_Return": "18.5", "Duration_Months": "36", "Market_Volatility": "22.3", "Liquidity": "6.8", "Priority": "5"}
     ],
     healthcare: [
         {"Patient_ID": "1", "Age": "45", "Treatment_Duration": "14", "Medication_Cost": "2500", "Severity": "3", "Insurance_Coverage": "0.8", "Recovery_Rate": "0.85", "Risk_Factor": "2.1", "Priority": "2"},
