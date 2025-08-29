@@ -1,6 +1,6 @@
 import numpy as np
 import random
-# from tqdm import tqdm <-- tidak perlu jika tidak digunakan
+import json
 
 class ACO_MultiAgent_Scheduler:
     def __init__(self, tasks, cost_function, heuristic_function,
@@ -16,7 +16,6 @@ class ACO_MultiAgent_Scheduler:
         self.agent_id_col = agent_id_col
 
         if not agents:
-            print(f"⚠️ Data agent tidak ditemukan. Membuat {num_default_agents} agent default secara otomatis.")
             self.agents = [{self.agent_id_col: f'DefaultAgent-{i+1}'} for i in range(num_default_agents)]
         else:
             self.agents = agents
@@ -38,10 +37,6 @@ class ACO_MultiAgent_Scheduler:
         self.best_schedule = None
         self.best_cost = float('inf')
         
-        # BARIS BARU: Untuk menyimpan riwayat cost terbaik
-        self.cost_history = []
-
-    # ... (metode-metode lain seperti _calculate_heuristics, _construct_solution, dll. tidak diubah) ...
     def _calculate_heuristics(self):
         heuristics = np.zeros((self.n_tasks, self.n_tasks))
         for i in range(self.n_tasks):
@@ -81,8 +76,7 @@ class ACO_MultiAgent_Scheduler:
             task = self.tasks[task_idx]
             best_agent_id = min(agent_finish_times, key=agent_finish_times.get)
             start_time = agent_finish_times[best_agent_id]
-            # Cari field execution time dengan berbagai kemungkinan nama
-            duration = task.get('Execution_Time (s)', task.get('execution_time', task.get('duration', 1)))
+            duration = task.get('length', 1) 
             finish_time = start_time + duration
             agent_finish_times[best_agent_id] = finish_time
             
@@ -106,11 +100,12 @@ class ACO_MultiAgent_Scheduler:
             self.pheromones[tour[-1], tour[0]] += pheromone_to_add
     
     def run(self):
-        # Hapus cetakan "Memulai optimasi..." agar lebih ringkas
-        # print("Memulai optimasi penjadwalan dengan ACO...")
+        log_message = "Starting ACO optimization..."
+        yield json.dumps({"type": "log", "message": log_message})
         
         for i in range(self.n_iterations):
             all_tours, all_costs = [], []
+            new_best_found_in_iter = False
             for _ in range(self.n_ants):
                 task_sequence = self._construct_solution()
                 schedule, makespan = self._assign_to_agents(task_sequence)
@@ -120,17 +115,25 @@ class ACO_MultiAgent_Scheduler:
                 if cost < self.best_cost:
                     self.best_cost = cost
                     self.best_schedule = schedule
+                    log_message = f"Iteration {i + 1}: New best solution found! Makespan: {self.best_cost:.2f}"
+                    yield json.dumps({"type": "log", "message": log_message})
+                    new_best_found_in_iter = True
                 
-            # --- Perubahan PENTING: Hapus SEMUA cetakan di dalam loop ---
-            # Hapus atau komentari baris ini:
-            # if self.best_cost < old_best_cost:
-            #     print(f"\nIterasi {i + 1}: Ditemukan solusi baru yang lebih baik! Makespan: {self.best_cost:.2f}")
-            # print(f"\rIterasi {i + 1}/{self.n_iterations} -> Terbaik Iterasi Ini: {best_in_iteration:.2f} | Terbaik Sejauh Ini: {self.best_cost:.2f}", end="")
-
             self._update_pheromones(all_tours, all_costs)
-            self.cost_history.append(self.best_cost)
-        
-        # Hapus cetakan "Optimasi Selesai!"
-        # print("\nOptimasi Selesai!")
-        
-        return self.best_schedule, self.best_cost
+            
+            # Kirim data update untuk grafik dan log progress
+            progress_log = f"Progress: Iteration {i + 1}/{self.n_iterations} -> Current Best: {self.best_cost:.2f}"
+            yield json.dumps({
+                "type": "iteration",
+                "iteration": i + 1,
+                "makespan": self.best_cost,
+                "log_message": progress_log
+            })
+
+        # Kirim hasil final
+        yield json.dumps({
+            "type": "done",
+            "schedule": self.best_schedule,
+            "makespan": self.best_cost,
+            "log_message": "ACO Optimization Finished!"
+        })

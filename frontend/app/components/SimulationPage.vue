@@ -224,12 +224,12 @@
               </span>
             </div>
             <input
-               v-model.number="parameters.n_iterations"
-               type="number"
-               min="1"
-               max="100"
-               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-             />
+              v-model.number="parameters.n_iterations"
+              type="number"
+              min="1"
+              max="100"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
           </div>
 
           <div>
@@ -238,7 +238,7 @@
                 Task ID Column
               </label>
               <span
-                 class="relative group cursor-pointer text-gray-400 text-xs font-bold"
+                class="relative group cursor-pointer text-gray-400 text-xs font-bold"
               >
                 ?
                 <div
@@ -270,9 +270,9 @@
                 ?
                 <div
                   class="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded-md shadow-lg p-2 left-4 top-0 w-64 z-10"
-                 >
-                   Column name for agent IDs in your dataset.
-                   Default: 'id'
+                  >
+                  Column name for agent IDs in your dataset.
+                  Default: 'id'
                 </div>
               </span>
             </div>
@@ -555,34 +555,6 @@
                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
-
-                <div>
-                  <div class="flex items-center gap-1 mb-2">
-                    <label class="block text-sm font-medium text-gray-700">
-                      Social (c2)
-                    </label>
-                    <span
-                      class="relative group cursor-pointer text-gray-400 text-xs font-bold"
-                    >
-                      ?
-                      <div
-                        class="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded-md shadow-lg p-2 left-4 top-0 w-64 z-10"
-                      >
-                        Particle's attraction to the swarm's best known
-                        position. Higher values promote convergence to global
-                        best solutions. Range: 0-3. Example: 1.5
-                      </div>
-                    </span>
-                  </div>
-                  <input
-                    v-model.number="parameters.c2"
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    max="3"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
               </div>
             </div>
           </template>
@@ -628,7 +600,9 @@
                     ? 'bg-gray-100 text-gray-800'
                     : status.ACO === 'Running...'
                     ? 'bg-blue-100 text-blue-800'
-                    : 'bg-green-100 text-green-800',
+                    : status.ACO === 'Completed'
+                    ? 'bg-green-100 text-green-800'
+                    : 'bg-red-100 text-red-800',
                 ]"
               >
                 Status: {{ status.ACO }}
@@ -640,7 +614,7 @@
             <!-- ACO Logs -->
             <div>
               <h3 class="text-lg font-medium text-gray-900 mb-2">ACO Logs</h3>
-              <div class="bg-gray-50 rounded-lg p-4 h-64 overflow-y-auto">
+              <div class="bg-gray-50 rounded-lg p-4 h-64 overflow-y-auto" ref="acoLogsContainer">
                 <div
                   v-if="!logs.ACO || logs.ACO.length === 0"
                   class="text-gray-500 text-center"
@@ -671,12 +645,12 @@
           </div>
 
           <!-- ACO Assignment -->
-          <div v-if="selectedAlgorithms.includes('ACO')" class="mt-6">
+          <div class="mt-6">
             <div class="flex justify-between items-center mb-2">
               <h3 class="text-lg font-medium text-gray-900">
                 ACO Final Assignment
                 <span v-if="bestMakespan.ACO"
-                  >(Best Makespan: {{ bestMakespan.ACO }}s)</span
+                  >(Best Makespan: {{ parseFloat(bestMakespan.ACO).toFixed(2) }}s)</span
                 >
               </h3>
               <div class="flex gap-2">
@@ -716,30 +690,14 @@
                   </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
-                  <!-- Preview Mode -->
-                  <tr
-                    v-if="
-                      simulationStatus !== 'completed' &&
-                      (!finalAssignment.ACO || finalAssignment.ACO.length === 0)
-                    "
-                  >
-                    <td
-                      class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"
-                    >
-                      Agent 1
-                    </td>
-                    <td class="px-6 py-4 text-sm text-gray-500">No data available</td>
-                    <td
-                      class="px-6 py-4 text-sm text-gray-500 text-right font-mono"
-                    >
-                      N/A
-                    </td>
+                  <tr v-if="acoFinalAssignment.length === 0">
+                     <td colspan="3" class="px-6 py-4 text-center text-sm text-gray-500">
+                        No assignment data yet.
+                     </td>
                   </tr>
-                  <!-- Actual Data -->
                   <tr
                     v-for="assignment in acoFinalAssignment"
                     :key="assignment.agent"
-                    v-if="acoFinalAssignment && acoFinalAssignment.length > 0"
                   >
                     <td
                       class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"
@@ -751,6 +709,7 @@
                         <div
                           v-if="
                             !expandedTasks.ACO[assignment.agent] &&
+                            assignment.tasks &&
                             assignment.tasks.length > 10
                           "
                         >
@@ -765,10 +724,7 @@
                           </button>
                         </div>
                         <div
-                          v-else-if="
-                            expandedTasks.ACO[assignment.agent] ||
-                            assignment.tasks.length <= 10
-                          "
+                          v-else
                         >
                           <div class="max-h-32 overflow-y-auto">
                             {{
@@ -795,13 +751,7 @@
                     <td
                       class="px-6 py-4 text-sm text-gray-500 text-right font-mono"
                     >
-                      <span
-                        v-if="assignment.total_time === 'Preview...'"
-                        class="text-gray-500"
-                      >
-                        {{ assignment.total_time }}
-                      </span>
-                      <span v-else>
+                      <span>
                         {{
                           typeof assignment.total_time === "number"
                             ? assignment.total_time.toFixed(2)
@@ -833,7 +783,9 @@
                     ? 'bg-gray-100 text-gray-800'
                     : status.PSO === 'Running...'
                     ? 'bg-blue-100 text-blue-800'
-                    : 'bg-green-100 text-green-800',
+                    : status.PSO === 'Completed'
+                    ? 'bg-green-100 text-green-800'
+                    : 'bg-red-100 text-red-800',
                 ]"
               >
                 Status: {{ status.PSO }}
@@ -845,7 +797,7 @@
             <!-- PSO Logs -->
             <div>
               <h3 class="text-lg font-medium text-gray-900 mb-2">PSO Logs</h3>
-              <div class="bg-gray-50 rounded-lg p-4 h-64 overflow-y-auto">
+              <div class="bg-gray-50 rounded-lg p-4 h-64 overflow-y-auto" ref="psoLogsContainer">
                 <div
                   v-if="!logs.PSO || logs.PSO.length === 0"
                   class="text-gray-500 text-center"
@@ -876,12 +828,12 @@
           </div>
 
           <!-- PSO Assignment -->
-          <div v-if="selectedAlgorithms.includes('PSO')" class="mt-6">
+          <div class="mt-6">
             <div class="flex justify-between items-center mb-2">
               <h3 class="text-lg font-medium text-gray-900">
                 PSO Final Assignment
                 <span v-if="bestMakespan.PSO"
-                  >(Best Makespan: {{ bestMakespan.PSO }}s)</span
+                  >(Best Makespan: {{ parseFloat(bestMakespan.PSO).toFixed(2) }}s)</span
                 >
               </h3>
               <div class="flex gap-2">
@@ -921,30 +873,13 @@
                   </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
-                  <!-- Preview Mode -->
-                  <tr
-                    v-if="
-                      simulationStatus !== 'completed' &&
-                      (!finalAssignment.PSO || finalAssignment.PSO.length === 0)
-                    "
-                  >
-                    <td
-                      class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"
-                    >
-                      Agent 1
-                    </td>
-                    <td class="px-6 py-4 text-sm text-gray-500">No data available</td>
-                    <td
-                      class="px-6 py-4 text-sm text-gray-500 text-right font-mono"
-                    >
-                      N/A
-                    </td>
+                   <tr v-if="psoFinalAssignment.length === 0">
+                     <td colspan="3" class="px-6 py-4 text-center text-sm text-gray-500">
+                        No assignment data yet.
+                     </td>
                   </tr>
-                  <!-- Actual Data -->
                   <tr
-                    v-for="assignment in simulationStatus === 'completed'
-                      ? psoFinalAssignment
-                      : finalAssignment.PSO"
+                    v-for="assignment in psoFinalAssignment"
                     :key="assignment.agent"
                   >
                     <td
@@ -957,6 +892,7 @@
                         <div
                           v-if="
                             !expandedTasks.PSO[assignment.agent] &&
+                            assignment.tasks &&
                             assignment.tasks.length > 10
                           "
                         >
@@ -971,10 +907,7 @@
                           </button>
                         </div>
                         <div
-                          v-else-if="
-                            expandedTasks.PSO[assignment.agent] ||
-                            assignment.tasks.length <= 10
-                          "
+                          v-else
                         >
                           <div class="max-h-32 overflow-y-auto">
                             {{
@@ -985,6 +918,7 @@
                           </div>
                           <button
                             v-if="
+                              assignment.tasks &&
                               assignment.tasks.length > 10 &&
                               expandedTasks.PSO[assignment.agent]
                             "
@@ -1001,13 +935,7 @@
                     <td
                       class="px-6 py-4 text-sm text-gray-500 text-right font-mono"
                     >
-                      <span
-                        v-if="assignment.total_time === 'Preview...'"
-                        class="text-gray-500"
-                      >
-                        {{ assignment.total_time }}
-                      </span>
-                      <span v-else>
+                      <span>
                         {{
                           typeof assignment.total_time === "number"
                             ? assignment.total_time.toFixed(2)
@@ -1474,33 +1402,33 @@
                       v-html="renderMarkdown(message.content)"
                     ></div>
 
-                  <!-- Copy Button for AI responses -->
-                  <div
-                    v-if="message.role === 'assistant'"
-                    class="mt-2 flex justify-end"
-                  >
-                    <button
-                      @click="copyToClipboard(message.content)"
-                      class="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-100 transition-colors"
-                      title="Copy response"
+                    <!-- Copy Button for AI responses -->
+                    <div
+                      v-if="message.role === 'assistant'"
+                      class="mt-2 flex justify-end"
                     >
-                      <svg
-                        class="w-3 h-3"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
+                      <button
+                        @click="copyToClipboard(message.content)"
+                        class="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-100 transition-colors"
+                        title="Copy response"
                       >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                        />
-                      </svg>
-                      Copy
-                    </button>
+                        <svg
+                          class="w-3 h-3"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                          />
+                        </svg>
+                        Copy
+                      </button>
+                    </div>
                   </div>
-                </div>
               </div>
 
               <!-- Loading Indicator -->
@@ -1663,19 +1591,11 @@ import Chart from "chart.js/auto";
 import { marked } from "marked";
 import { useAiChatStream } from "~/composables/useAiChatStream";
 
-// Props
+// Props & Emits
 const props = defineProps({
-  tasks: {
-    type: Array,
-    required: true,
-  },
-  algorithms: {
-    type: Array,
-    default: () => [],
-  },
+  tasks: { type: Array, required: true },
+  algorithms: { type: Array, default: () => [] },
 });
-
-// Emits
 const emit = defineEmits(["back-to-table", "edit-data"]);
 
 // AI Chat Composable
@@ -1689,1264 +1609,421 @@ const {
   clearChat,
 } = useAiChatStream();
 
-// State
+
+// --- STATE MANAGEMENT ---
 const selectedAlgorithms = ref([]);
-// Toast notification state
-const toast = ref({
-  show: false,
-  message: "",
-  type: "error" // 'error', 'success', 'info'
-});
 const isRunning = ref(false);
-const logs = ref({});
-const finalAssignment = ref({});
-const bestMakespan = ref({});
-const executionTime = ref({});
-const loadBalanceIndex = ref({});
-const computationTime = ref({});
-const chartData = ref({});
-const dataValidation = ref({
-  isValid: true,
-  errors: [],
-  warnings: [],
-  summary: {},
-});
-const userMessage = ref("")
+const logs = ref({ ACO: [], PSO: [] });
+const bestMakespan = ref({ ACO: null, PSO: null });
+const executionTime = ref({ ACO: null, PSO: null });
+const loadBalanceIndex = ref({ ACO: null, PSO: null });
+const computationTime = ref({ ACO: null, PSO: null });
+const status = ref({ ACO: "Idle", PSO: "Idle" });
+const acoFinalAssignment = ref([]);
+const psoFinalAssignment = ref([]);
 const chartCanvasACO = ref(null);
 const chartCanvasPSO = ref(null);
-const messagesContainer = ref<HTMLElement | null>(null);
+const acoLogsContainer = ref(null);
+const psoLogsContainer = ref(null);
 let chartACO = null;
 let chartPSO = null;
-const dummyFinalAssignment = ref(null);
-const showTaskModal = ref(false);
-const modalData = ref({ agent: "", tasks: [] });
-const status = ref({ ACO: "Idle", PSO: "Idle" });
-const expandedTasks = ref({ ACO: {}, PSO: {} });
-
-// Data filtering state
-// Initialize dataLimit with props.tasks.length or 1 as minimum
+const toast = ref({ show: false, message: "", type: "error" });
+const dataValidation = ref({ isValid: true, errors: [], warnings: [], summary: {} });
 const dataLimit = ref(Math.max(1, props.tasks.length));
 const showAllData = ref(false);
+const parameters = reactive({
+  num_default_agents: 3, n_iterations: 100, task_id_col: 'id', agent_id_col: '',
+  n_ants: 10, alpha: 1.0, beta: 2.0, evaporation_rate: 0.5, pheromone_deposit: 100.0,
+  n_particles: 30, w: 0.5, c1: 1.5, c2: 1.5,
+});
+const expandedTasks = ref({ ACO: {}, PSO: {} });
 
-// Computed filtered tasks - ensures minimum 1 task is shown
+// --- COMPUTED PROPERTIES ---
 const filteredTasks = computed(() => {
-  // Handle case when there are no tasks
-  if (!props.tasks || props.tasks.length === 0) {
-    return [];
-  }
-  
-  if (showAllData.value) {
-    return props.tasks;
-  }
-  
-  // Calculate actual limit with minimum 1 task
+  if (!props.tasks || props.tasks.length === 0) return [];
+  if (showAllData.value) return props.tasks;
   const actualLimit = Math.max(1, Math.min(dataLimit.value, props.tasks.length));
   return props.tasks.slice(0, actualLimit);
 });
 
-// Computed dataset headers
 const datasetHeaders = computed(() => {
   if (props.tasks.length === 0) return [];
   return Object.keys(props.tasks[0]);
 });
 
-// Reactive state for backend results
-const acoFinalAssignment = ref([]);
-const psoFinalAssignment = ref([]);
-const simulationStatus = ref("idle"); // idle, running, completed
+// --- SIMULATION LOGIC (STREAMING) ---
 
-// Show toast notification
-const showToast = (message, type = 'error') => {
-  toast.value = {
-    show: true,
-    message,
-    type
-  };
-  
-  // Hide toast after 3 seconds
-  setTimeout(() => {
-    toast.value.show = false;
-  }, 3000);
+const resetSimulationStateForAlgo = (algo) => {
+  status.value[algo] = "Idle";
+  logs.value[algo] = [];
+  bestMakespan.value[algo] = null;
+  executionTime.value[algo] = null;
+  loadBalanceIndex.value[algo] = null;
+  computationTime.value[algo] = null;
+  if (algo === 'ACO') acoFinalAssignment.value = [];
+  if (algo === 'PSO') psoFinalAssignment.value = [];
+
+  const chart = algo === 'ACO' ? chartACO : chartPSO;
+  if (chart) {
+    chart.data.labels = [];
+    chart.data.datasets[0].data = [];
+    chart.data.datasets[1].data = [];
+    chart.update();
+  }
 };
 
-// Floating Chat State
+const runSimulation = async () => {
+  validateData();
+  if (filteredTasks.value.length === 0) {
+    showToast("Please add at least one task to the data.", 'error');
+    return;
+  }
+  if (!dataValidation.value.isValid || selectedAlgorithms.value.length === 0) {
+    showToast("Please select an algorithm and ensure data is valid.", 'error');
+    return;
+  }
+
+  isRunning.value = true;
+  selectedAlgorithms.value.forEach(resetSimulationStateForAlgo);
+
+  const runningSims = selectedAlgorithms.value.map(async (algorithm) => {
+    const requestBody = {
+      algorithm: algorithm,
+      tasks: filteredTasks.value,
+      parameters: { ...parameters }
+    };
+
+    try {
+      const response = await fetch('http://127.0.0.1:5001/stream_scheduling', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok || !response.body) {
+        throw new Error(`Server error: ${response.statusText}`);
+      }
+
+      status.value[algorithm] = "Running...";
+      const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        
+        const lines = value.split('\n\n').filter(line => line.startsWith('data:'));
+        for (const line of lines) {
+          const jsonData = line.substring(5);
+          if (jsonData) {
+            handleStreamEvent(algorithm, JSON.parse(jsonData));
+          }
+        }
+      }
+    } catch (error) {
+      console.error(`Error with ${algorithm} simulation:`, error);
+      logs.value[algorithm].push(`❌ Simulation failed: ${error.message}`);
+      status.value[algorithm] = "Failed";
+    }
+  });
+
+  await Promise.all(runningSims);
+  isRunning.value = false;
+};
+
+const handleStreamEvent = (algorithm, data) => {
+  const chart = algorithm === 'ACO' ? chartACO : chartPSO;
+  const logsContainer = algorithm === 'ACO' ? acoLogsContainer.value : psoLogsContainer.value;
+
+  const processLog = (message) => {
+      logs.value[algorithm].push(message);
+      nextTick(() => {
+          if (logsContainer) {
+              logsContainer.scrollTop = logsContainer.scrollHeight;
+          }
+      });
+  };
+
+  switch (data.type) {
+    case 'log':
+    case 'start':
+      processLog(data.message);
+      break;
+    
+    case 'iteration':
+      processLog(data.log_message);
+      bestMakespan.value[algorithm] = data.makespan;
+      if (chart) {
+        chart.data.labels.push(data.iteration);
+        chart.data.datasets[0].data.push(data.makespan);
+        // Only show the best point marker
+        const bestVal = Math.min(...chart.data.datasets[0].data);
+        const bestIndex = chart.data.datasets[0].data.indexOf(bestVal);
+        chart.data.datasets[1].data = chart.data.datasets[0].data.map((val, idx) => idx === bestIndex ? val : null);
+
+        chart.update('none'); // Use 'none' for smoother updates
+      }
+      break;
+
+    case 'done':
+      processLog(data.log_message);
+      bestMakespan.value[algorithm] = data.makespan;
+      const finalAssignments = transformAssignmentData(data.schedule);
+      if (algorithm === 'ACO') acoFinalAssignment.value = finalAssignments;
+      if (algorithm === 'PSO') psoFinalAssignment.value = finalAssignments;
+      break;
+
+    case 'final_metrics':
+      executionTime.value[algorithm] = data.execution_time;
+      computationTime.value[algorithm] = data.execution_time;
+      loadBalanceIndex.value[algorithm] = data.load_balance_index;
+      status.value[algorithm] = "Completed";
+      break;
+
+    case 'error':
+      processLog(`❌ ERROR: ${data.message}`);
+      status.value[algorithm] = "Failed";
+      break;
+  }
+};
+
+const transformAssignmentData = (schedule) => {
+  if (!schedule || schedule.length === 0) return [];
+  const agentMap = new Map();
+
+  schedule.forEach(task => {
+    const agentId = task.agent_id;
+    if (!agentMap.has(agentId)) {
+      agentMap.set(agentId, { tasks: [], finish_time: 0 });
+    }
+    const agentData = agentMap.get(agentId);
+    agentData.tasks.push(task.task_id);
+    agentData.finish_time = Math.max(agentData.finish_time, task.finish_time);
+  });
+
+  return Array.from(agentMap.entries()).map(([agent, data]) => ({
+    agent: agent,
+    tasks: data.tasks,
+    total_time: data.finish_time
+  }));
+};
+
+// --- UI & HELPER FUNCTIONS ---
+
+const initCharts = () => {
+    const createChart = (canvasRef, label, color) => {
+        if (!canvasRef.value) return null;
+        const ctx = canvasRef.value.getContext("2d");
+        return new Chart(ctx, {
+            type: "line",
+            data: {
+                labels: [],
+                datasets: [
+                    { label: `${label} Best Makespan`, data: [], borderColor: color, backgroundColor: 'transparent', tension: 0.1, fill: true },
+                    { label: "Best Point", data: [], backgroundColor: color, borderColor: color, pointRadius: 5, pointHoverRadius: 7, showLine: false }
+                ]
+            },
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false,
+                animation: { duration: 200 },
+                scales: { 
+                    y: { beginAtZero: false, title: { display: true, text: "Makespan" } }, 
+                    x: { title: { display: true, text: "Iteration" } } 
+                } 
+            }
+        });
+    };
+    if (chartACO) chartACO.destroy();
+    if (chartPSO) chartPSO.destroy();
+    nextTick(() => {
+        chartACO = createChart(chartCanvasACO, 'ACO', 'rgb(59, 130, 246)');
+        chartPSO = createChart(chartCanvasPSO, 'PSO', 'rgb(239, 68, 68)');
+    });
+};
+
+const validateData = () => {
+  const errors = [];
+  if (props.tasks.length === 0) {
+    errors.push("No tasks available.");
+  }
+  // Add more comprehensive validation if needed
+  dataValidation.value = {
+    isValid: errors.length === 0,
+    errors,
+    warnings: [],
+  };
+};
+
+const resetSimulation = () => {
+  selectedAlgorithms.value.forEach(resetSimulationStateForAlgo);
+  isRunning.value = false;
+};
+
+const editData = () => emit("edit-data");
+
+const exportData = (algorithm, format) => {
+    const assignment = algorithm === 'ACO' ? acoFinalAssignment.value : psoFinalAssignment.value;
+    if (!assignment || assignment.length === 0) {
+        showToast(`No data to export for ${algorithm}`, 'info');
+        return;
+    }
+
+    let content = '';
+    let mimeType = '';
+    let fileExtension = '';
+
+    if (format === 'json') {
+        content = JSON.stringify(assignment, null, 2);
+        mimeType = 'application/json';
+        fileExtension = 'json';
+    } else { // csv
+        const headers = ["Agent", "Tasks", "Total Time"];
+        const rows = assignment.map(row => [
+            `"${row.agent}"`,
+            `"${Array.isArray(row.tasks) ? row.tasks.join(";") : row.tasks}"`,
+            `"${row.total_time}"`
+        ]);
+        content = [headers.join(","), ...rows.map(row => row.join(","))].join("\n");
+        mimeType = 'text/csv;charset=utf-8;';
+        fileExtension = 'csv';
+    }
+
+    const blob = new Blob([content], { type: mimeType });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `${algorithm}_final_assignment.${fileExtension}`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+};
+
+const exportJSON = (algorithm) => exportData(algorithm, 'json');
+const exportCSV = (algorithm) => exportData(algorithm, 'csv');
+
+const toggleTaskExpansion = (algorithm, agentId) => {
+  if (!expandedTasks.value[algorithm]) expandedTasks.value[algorithm] = {};
+  expandedTasks.value[algorithm][agentId] = !expandedTasks.value[algorithm][agentId];
+};
+
+// --- LIFECYCLE HOOKS ---
+onMounted(() => {
+  if (props.algorithms && props.algorithms.length > 0) {
+    selectedAlgorithms.value = [...props.algorithms];
+  }
+  validateData();
+  initCharts();
+});
+
+watch(props.tasks, () => {
+    validateData();
+    dataLimit.value = props.tasks.length;
+}, { deep: true, immediate: true });
+
+// --- AI & CHAT WINDOW (UNCHANGED) ---
+const userMessage = ref("");
 const isChatOpen = ref(false);
 const draggablePosition = ref({ x: 0, y: 0 });
 const isDragging = ref(false);
 const dragStart = ref({ x: 0, y: 0 });
 const chatWindow = ref(null);
-
-// Resize State
 const chatWindowSize = ref({ width: 384, height: 500 });
 const isResizing = ref(false);
 const resizeStart = ref({ x: 0, y: 0, width: 0, height: 0 });
+const messagesContainer = ref(null);
 
-// Data initialization functions
-const initializeACOAssignments = () => {
-  acoFinalAssignment.value = [];
-};
+const openChat = () => isChatOpen.value = true;
+const closeChat = () => isChatOpen.value = false;
+const renderMarkdown = (text) => marked(text || '');
+const copyToClipboard = (text) => navigator.clipboard.writeText(text).then(() => showToast('Copied to clipboard', 'success'));
 
-const initializePSOAssignments = () => {
-  psoFinalAssignment.value = [];
-};
-
-// Edit data function
-const editData = () => {
-  emit("edit-data", props.tasks);
-  emit("back-to-table");
-};
-
-// Parameters
-const parameters = reactive({
-  // Common
-  num_default_agents: 3,
-  n_iterations: 100,
-  task_id_col: 'id',
-  agent_id_col: '',
-
-  // ACO specific
-  n_ants: 10,
-  alpha: 1.0,
-  beta: 2.0,
-  evaporation_rate: 0.5,
-  pheromone_deposit: 100.0,
-
-  // PSO specific
-  n_particles: 30,
-  w: 0.5,
-  c1: 1.5,
-  c2: 1.5,
-});
-
-// Chart data already declared above
-
-// Watch for dataset changes to update default column selections
-watch(datasetHeaders, (newHeaders) => {
-  if (newHeaders.length > 0) {
-    // Set task_id_col to first header if not already set
-    if (!parameters.task_id_col || parameters.task_id_col === 'id') {
-      parameters.task_id_col = newHeaders[0];
-    }
-    // Keep agent_id_col as empty (none) by default
-    if (!parameters.agent_id_col) {
-      parameters.agent_id_col = '';
-    }
-  }
-}, { immediate: true });
-
-// Initialize charts
-const initCharts = () => {
-  // ACO Chart
-  if (chartCanvasACO.value) {
-    const ctx = chartCanvasACO.value.getContext("2d");
-    chartACO = new Chart(ctx, {
-      type: "line",
-      data: {
-        labels: [],
-        datasets: [
-          {
-            label: "ACO Best Makespan",
-            data: [],
-            borderColor: "rgb(59, 130, 246)",
-            backgroundColor: "rgba(59, 130, 246, 0.1)",
-            tension: 0.4,
-            fill: true,
-          },
-          {
-            label: "Best Makespan",
-            data: [],
-            backgroundColor: "rgb(59, 130, 246)",
-            borderColor: "rgb(59, 130, 246)",
-            pointRadius: 6,
-            pointHoverRadius: 8,
-            showLine: false,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            display: true,
-          },
-        },
-        scales: {
-          y: {
-            beginAtZero: false,
-            title: {
-              display: true,
-              text: "Makespan",
-            },
-          },
-          x: {
-            title: {
-              display: true,
-              text: "Iteration",
-            },
-          },
-        },
-      },
-    });
-  }
-
-  // PSO Chart
-  if (chartCanvasPSO.value) {
-    const ctx = chartCanvasPSO.value.getContext("2d");
-    chartPSO = new Chart(ctx, {
-      type: "line",
-      data: {
-        labels: [],
-        datasets: [
-          {
-            label: "PSO Best Makespan",
-            data: [],
-            borderColor: "rgb(239, 68, 68)",
-            backgroundColor: "rgba(239, 68, 68, 0.1)",
-            tension: 0.4,
-            fill: true,
-          },
-          {
-            label: "Best Makespan",
-            data: [],
-            backgroundColor: "rgb(239, 68, 68)",
-            borderColor: "rgb(239, 68, 68)",
-            pointRadius: 6,
-            pointHoverRadius: 8,
-            showLine: false,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            display: true,
-          },
-        },
-        scales: {
-          y: {
-            beginAtZero: false,
-            title: {
-              display: true,
-              text: "Makespan",
-            },
-          },
-          x: {
-            title: {
-              display: true,
-              text: "Iteration",
-            },
-          },
-        },
-      },
-    });
-  }
-};
-
-// Data validation and preview
-const validateData = () => {
-  const errors = [];
-  const warnings = [];
-  const summary = {
-    totalRows: props.tasks.length,
-    emptyCells: 0,
-    validRows: 0,
-    numericColumns: [],
-    textColumns: [],
-  };
-
-  if (props.tasks.length === 0 || props.tasks.length < 1) {
-    errors.push("No tasks available. Please add at least 1 task to the data table.");
-    dataValidation.value = { isValid: false, errors, warnings, summary };
-    return;
-  }
-
-  if (props.tasks.length < 1) {
-    errors.push("Minimum 1 task is required for simulation.");
-    dataValidation.value = { isValid: false, errors, warnings, summary };
-    return;
-  }
-
-  // Analyze each task for valid data
-  props.tasks.forEach((task, index) => {
-    const taskKeys = Object.keys(task);
-    let hasValidData = false;
-    let rowHasValidNumeric = false;
-
-    taskKeys.forEach((key) => {
-      const value = task[key];
-      const strValue = String(value).trim();
-
-      if (
-        value === null ||
-        value === undefined ||
-        value === "" ||
-        strValue === ""
-      ) {
-        summary.emptyCells++;
-        // Treat empty as 0 for validation purposes
-        if (!summary.numericColumns.includes(key))
-          summary.numericColumns.push(key);
-        rowHasValidNumeric = true;
-      } else {
-        hasValidData = true;
-
-        // Validate all non-empty values must be numeric
-        const numValue = Number(strValue);
-
-        if (!isNaN(numValue) && isFinite(numValue)) {
-          // Check for negative values
-          if (numValue < 0) {
-            errors.push(
-              `Row ${index + 1}: ${key} cannot be negative (found: "${strValue}")`
-            );
-          } else {
-            if (!summary.numericColumns.includes(key))
-              summary.numericColumns.push(key);
-            rowHasValidNumeric = true;
-          }
-        } else {
-          errors.push(
-            `Row ${index + 1}: ${key} must be numeric (found: "${strValue}")`
-          );
-          return;
-        }
-      }
-    });
-
-    if (rowHasValidNumeric) summary.validRows++;
-  });
-
-  // Validation rules - allow empty values as 0
-  if (summary.validRows === 0 && props.tasks.length === 0) {
-    errors.push("No tasks available. Please add tasks to the data table.");
-  }
-
-  if (summary.emptyCells > 0) {
-    warnings.push(
-      `${summary.emptyCells} empty cells detected. These will be treated as 0 during simulation.`
-    );
-  }
-
-  dataValidation.value = {
-    isValid: errors.length === 0,
-    errors,
-    warnings,
-    summary,
-  };
-};
-
-// Update charts
-const updateCharts = () => {
-  if (chartACO && chartData.value.ACO.labels.length > 0) {
-    chartACO.data.labels = chartData.value.ACO.labels;
-    chartACO.data.datasets[0].data = chartData.value.ACO.values;
-
-    // Add best makespan marker
-    const minValue = Math.min(...chartData.value.ACO.values);
-    const minIndex = chartData.value.ACO.values.indexOf(minValue);
-
-    chartACO.data.datasets[1] = {
-      label: "Best Makespan",
-      data: chartData.value.ACO.values.map((value, index) =>
-        index === minIndex ? value : null
-      ),
-      backgroundColor: "rgb(59, 130, 246)",
-      borderColor: "rgb(59, 130, 246)",
-      pointRadius: 6,
-      pointHoverRadius: 8,
-      showLine: false,
-    };
-
-    chartACO.update();
-  }
-
-  if (chartPSO && chartData.value.PSO.labels.length > 0) {
-    chartPSO.data.labels = chartData.value.PSO.labels;
-    chartPSO.data.datasets[0].data = chartData.value.PSO.values;
-
-    // Add best makespan marker
-    const minValue = Math.min(...chartData.value.PSO.values);
-    const minIndex = chartData.value.PSO.values.indexOf(minValue);
-
-    chartPSO.data.datasets[1] = {
-      label: "Best Makespan",
-      data: chartData.value.PSO.values.map((value, index) =>
-        index === minIndex ? value : null
-      ),
-      backgroundColor: "rgb(239, 68, 68)",
-      borderColor: "rgb(239, 68, 68)",
-      pointRadius: 6,
-      pointHoverRadius: 8,
-      showLine: false,
-    };
-
-    chartPSO.update();
-  }
-};
-
-// Mock simulation function for multiple algorithms
-const runSimulation = async () => {
-  validateData();
-  
-  // Check if there are no tasks available
-  if (filteredTasks.value.length === 0) {
-    showToast("please masukan data minimal 1");
-    return;
-  }
-
-  if (!dataValidation.value.isValid) {
-    console.error(
-      "SimulationPage - Data validation failed:",
-      dataValidation.value.errors
-    );
-    return;
-  }
-
-  if (selectedAlgorithms.value.length === 0) {
-    console.error(
-      "SimulationPage - Cannot run simulation: No algorithms selected"
-    );
-    return;
-  }
-
-  isRunning.value = true;
-  dummyFinalAssignment.value = null; // Reset dummy data
-
-  // Reset data for selected algorithms and set status to Running
-  simulationStatus.value = "running";
-  selectedAlgorithms.value.forEach((algo) => {
-    status.value[algo] = "Running...";
-    logs.value[algo] = [];
-    finalAssignment.value[algo] = [];
-    bestMakespan.value[algo] = null;
-    executionTime.value[algo] = null;
-    loadBalanceIndex.value[algo] = null;
-    computationTime.value[algo] = null;
-    chartData.value[algo] = { labels: [], values: [] };
-  });
-
-  // Ensure logs arrays are properly initialized
-  selectedAlgorithms.value.forEach((algo) => {
-    logs.value[algo] = logs.value[algo] || [];
-  });
-
-  // Reset backend result arrays
-  initializeACOAssignments();
-  initializePSOAssignments();
-
-  // Reset and clear charts - destroy and recreate to ensure proper re-rendering
-  if (chartACO) {
-    chartACO.destroy();
-    chartACO = null;
-  }
-  if (chartPSO) {
-    chartPSO.destroy();
-    chartPSO = null;
-  }
-
-  // Re-initialize charts after data reset
-  await nextTick();
-  initCharts();
-
-  try {
-    // Prepare request body for API
-    console.log("Sending tasks data to API:", filteredTasks.value);
-    console.log("Tasks data length:", filteredTasks.value?.length);
-    console.log("Selected algorithms:", selectedAlgorithms.value);
-    
-    const requestBody = {
-      algorithms: selectedAlgorithms.value,
-      tasks: filteredTasks.value || [],
-      parameters: {
-        num_default_agents: parameters.num_default_agents,
-        n_iterations: parameters.n_iterations,
-        task_id_col: parameters.task_id_col,
-        agent_id_col: parameters.agent_id_col,
-        // ACO specific parameters
-        n_ants: parameters.n_ants,
-        alpha: parameters.alpha,
-        beta: parameters.beta,
-        evaporation_rate: parameters.evaporation_rate,
-        pheromone_deposit: parameters.pheromone_deposit,
-        // PSO specific parameters
-        n_particles: parameters.n_particles,
-        w: parameters.w,
-        c1: parameters.c1,
-        c2: parameters.c2
-      }
-    };
-
-    logs.value.ACO = logs.value.ACO || [];
-    logs.value.ACO.push("📤 Sending request to simulation API...");
-    logs.value.ACO.push(`📊 Data being sent: ${filteredTasks.value?.length} tasks`);
-    logs.value.PSO = logs.value.PSO || [];
-    logs.value.PSO.push("📤 Sending request to simulation API...");
-    logs.value.PSO.push(`📊 Data being sent: ${filteredTasks.value?.length} tasks`);
-    
-    let response;
-    let usedSchedulingEndpoint = false;
-    
-    // Try the new scheduling endpoint first
-    try {
-      const schedulingPromises = selectedAlgorithms.value.map(async (algorithm) => {
-        try {
-          logs.value[algorithm] = logs.value[algorithm] || [];
-          logs.value[algorithm].push(`🔄 Trying scheduling endpoint for ${algorithm}...`);
-          const result = await runScheduling(algorithm.toLowerCase());
-          logs.value[algorithm].push("✅ Scheduling endpoint successful!");
-          return {
-            algorithm,
-            success: true,
-            data: result
-          };
-        } catch (error) {
-          logs.value[algorithm] = logs.value[algorithm] || [];
-          logs.value[algorithm].push(`❌ Scheduling endpoint failed: ${error.message}`);
-          return {
-            algorithm,
-            success: false,
-            error: error.message
-          };
-        }
-      });
-
-      const results = await Promise.all(schedulingPromises);
-      
-      // Check if any scheduling call succeeded
-      const successfulResults = results.filter(r => r.success);
-      
-      if (successfulResults.length > 0) {
-        usedSchedulingEndpoint = true;
-        logs.value.ACO = logs.value.ACO || [];
-        logs.value.ACO.push("✅ Using scheduling endpoint results");
-        logs.value.PSO = logs.value.PSO || [];
-        logs.value.PSO.push("✅ Using scheduling endpoint results");
-        
-        // Create a mock response format for the scheduling results
-        response = {
-          status: 'success',
-          results: {}
-        };
-
-        successfulResults.forEach((result) => {
-          response.results[result.algorithm.toUpperCase()] = {
-            bestMakespan: result.data.makespan,
-            executionTime: result.data.executionTime || 0,
-            loadBalanceIndex: result.data.loadBalanceIndex || 0,
-            loadbalancing: result.data.loadbalancing || result.data.loadBalanceIndex || 0,
-            computationTime: result.data.computing_time || result.data.computationTime || 0,
-            // Use results array from backend response for final assignment
-            results: result.data.results || [],
-            totalExecutionTime: result.data.total_execution_time || result.data.executionTime || 0,
-            // Extract convergence data from iterations
-            convergenceData: result.data.iterations ? {
-              bestValues: result.data.iterations.map(iter => iter.makespan),
-              loadBalancingValues: result.data.iterations.map(iter => iter.loadbalancing),
-              computingTimeValues: result.data.iterations.map(iter => iter.computing_time)
-            } : null
-          };
-        });
-      } else {
-        throw new Error('All scheduling endpoints failed');
-      }
-      
-    } catch (error) {
-      console.log('Scheduling endpoint failed, falling back to original API:', error);
-      logs.value.ACO = logs.value.ACO || [];
-      logs.value.ACO.push("🔄 Falling back to original simulation API...");
-      logs.value.PSO = logs.value.PSO || [];
-      logs.value.PSO.push("🔄 Falling back to original simulation API...");
-      
-      // Fallback to original API
-      response = await $fetch('http://127.0.0.1:5000/run_scheduling', {
-        method: 'POST',
-        body: requestBody,
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        credentials: 'omit', // Handle CORS
-        mode: 'cors' // Enable CORS
-      });
-    }
-
-    logs.value.ACO = logs.value.ACO || [];
-    logs.value.ACO.push("✅ Simulation completed successfully!");
-    logs.value.PSO = logs.value.PSO || [];
-    logs.value.PSO.push("✅ Simulation completed successfully!");
-
-    // Process API response
-    console.log("Raw API response:", response);
-    
-    // Check if response has valid structure
-    const isValidResponse = response && 
-                          (response.status === 'success' || 
-                           (response.results && Object.keys(response.results).length > 0));
-    
-    if (isValidResponse) {
-      const data = response;
-      
-      console.log("Full API response:", data);
-      
-      // Update simulation results for each algorithm
-      selectedAlgorithms.value.forEach((algorithm) => {
-        let result;
-        if (data.results && data.results[algorithm] && Object.keys(data.results[algorithm]).length > 0) {
-          console.log(`${algorithm} data structure is valid`);
-          result = data.results[algorithm];
-          console.log(`${algorithm} result data:`, result);
-        } else {
-          console.warn(`${algorithm} data structure is invalid or empty, using fallback data`);
-          // Initialize empty assignments
-          if (algorithm === "ACO") {
-            initializeACOAssignments();
-          } else if (algorithm === "PSO") {
-            initializePSOAssignments();
-          }
-        }
-        
-        // Update best results dengan pengecekan yang lebih robust
-        bestMakespan.value[algorithm] = result.bestMakespan || result.makespan || 0;
-        executionTime.value[algorithm] = result.totalExecutionTime || result.executionTime || 0;
-        loadBalanceIndex.value[algorithm] = result.loadbalancing || result.loadBalanceIndex || 0;
-        computationTime.value[algorithm] = result.computationTime || result.computing_time || 0;
-
-          // Update final assignment - use results array from API response
-          if (algorithm === "ACO") {
-            console.log("ACO response data:", result);
-            
-            // Gunakan data dari results array yang berisi array of objects
-            if (result.results && Array.isArray(result.results) && result.results.length > 0) {
-              // Map langsung dari format API ke format UI
-              acoFinalAssignment.value = result.results.map(item => ({
-                agent: item.agent || 'Default Agent',
-                tasks: Array.isArray(item.task_list) ? item.task_list : [],
-                total_time: item.total_time || 0
-              }));
-              console.log("Processed ACO results from API:", acoFinalAssignment.value);
-            } else if (result.finalAssignment && Array.isArray(result.finalAssignment) && result.finalAssignment.length > 0) {
-              // Fallback ke data dari finalAssignment jika results tidak ada
-              console.log("Using finalAssignment data as fallback");
-              acoFinalAssignment.value = result.finalAssignment;
-            } else {
-              // Jika kedua struktur tidak ada, inisialisasi kosong
-              console.log("No assignment data found, initializing empty");
-              initializeACOAssignments();
-            }
-          } else if (algorithm === "PSO") {
-            console.log("PSO response data:", result);
-            
-            // Gunakan data dari results array yang berisi array of objects
-            if (result.results && Array.isArray(result.results) && result.results.length > 0) {
-              // Map langsung dari format API ke format UI
-              psoFinalAssignment.value = result.results.map(item => ({
-                agent: item.agent || 'Default Agent',
-                tasks: Array.isArray(item.task_list) ? item.task_list : [],
-                total_time: item.total_time || 0
-              }));
-              console.log("Processed PSO results from API:", psoFinalAssignment.value);
-            } else if (result.finalAssignment && Array.isArray(result.finalAssignment) && result.finalAssignment.length > 0) {
-              // Fallback ke data dari finalAssignment jika results tidak ada
-              console.log("Using finalAssignment data as fallback");
-              psoFinalAssignment.value = result.finalAssignment;
-            } else {
-              // Jika kedua struktur tidak ada, inisialisasi kosong
-              console.log("No assignment data found, initializing empty");
-              initializePSOAssignments();
-            }
-          }
-
-          // Update convergence charts
-          if (result.convergenceData) {
-            chartData.value[algorithm] = {
-              labels: result.convergenceData.bestValues.map((_, index) => index + 1),
-              values: result.convergenceData.bestValues
-            };
-          }
-
-          status.value[algorithm] = "Completed";
-        
-      });
-
-      // Send results to AI chat
-      await sendUserMessage();
-      
-    } else {
-      console.error('Invalid response format from API:', response);
-      logs.value.ACO = logs.value.ACO || [];
-      logs.value.ACO.push('❌ Invalid response format from API');
-      logs.value.PSO = logs.value.PSO || [];
-      logs.value.PSO.push('❌ Invalid response format from API');
-      
-      // Initialize empty assignments
-      selectedAlgorithms.value.forEach((algorithm) => {
-        if (algorithm === "ACO") {
-          initializeACOAssignments();
-        } else if (algorithm === "PSO") {
-          initializePSOAssignments();
-        }
-      });
-      
-      throw new Error('Invalid response format from API - missing results or status');
-    }
-  } catch (error) {
-    console.error('Simulation error:', error);
-    const errorMessage = error.message || 'Unknown error occurred';
-    
-    // Handle specific CORS/network errors
-    if (errorMessage.includes('CORS') || errorMessage.includes('Network')) {
-      logs.value.ACO = logs.value.ACO || [];
-      logs.value.ACO.push('❌ CORS/Network error: Please ensure Flask server is running with CORS enabled');
-      logs.value.PSO = logs.value.PSO || [];
-      logs.value.PSO.push('❌ CORS/Network error: Please ensure Flask server is running with CORS enabled');
-    } else {
-      logs.value.ACO = logs.value.ACO || [];
-      logs.value.ACO.push(`❌ Simulation failed: ${errorMessage}`);
-      logs.value.PSO = logs.value.PSO || [];
-      logs.value.PSO.push(`❌ Simulation failed: ${errorMessage}`);
-    }
-    
-    // Clear assignments and show error state
-    selectedAlgorithms.value.forEach((algorithm) => {
-      if (algorithm === "ACO") {
-        initializeACOAssignments();
-      } else if (algorithm === "PSO") {
-        initializePSOAssignments();
-      }
-      
-      bestMakespan.value[algorithm] = "N/A";
-      executionTime.value[algorithm] = "N/A";
-      loadBalanceIndex.value[algorithm] = "N/A";
-      computationTime.value[algorithm] = "N/A";
-      status.value[algorithm] = "Failed";
-    });
-  } finally {
-    isRunning.value = false;
-    simulationStatus.value = "completed";
-    updateCharts();
-  }
-};
-
-// Watch for algorithms prop changes
-watch(
-  () => props.algorithms,
-  (newAlgorithms) => {
-    console.log("SimulationPage - Algorithms prop changed:", newAlgorithms);
-    if (newAlgorithms && newAlgorithms.length > 0) {
-      selectedAlgorithms.value = [...newAlgorithms];
-      console.log(
-        "SimulationPage - Updated selected algorithms:",
-        selectedAlgorithms.value
-      );
-    }
-  },
-  { immediate: true }
-);
-
-// Watch for simulation completion to update tables
-watch(simulationStatus, (newStatus) => {
-  if (newStatus === "completed") {
-    console.log("Simulation completed - tables updated with backend data");
-  }
-});
-
-// Watch for num_default_agents changes to reset assignments
-watch(
-  () => parameters.num_default_agents,
-  (newNumAgents) => {
-    if (simulationStatus.value === "idle") {
-      initializeACOAssignments();
-      initializePSOAssignments();
-    }
-  }
-);
-
-// Watch for tasks changes to re-validate
-watch(
-  () => props.tasks,
-  (newTasks) => {
-    console.log("SimulationPage - Tasks changed:", newTasks?.length);
-    validateData();
-  },
-  { immediate: true, deep: true }
-);
-
-// Lifecycle
-onMounted(() => {
-  console.log("SimulationPage - Mounted with props:", {
-    tasks: props.tasks?.length,
-    algorithms: props.algorithms,
-  });
-
-  // Initialize with provided algorithms
-  if (props.algorithms && props.algorithms.length > 0) {
-    selectedAlgorithms.value = [...props.algorithms];
-    console.log(
-      "SimulationPage - Initialized with algorithms:",
-      selectedAlgorithms.value
-    );
-  }
-
-  // Initialize assignments
-  initializeACOAssignments();
-  initializePSOAssignments();
-
-  validateData();
-  initCharts();
-});
-
-// Modal functions
-const openTaskModal = (assignment) => {
-  modalData.value = { agent: assignment.agent, tasks: assignment.tasks };
-  showTaskModal.value = true;
-};
-
-const closeTaskModal = () => {
-  showTaskModal.value = false;
-  modalData.value = { agent: "", tasks: [] };
-};
-
-// Reset simulation function
-const resetSimulation = () => {
-  // Reset all state
-  logs.value = {};
-  finalAssignment.value = {};
-  bestMakespan.value = {};
-  executionTime.value = {};
-  loadBalanceIndex.value = {};
-  computationTime.value = {};
-  chartData.value = {};
-  status.value = { ACO: "Idle", PSO: "Idle" };
-  expandedTasks.value = { ACO: {}, PSO: {} };
-  dummyFinalAssignment.value = null;
-
-  // Reset backend result arrays
-  initializeACOAssignments();
-  initializePSOAssignments();
-  simulationStatus.value = "idle";
-
-  // Reset charts
-  if (chartACO) {
-    chartACO.destroy();
-    chartACO = null;
-  }
-  if (chartPSO) {
-    chartPSO.destroy();
-    chartPSO = null;
-  }
-
-  // Re-initialize charts
-  nextTick(() => {
-    initCharts();
-  });
-};
-
-// Scheduling API Methods
-const runScheduling = async (algorithmType = 'pso') => {
-  try {
-    // Prepare request body sesuai dengan endpoint Flask
-    const requestBody = {
-      algorithm: algorithmType,
-      parameters: {
-        num_default_agents: parameters.num_default_agents,
-        task_id_col: parameters.task_id_col,
-        agent_id_col: parameters.agent_id_col,
-        // Include other algorithm-specific parameters
-        ...(algorithmType === 'aco' && {
-          n_iterations: parameters.n_iterations,
-          n_ants: parameters.n_ants,
-          alpha: parameters.alpha,
-          beta: parameters.beta,
-          evaporation_rate: parameters.evaporation_rate,
-          pheromone_deposit: parameters.pheromone_deposit
-        }),
-        ...(algorithmType === 'pso' && {
-          n_iterations: parameters.n_iterations,
-          n_particles: parameters.n_particles,
-          w: parameters.w,
-          c1: parameters.c1,
-          c2: parameters.c2
-        })
-      },
-      tasks_data: filteredTasks.value || []
-    };
-
-    console.log('Sending scheduling request:', requestBody);
-
-    const response = await fetch('http://127.0.0.1:5000/run_scheduling', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody)
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const result = await response.json();
-    
-    if (result.success) {
-        console.log('Scheduling successful:', result);
-        // Return formatted result for simulation processing
-        return {
-          makespan: result.makespan,
-          gantt_chart_html: result.gantt_chart_html,
-          // Extract iterations data for charting
-          iterations: result.iterations || [],
-          computing_time: result.computing_time || 0,
-          // Include results array from backend for final assignment
-          results: result.results || [],
-          // Map backend properties to frontend properties
-          executionTime: result.total_execution_time || 0,
-          loadBalanceIndex: result.loadbalancing || 0,
-          computationTime: result.computing_time || 0,
-          finalAssignment: []
-        };
-      } else {
-        throw new Error(result.message || 'Scheduling failed');
-      }
-  } catch (error) {
-    console.error('Error running scheduling:', error);
-    throw error;
-  }
-};
-
-// AI Chat Methods
 const sendUserMessage = async () => {
-  if (!userMessage.value.trim()) return;
+    if (!userMessage.value.trim() && chatHistory.value.length === 0) {
+        userMessage.value = "Explain these simulation results.";
+    }
+    if (!userMessage.value.trim()) return;
 
-  try {
-    // Debug: Check current values
-    console.log("Current bestMakespan:", bestMakespan.value);
-    console.log("Current executionTime:", executionTime.value);
-    console.log("Current loadBalanceIndex:", loadBalanceIndex.value);
-    console.log("Current computationTime:", computationTime.value);
-    console.log("Selected algorithms:", selectedAlgorithms.value);
-
-    // Always include complete simulation data
     const simulationData = {
-      aco: {
-        bestMakespan: bestMakespan.value?.ACO,
-        executionTime: executionTime.value?.ACO,
-        loadBalanceIndex: loadBalanceIndex.value?.ACO,
-        computationTime: computationTime.value?.ACO,
-        finalAssignment: acoFinalAssignment.value,
-        totalAgents: parameters.num_default_agents,
-        totalTasks: props.tasks?.length || 0,
-      },
-      pso: {
-        bestMakespan: bestMakespan.value?.PSO,
-        executionTime: executionTime.value?.PSO,
-        loadBalanceIndex: loadBalanceIndex.value?.PSO,
-        computationTime: computationTime.value?.PSO,
-        finalAssignment: psoFinalAssignment.value,
-        totalAgents: parameters.num_default_agents,
-        totalTasks: props.tasks?.length || 0,
-      }
+        aco: selectedAlgorithms.value.includes('ACO') ? {
+            bestMakespan: bestMakespan.value.ACO,
+            executionTime: executionTime.value.ACO,
+            loadBalanceIndex: loadBalanceIndex.value.ACO,
+            finalAssignment: acoFinalAssignment.value,
+        } : null,
+        pso: selectedAlgorithms.value.includes('PSO') ? {
+            bestMakespan: bestMakespan.value.PSO,
+            executionTime: executionTime.value.PSO,
+            loadBalanceIndex: loadBalanceIndex.value.PSO,
+            finalAssignment: psoFinalAssignment.value,
+        } : null,
     };
-
-    console.log("Sending simulation data to AI:", simulationData);
-
-    // Determine swarmType based on selected algorithms
-    let swarmType = "both";
-    if (selectedAlgorithms.value.length === 1) {
-      swarmType = selectedAlgorithms.value[0]; // "ACO" or "PSO"
-    }
-
-    await sendMessage(userMessage.value || "explain results", simulationData, swarmType);
-
+    await sendMessage(userMessage.value, simulationData, selectedAlgorithms.value.join('_'));
     userMessage.value = "";
-    scrollToBottom();
-  } catch (error) {
-    console.error("Failed to send message:", error);
-  }
 };
-
-const renderMarkdown = (text) => {
-  if (!text) return "";
-  
-  // Konfigurasi marked untuk menghindari overflow teks
-  marked.setOptions({
-    breaks: true,  // Mengonversi baris baru menjadi <br>
-    gfm: true,     // Mengaktifkan GitHub Flavored Markdown
-    sanitize: false,
-    smartLists: true,
-    smartypants: true,
-    mangle: true,  // Mencegah tautan terlalu panjang
-    headerIds: false
-  });
-  
-  return marked(text);
-};
-
-// Export functions
-const exportJSON = (algorithm) => {
-  const data =
-    algorithm === "ACO" ? acoFinalAssignment.value : psoFinalAssignment.value;
-
-  if (!data || data.length === 0) return;
-
-  // Use real data from backend
-  const exportData = data;
-  if (!exportData || exportData.length === 0) return;
-
-  const jsonString = JSON.stringify(exportData, null, 2);
-  const blob = new Blob([jsonString], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `${algorithm}_final_assignment.json`;
-  link.click();
-
-  URL.revokeObjectURL(url);
-};
-
-const exportCSV = (algorithm) => {
-  const data =
-    algorithm === "ACO" ? acoFinalAssignment.value : psoFinalAssignment.value;
-
-  if (!data || data.length === 0) return;
-
-  // Use real data from backend
-  const exportData = data;
-  if (!exportData || exportData.length === 0) return;
-
-  const headers = ["Agent", "Tasks", "Total Time"];
-  const rows = exportData.map((row) => [
-    `"${row.agent}"`,
-    `"${Array.isArray(row.tasks) ? row.tasks.join("; ") : row.tasks}"`,
-    `"${row.total_time}"`,
-  ]);
-
-  const csvContent = [
-    headers.join(","),
-    ...rows.map((row) => row.join(",")),
-  ].join("\n");
-  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `${algorithm}_final_assignment.csv`;
-  link.click();
-
-  URL.revokeObjectURL(url);
-};
-
-// Toggle task expansion
-const toggleTaskExpansion = (algorithm, index) => {
-  expandedTasks.value[algorithm][index] =
-    !expandedTasks.value[algorithm][index];
-};
-
-// Floating Chat Methods
-const openChat = () => {
-  isChatOpen.value = true;
-};
-
-const closeChat = () => {
-  isChatOpen.value = false;
-};
-
-const copyToClipboard = async (text) => {
-  try {
-    await navigator.clipboard.writeText(text);
-    // You could add a toast notification here
-    console.log("Copied to clipboard");
-  } catch (err) {
-    console.error("Failed to copy text: ", err);
-  }
-};
-
-// Auto-scroll functionality
-const scrollToBottom = () => {
-  console.log('Scrolling to bottom...');
-  nextTick(() => {
-    setTimeout(() => {
-      if (messagesContainer.value) {
-        console.log('Container found, scrolling...');
-        // Cari pesan terakhir dan scroll ke sana
-        const messages = messagesContainer.value.querySelectorAll('.message-container, .bg-blue-50, .bg-gray-50');
-        if (messages.length > 0) {
-          const lastMessage = messages[messages.length - 1];
-          lastMessage.scrollIntoView({ behavior: 'smooth', block: 'end' });
-        } else {
-          // Fallback ke scroll tradisional
-          messagesContainer.value.scrollTo({
-            top: messagesContainer.value.scrollHeight,
-            behavior: 'smooth'
-          });
-        }
-      } else {
-        console.log('Container not found');
-      }
-    }, 100);
-  });
-};
-
-// MutationObserver untuk auto-scroll yang lebih akurat
-let observer = null;
-
-const setupAutoScrollObserver = () => {
-  if (messagesContainer.value && !observer) {
-    observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-          // Scroll dengan delay untuk memastikan DOM sudah selesai update
-          setTimeout(scrollToBottom, 50);
-        }
-      });
-    });
-    
-    observer.observe(messagesContainer.value, {
-      childList: true,
-      subtree: true
-    });
-  }
-};
-
-const cleanupAutoScrollObserver = () => {
-  if (observer) {
-    observer.disconnect();
-    observer = null;
-  }
-};
-
-// Watch for new messages and scroll to bottom
-watch(
-  () => chatHistory.value.length,
-  () => {
-    scrollToBottom();
-  }
-);
-
-// Also scroll when streaming completes
-watch(
-  () => isStreaming.value,
-  (newVal, oldVal) => {
-    if (!newVal && oldVal) {
-      scrollToBottom();
-    }
-  }
-);
-
-// Scroll when chat opens
-watch(
-  () => isChatOpen.value,
-  (newVal) => {
-    if (newVal) {
-      setTimeout(scrollToBottom, 100);
-    }
-  }
-);
-
-// Setup observer on mount
-onMounted(() => {
-  nextTick(() => {
-    setupAutoScrollObserver();
-  });
-  
-  // Listen for scroll events from streaming
-  if (typeof window !== 'undefined') {
-    window.addEventListener('chat-scroll', scrollToBottom);
-  }
-});
-
-// Cleanup on unmount
-onUnmounted(() => {
-  cleanupAutoScrollObserver();
-  if (typeof window !== 'undefined') {
-    window.removeEventListener('chat-scroll', scrollToBottom);
-  }
-});
 
 const startDrag = (event) => {
   isDragging.value = true;
-  const clientX = event.clientX || (event.touches && event.touches[0].clientX);
-  const clientY = event.clientY || (event.touches && event.touches[0].clientY);
-
-  dragStart.value = {
-    x: clientX - draggablePosition.value.x,
-    y: clientY - draggablePosition.value.y,
-  };
-
-  const handleMouseMove = (e) => {
+  const clientX = event.clientX || event.touches[0].clientX;
+  const clientY = event.clientY || event.touches[0].clientY;
+  dragStart.value = { x: clientX - draggablePosition.value.x, y: clientY - draggablePosition.value.y };
+  
+  const handleMove = (e) => {
     if (!isDragging.value) return;
-
-    const moveX = e.clientX || (e.touches && e.touches[0].clientX);
-    const moveY = e.clientY || (e.touches && e.touches[0].clientY);
-
-    draggablePosition.value = {
-      x: moveX - dragStart.value.x,
-      y: moveY - dragStart.value.y,
-    };
+    const moveX = e.clientX || e.touches[0].clientX;
+    const moveY = e.clientY || e.touches[0].clientY;
+    draggablePosition.value = { x: moveX - dragStart.value.x, y: moveY - dragStart.value.y };
   };
-
-  const handleMouseUp = () => {
+  const handleUp = () => {
     isDragging.value = false;
-    document.removeEventListener("mousemove", handleMouseMove);
-    document.removeEventListener("mouseup", handleMouseUp);
-    document.removeEventListener("touchmove", handleMouseMove);
-    document.removeEventListener("touchend", handleMouseUp);
+    document.removeEventListener('mousemove', handleMove);
+    document.removeEventListener('mouseup', handleUp);
+    document.removeEventListener('touchmove', handleMove);
+    document.removeEventListener('touchend', handleUp);
   };
-
-  document.addEventListener("mousemove", handleMouseMove);
-  document.addEventListener("mouseup", handleMouseUp);
-  document.addEventListener("touchmove", handleMouseMove);
-  document.addEventListener("touchend", handleMouseUp);
+  
+  document.addEventListener('mousemove', handleMove);
+  document.addEventListener('mouseup', handleUp);
+  document.addEventListener('touchmove', handleMove);
+  document.addEventListener('touchend', handleUp);
 };
 
 const startResize = (event) => {
   isResizing.value = true;
-  const clientX = event.clientX || (event.touches && event.touches[0].clientX);
-  const clientY = event.clientY || (event.touches && event.touches[0].clientY);
-
-  resizeStart.value = {
-    x: clientX,
-    y: clientY,
-    width: chatWindowSize.value.width,
-    height: chatWindowSize.value.height,
-  };
-
-  const handleMouseMove = (e) => {
+  const clientX = event.clientX || event.touches[0].clientX;
+  const clientY = event.clientY || event.touches[0].clientY;
+  resizeStart.value = { x: clientX, y: clientY, width: chatWindowSize.value.width, height: chatWindowSize.value.height };
+  
+  const handleMove = (e) => {
     if (!isResizing.value) return;
-
-    const moveX = e.clientX || (e.touches && event.touches[0].clientX);
-    const moveY = e.clientY || (e.touches && event.touches[0].clientY);
-
+    const moveX = e.clientX || e.touches[0].clientX;
+    const moveY = e.clientY || e.touches[0].clientY;
     const deltaX = moveX - resizeStart.value.x;
     const deltaY = moveY - resizeStart.value.y;
-
     chatWindowSize.value = {
       width: Math.max(320, resizeStart.value.width + deltaX),
       height: Math.max(400, resizeStart.value.height + deltaY),
     };
   };
-
-  const handleMouseUp = () => {
+  const handleUp = () => {
     isResizing.value = false;
-    document.removeEventListener("mousemove", handleMouseMove);
-    document.removeEventListener("mouseup", handleMouseUp);
-    document.removeEventListener("touchmove", handleMouseMove);
-    document.removeEventListener("touchend", handleMouseUp);
+    document.removeEventListener('mousemove', handleMove);
+    document.removeEventListener('mouseup', handleUp);
+    document.removeEventListener('touchmove', handleMove);
+    document.removeEventListener('touchend', handleUp);
   };
-
-  document.addEventListener("mousemove", handleMouseMove);
-  document.addEventListener("mouseup", handleMouseUp);
-  document.addEventListener("touchmove", handleMouseMove);
-  document.addEventListener("touchend", handleMouseUp);
+  
+  document.addEventListener('mousemove', handleMove);
+  document.addEventListener('mouseup', handleUp);
+  document.addEventListener('touchmove', handleMove);
+  document.addEventListener('touchend', handleUp);
 };
 
-// Expose for parent component
-defineExpose({
-  runSimulation,
-  resetSimulation,
-});
+watch(chatHistory, () => {
+    nextTick(() => {
+        if(messagesContainer.value) {
+            messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight;
+        }
+    });
+}, { deep: true });
+
 </script>
 
 <style scoped>
@@ -2985,4 +2062,3 @@ defineExpose({
   animation: fadeIn 0.3s ease-out;
 }
 </style>
-
