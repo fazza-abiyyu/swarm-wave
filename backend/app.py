@@ -7,7 +7,7 @@ from models.aco import ACO_MultiAgent_Scheduler as ACOScheduler
 from models.pso import PSO_MultiAgent_Scheduler as PSOScheduler
 
 app = Flask(__name__)
-CORS(app, origins=['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:5000', 'http://127.0.0.1:5000', 'https://swarm-lab.vercel.app/'], supports_credentials=True, allow_headers=['Content-Type', 'Authorization'], methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
+CORS(app, origins=['http://localhost:3000', 'http://127.0.0.1:3000', 'http://127.0.0.1:3001', 'http://localhost:5000', 'http://127.0.0.1:5000', 'https://swarm-lab.vercel.app'], supports_credentials=True, allow_headers=['Content-Type', 'Authorization'], methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
 
 @app.route('/')
 def home():
