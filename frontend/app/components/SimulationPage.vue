@@ -1694,7 +1694,7 @@ const runSimulation = async () => {
     };
 
     try {
-      const response = await fetch('http://127.0.0.1:5001/stream_scheduling', {
+      const response = await fetch('https://awkward-gilda-fazza-abiyyu-85e5defd.koyeb.app/stream_scheduling', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody)
