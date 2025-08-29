@@ -1,0 +1,7 @@
+Flask
+pandas
+matplotlib
+plotly
+numpy
+tqdm
+flask-cors
