@@ -1,12 +1,8 @@
 import numpy as np
 import random
-from tqdm import tqdm
+import json
 
-# ==============================================================================
-# 🧠 CELL 2: DEFINISI CLASS MODEL PSO (DENGAN LOGGING PER ITERASI)
-# ==============================================================================
 class PSO_MultiAgent_Scheduler:
-    # ... (__init__ dan fungsi lainnya tetap sama) ...
     def __init__(self, tasks, agents, cost_function, task_id_col='id', agent_id_col='id',
                  n_particles=30, n_iterations=100, w=0.5, c1=1.5, c2=1.5):
         self.tasks = tasks
@@ -28,7 +24,6 @@ class PSO_MultiAgent_Scheduler:
         self.gbest_position = None
         self.gbest_cost = float('inf')
         self.gbest_schedule = None
-        self.cost_history = []
 
     def _position_to_sequence(self, position):
         return np.argsort(position)
@@ -40,8 +35,7 @@ class PSO_MultiAgent_Scheduler:
             task = self.tasks[task_idx]
             best_agent_id = min(agent_finish_times, key=agent_finish_times.get)
             start_time = agent_finish_times[best_agent_id]
-            # Cari field execution time dengan berbagai kemungkinan nama
-            duration = task.get('Execution_Time (s)', task.get('execution_time', task.get('duration', 1)))
+            duration = task.get('length', 1) 
             finish_time = start_time + duration
             agent_finish_times[best_agent_id] = finish_time
             schedule.append({
@@ -51,16 +45,12 @@ class PSO_MultiAgent_Scheduler:
         makespan = max(agent_finish_times.values()) if agent_finish_times else 0
         return self.cost_function(schedule, makespan), schedule
 
-    # --- PERUBAHAN DI FUNGSI run ---
     def run(self):
-        """Menjalankan algoritma PSO dengan logging perbaikan."""
-        print("Memulai optimasi penjadwalan dengan PSO...")
+        log_message = "Starting PSO optimization..."
+        yield json.dumps({"type": "log", "message": log_message})
         
-        # Simpan cost awal untuk perbandingan
-        old_best_cost = self.gbest_cost
-
-        # Mengganti tqdm dengan loop biasa agar print tidak terganggu
         for i in range(self.n_iterations):
+            new_best_found_in_iter = False
             for p in range(self.n_particles):
                 sequence = self._position_to_sequence(self.positions[p])
                 cost, schedule = self._evaluate_sequence(sequence)
@@ -73,11 +63,11 @@ class PSO_MultiAgent_Scheduler:
                     self.gbest_cost = cost
                     self.gbest_position = self.positions[p].copy()
                     self.gbest_schedule = schedule
+                    new_best_found_in_iter = True
 
-            # --- TAMBAHAN BARU: Tampilkan hanya jika ada peningkatan ---
-            if self.gbest_cost < old_best_cost:
-                print(f"Iterasi {i + 1}: Ditemukan solusi baru yang lebih baik! Makespan: {self.gbest_cost:.2f}")
-                old_best_cost = self.gbest_cost
+            if new_best_found_in_iter:
+                log_message = f"Iteration {i + 1}: New best solution found! Makespan: {self.gbest_cost:.2f}"
+                yield json.dumps({"type": "log", "message": log_message})
 
             for p in range(self.n_particles):
                 r1, r2 = np.random.rand(self.n_tasks), np.random.rand(self.n_tasks)
@@ -86,9 +76,18 @@ class PSO_MultiAgent_Scheduler:
                 self.velocities[p] = (self.w * self.velocities[p]) + cognitive_velocity + social_velocity
                 self.positions[p] += self.velocities[p]
             
-            self.cost_history.append(self.gbest_cost)
-            # Manual progress update
-            print(f"\rProgress: Iterasi {i + 1}/{self.n_iterations}", end="")
+            progress_log = f"Progress: Iteration {i + 1}/{self.n_iterations} -> Current Best: {self.gbest_cost:.2f}"
+            yield json.dumps({
+                "type": "iteration",
+                "iteration": i + 1,
+                "makespan": self.gbest_cost,
+                "log_message": progress_log
+            })
 
-        print("\nOptimasi Selesai!")
-        return self.gbest_schedule, self.gbest_cost
+        # Kirim hasil final
+        yield json.dumps({
+            "type": "done",
+            "schedule": self.gbest_schedule,
+            "makespan": self.gbest_cost,
+            "log_message": "PSO Optimization Finished!"
+        })

@@ -5,4 +5,3 @@ plotly
 numpy
 tqdm
 flask-cors
-gunicorn
