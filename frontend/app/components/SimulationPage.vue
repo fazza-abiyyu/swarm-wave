@@ -1,5 +1,24 @@
 <template>
   <div class="min-h-screen bg-gray-50 p-4 md:p-6">
+    <!-- Toast Notification -->
+    <div 
+      v-if="toast.show"
+      class="fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg flex items-center animate-fade-in"
+      :class="{
+        'bg-red-500 text-white': toast.type === 'error',
+        'bg-green-500 text-white': toast.type === 'success',
+        'bg-blue-500 text-white': toast.type === 'info'
+      }"
+    >
+      <svg v-if="toast.type === 'error'" class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+      </svg>
+      <svg v-else-if="toast.type === 'success'" class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+      </svg>
+      <span>{{ toast.message }}</span>
+    </div>
+
     <!-- Header -->
     <div class="max-w-7xl mx-auto">
       <div class="text-center mb-8">
@@ -178,7 +197,7 @@
               </span>
             </div>
             <input
-              v-model.number="parameters.num_agents"
+              v-model.number="parameters.num_default_agents"
               type="number"
               min="1"
               max="10"
@@ -205,12 +224,67 @@
               </span>
             </div>
             <input
-              v-model.number="parameters.num_iterations"
-              type="number"
-              min="1"
-              max="100"
+               v-model.number="parameters.n_iterations"
+               type="number"
+               min="1"
+               max="100"
+               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+             />
+          </div>
+
+          <div>
+            <div class="flex items-center gap-1 mb-2">
+              <label class="block text-sm font-medium text-gray-700">
+                Task ID Column
+              </label>
+              <span
+                 class="relative group cursor-pointer text-gray-400 text-xs font-bold"
+              >
+                ?
+                <div
+                  class="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded-md shadow-lg p-2 left-4 top-0 w-64 z-10"
+                >
+                  Column name for task IDs in your dataset.
+                  Default: 'id'
+                </div>
+              </span>
+            </div>
+            <select
+              v-model="parameters.task_id_col"
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
+            >
+              <option v-for="header in datasetHeaders" :key="header" :value="header">
+                {{ header }}
+              </option>
+            </select>
+          </div>
+
+          <div>
+            <div class="flex items-center gap-1 mb-2">
+              <label class="block text-sm font-medium text-gray-700">
+                Agent ID Column
+              </label>
+              <span
+                class="relative group cursor-pointer text-gray-400 text-xs font-bold"
+              >
+                ?
+                <div
+                  class="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded-md shadow-lg p-2 left-4 top-0 w-64 z-10"
+                 >
+                   Column name for agent IDs in your dataset.
+                   Default: 'id'
+                </div>
+              </span>
+            </div>
+            <select
+              v-model="parameters.agent_id_col"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="">None</option>
+              <option v-for="header in datasetHeaders" :key="header" :value="header">
+                {{ header }}
+              </option>
+            </select>
           </div>
 
           <!-- ACO Specific Parameters -->
@@ -304,6 +378,61 @@
                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
+
+                <div>
+                  <div class="flex items-center gap-1 mb-2">
+                    <label class="block text-sm font-medium text-gray-700">
+                      Pheromone Deposit
+                    </label>
+                    <span
+                      class="relative group cursor-pointer text-gray-400 text-xs font-bold"
+                    >
+                      ?
+                      <div
+                        class="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded-md shadow-lg p-2 left-4 top-0 w-64 z-10"
+                      >
+                        Amount of pheromone deposited by ants on successful paths.
+                        Higher values strengthen pheromone trails faster.
+                        Range: 1-500. Example: 100.0
+                      </div>
+                    </span>
+                  </div>
+                  <input
+                    v-model.number="parameters.pheromone_deposit"
+                    type="number"
+                    step="1"
+                    min="1"
+                    max="500"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <div class="flex items-center gap-1 mb-2">
+                    <label class="block text-sm font-medium text-gray-700">
+                      Number of Ants
+                    </label>
+                    <span
+                      class="relative group cursor-pointer text-gray-400 text-xs font-bold"
+                    >
+                      ?
+                      <div
+                        class="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded-md shadow-lg p-2 left-4 top-0 w-64 z-10"
+                      >
+                        Number of ants exploring solutions in each iteration.
+                        More ants explore more solutions but increase computation time.
+                        Range: 1-100. Example: 25
+                      </div>
+                    </span>
+                  </div>
+                  <input
+                    v-model.number="parameters.n_ants"
+                    type="number"
+                    min="1"
+                    max="100"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
               </div>
             </div>
           </template>
@@ -334,7 +463,7 @@
                     </span>
                   </div>
                   <input
-                    v-model.number="parameters.num_particles"
+                    v-model.number="parameters.n_particles"
                     type="number"
                     min="1"
                     max="100"
@@ -362,7 +491,7 @@
                     </span>
                   </div>
                   <input
-                    v-model.number="parameters.inertia"
+                    v-model.number="parameters.w"
                     type="number"
                     step="0.1"
                     min="0"
@@ -426,6 +555,34 @@
                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
+
+                <div>
+                  <div class="flex items-center gap-1 mb-2">
+                    <label class="block text-sm font-medium text-gray-700">
+                      Social (c2)
+                    </label>
+                    <span
+                      class="relative group cursor-pointer text-gray-400 text-xs font-bold"
+                    >
+                      ?
+                      <div
+                        class="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded-md shadow-lg p-2 left-4 top-0 w-64 z-10"
+                      >
+                        Particle's attraction to the swarm's best known
+                        position. Higher values promote convergence to global
+                        best solutions. Range: 0-3. Example: 1.5
+                      </div>
+                    </span>
+                  </div>
+                  <input
+                    v-model.number="parameters.c2"
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="3"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
               </div>
             </div>
           </template>
@@ -433,20 +590,22 @@
 
         <div class="mt-6">
           <button
-            @click="runSimulation"
-            :disabled="
-              isRunning ||
-              selectedAlgorithms.length === 0 ||
-              !dataValidation.isValid
-            "
-            class="w-full md:w-auto px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-          >
-            <span v-if="isRunning">Running...</span>
-            <span v-else-if="!dataValidation.isValid">Invalid Data</span>
-            <span v-else>{{
-              `Run ${selectedAlgorithms.join(" & ")} Simulation`
-            }}</span>
-          </button>
+          @click="runSimulation"
+          :disabled="
+            isRunning ||
+            selectedAlgorithms.length === 0 ||
+            !dataValidation.isValid ||
+            filteredTasks.length === 0
+          "
+          class="w-full md:w-auto px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+        >
+          <span v-if="isRunning">Running...</span>
+          <span v-else-if="filteredTasks.length === 0">No Data Available</span>
+          <span v-else-if="!dataValidation.isValid">Invalid Data</span>
+          <span v-else>{{
+            `Run ${selectedAlgorithms.join(" & ")} Simulation`
+          }}</span>
+        </button>
         </div>
       </div>
 
@@ -569,19 +728,18 @@
                     >
                       Agent 1
                     </td>
-                    <td class="px-6 py-4 text-sm text-gray-500">Preview...</td>
+                    <td class="px-6 py-4 text-sm text-gray-500">No data available</td>
                     <td
                       class="px-6 py-4 text-sm text-gray-500 text-right font-mono"
                     >
-                      Preview...
+                      N/A
                     </td>
                   </tr>
                   <!-- Actual Data -->
                   <tr
-                    v-for="assignment in simulationStatus === 'completed'
-                      ? acoFinalAssignment
-                      : finalAssignment.ACO"
+                    v-for="assignment in acoFinalAssignment"
                     :key="assignment.agent"
+                    v-if="acoFinalAssignment && acoFinalAssignment.length > 0"
                   >
                     <td
                       class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"
@@ -775,11 +933,11 @@
                     >
                       Agent 1
                     </td>
-                    <td class="px-6 py-4 text-sm text-gray-500">Preview...</td>
+                    <td class="px-6 py-4 text-sm text-gray-500">No data available</td>
                     <td
                       class="px-6 py-4 text-sm text-gray-500 text-right font-mono"
                     >
-                      Preview...
+                      N/A
                     </td>
                   </tr>
                   <!-- Actual Data -->
@@ -1213,13 +1371,21 @@
         <!-- Draggable Chat Window -->
         <div
           v-if="isChatOpen"
-          class="fixed bottom-6 right-6 w-96 h-[500px] bg-white rounded-xl shadow-2xl z-50 flex flex-col transition-all duration-300 ease-in-out"
+          class="fixed bottom-6 right-6 bg-white rounded-xl shadow-2xl z-50 flex flex-col transition-all duration-300 ease-in-out"
           :class="{
             'translate-y-0 opacity-100': isChatOpen,
             'translate-y-full opacity-0': !isChatOpen,
+            'cursor-move': isDragging,
+            'cursor-se-resize': isResizing,
           }"
           :style="{
             transform: `translate(${draggablePosition.x}px, ${draggablePosition.y}px)`,
+            width: `${chatWindowSize.width}px`,
+            height: `${chatWindowSize.height}px`,
+            minWidth: '320px',
+            minHeight: '400px',
+            maxWidth: '90vw',
+            maxHeight: '90vh',
           }"
           ref="chatWindow"
         >
@@ -1296,17 +1462,17 @@
                 ]"
               >
                 <div
-                  :class="[
-                    'max-w-[280px] px-3 py-2 rounded-lg text-sm',
-                    message.role === 'user'
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-white border border-gray-200 text-gray-900',
-                  ]"
-                >
-                  <div
-                    class="prose prose-sm max-w-none"
-                    v-html="renderMarkdown(message.content)"
-                  ></div>
+                    :class="[
+                      'max-w-[90%] px-3 py-2 rounded-lg text-sm whitespace-normal',
+                      message.role === 'user'
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-white border border-gray-200 text-gray-900',
+                    ]"
+                  >
+                    <div
+                      class="prose prose-sm max-w-none break-words overflow-wrap-break-word overflow-x-auto"
+                      v-html="renderMarkdown(message.content)"
+                    ></div>
 
                   <!-- Copy Button for AI responses -->
                   <div
@@ -1379,6 +1545,17 @@
               </svg>
               <span class="text-xs text-red-600">{{ aiError }}</span>
             </div>
+          </div>
+
+          <!-- Resize Handle -->
+          <div 
+            class="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize"
+            @mousedown="startResize"
+            @touchstart="startResize"
+          >
+            <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd" />
+            </svg>
           </div>
 
           <!-- Footer Input -->
@@ -1514,6 +1691,12 @@ const {
 
 // State
 const selectedAlgorithms = ref([]);
+// Toast notification state
+const toast = ref({
+  show: false,
+  message: "",
+  type: "error" // 'error', 'success', 'info'
+});
 const isRunning = ref(false);
 const logs = ref({});
 const finalAssignment = ref({});
@@ -1541,21 +1724,50 @@ const status = ref({ ACO: "Idle", PSO: "Idle" });
 const expandedTasks = ref({ ACO: {}, PSO: {} });
 
 // Data filtering state
-const dataLimit = ref(props.tasks.length);
+// Initialize dataLimit with props.tasks.length or 1 as minimum
+const dataLimit = ref(Math.max(1, props.tasks.length));
 const showAllData = ref(false);
 
-// Computed filtered tasks
+// Computed filtered tasks - ensures minimum 1 task is shown
 const filteredTasks = computed(() => {
+  // Handle case when there are no tasks
+  if (!props.tasks || props.tasks.length === 0) {
+    return [];
+  }
+  
   if (showAllData.value) {
     return props.tasks;
   }
-  return props.tasks.slice(0, dataLimit.value);
+  
+  // Calculate actual limit with minimum 1 task
+  const actualLimit = Math.max(1, Math.min(dataLimit.value, props.tasks.length));
+  return props.tasks.slice(0, actualLimit);
+});
+
+// Computed dataset headers
+const datasetHeaders = computed(() => {
+  if (props.tasks.length === 0) return [];
+  return Object.keys(props.tasks[0]);
 });
 
 // Reactive state for backend results
 const acoFinalAssignment = ref([]);
 const psoFinalAssignment = ref([]);
 const simulationStatus = ref("idle"); // idle, running, completed
+
+// Show toast notification
+const showToast = (message, type = 'error') => {
+  toast.value = {
+    show: true,
+    message,
+    type
+  };
+  
+  // Hide toast after 3 seconds
+  setTimeout(() => {
+    toast.value.show = false;
+  }, 3000);
+};
 
 // Floating Chat State
 const isChatOpen = ref(false);
@@ -1564,29 +1776,18 @@ const isDragging = ref(false);
 const dragStart = ref({ x: 0, y: 0 });
 const chatWindow = ref(null);
 
-// Dummy data generators
-const generateDummyACOAssignments = () => {
-  const dummy = [];
-  for (let i = 1; i <= parameters.num_agents; i++) {
-    dummy.push({
-      agent: `ACO Agent ${i}`,
-      tasks: ["Preview..."],
-      total_time: "Preview...",
-    });
-  }
-  acoFinalAssignment.value = dummy;
+// Resize State
+const chatWindowSize = ref({ width: 384, height: 500 });
+const isResizing = ref(false);
+const resizeStart = ref({ x: 0, y: 0, width: 0, height: 0 });
+
+// Data initialization functions
+const initializeACOAssignments = () => {
+  acoFinalAssignment.value = [];
 };
 
-const generateDummyPSOAssignments = () => {
-  const dummy = [];
-  for (let i = 1; i <= parameters.num_agents; i++) {
-    dummy.push({
-      agent: `PSO Agent ${i}`,
-      tasks: ["Preview..."],
-      total_time: "Preview...",
-    });
-  }
-  psoFinalAssignment.value = dummy;
+const initializePSOAssignments = () => {
+  psoFinalAssignment.value = [];
 };
 
 // Edit data function
@@ -1598,22 +1799,40 @@ const editData = () => {
 // Parameters
 const parameters = reactive({
   // Common
-  num_agents: 3,
-  num_iterations: 50,
+  num_default_agents: 3,
+  n_iterations: 100,
+  task_id_col: 'id',
+  agent_id_col: '',
 
   // ACO specific
-  alpha: 0.7,
-  beta: 3.0,
+  n_ants: 10,
+  alpha: 1.0,
+  beta: 2.0,
   evaporation_rate: 0.5,
+  pheromone_deposit: 100.0,
 
   // PSO specific
-  num_particles: 30,
-  inertia: 0.7,
+  n_particles: 30,
+  w: 0.5,
   c1: 1.5,
   c2: 1.5,
 });
 
 // Chart data already declared above
+
+// Watch for dataset changes to update default column selections
+watch(datasetHeaders, (newHeaders) => {
+  if (newHeaders.length > 0) {
+    // Set task_id_col to first header if not already set
+    if (!parameters.task_id_col || parameters.task_id_col === 'id') {
+      parameters.task_id_col = newHeaders[0];
+    }
+    // Keep agent_id_col as empty (none) by default
+    if (!parameters.agent_id_col) {
+      parameters.agent_id_col = '';
+    }
+  }
+}, { immediate: true });
 
 // Initialize charts
 const initCharts = () => {
@@ -1738,8 +1957,14 @@ const validateData = () => {
     textColumns: [],
   };
 
-  if (props.tasks.length === 0) {
-    errors.push("No tasks available. Please add tasks to the data table.");
+  if (props.tasks.length === 0 || props.tasks.length < 1) {
+    errors.push("No tasks available. Please add at least 1 task to the data table.");
+    dataValidation.value = { isValid: false, errors, warnings, summary };
+    return;
+  }
+
+  if (props.tasks.length < 1) {
+    errors.push("Minimum 1 task is required for simulation.");
     dataValidation.value = { isValid: false, errors, warnings, summary };
     return;
   }
@@ -1772,9 +1997,16 @@ const validateData = () => {
         const numValue = Number(strValue);
 
         if (!isNaN(numValue) && isFinite(numValue)) {
-          if (!summary.numericColumns.includes(key))
-            summary.numericColumns.push(key);
-          rowHasValidNumeric = true;
+          // Check for negative values
+          if (numValue < 0) {
+            errors.push(
+              `Row ${index + 1}: ${key} cannot be negative (found: "${strValue}")`
+            );
+          } else {
+            if (!summary.numericColumns.includes(key))
+              summary.numericColumns.push(key);
+            rowHasValidNumeric = true;
+          }
         } else {
           errors.push(
             `Row ${index + 1}: ${key} must be numeric (found: "${strValue}")`
@@ -1858,6 +2090,12 @@ const updateCharts = () => {
 // Mock simulation function for multiple algorithms
 const runSimulation = async () => {
   validateData();
+  
+  // Check if there are no tasks available
+  if (filteredTasks.value.length === 0) {
+    showToast("please masukan data minimal 1");
+    return;
+  }
 
   if (!dataValidation.value.isValid) {
     console.error(
@@ -1890,9 +2128,14 @@ const runSimulation = async () => {
     chartData.value[algo] = { labels: [], values: [] };
   });
 
-  // Reset backend result arrays and generate dummy assignments
-  generateDummyACOAssignments();
-  generateDummyPSOAssignments();
+  // Ensure logs arrays are properly initialized
+  selectedAlgorithms.value.forEach((algo) => {
+    logs.value[algo] = logs.value[algo] || [];
+  });
+
+  // Reset backend result arrays
+  initializeACOAssignments();
+  initializePSOAssignments();
 
   // Reset and clear charts - destroy and recreate to ensure proper re-rendering
   if (chartACO) {
@@ -1908,115 +2151,282 @@ const runSimulation = async () => {
   await nextTick();
   initCharts();
 
-  // Simple simulation with dummy data - prevent stack overflow
-  const numTasks = filteredTasks.value.length;
-  const numAgents = parameters.num_agents;
-
-  // Add minimal logs for each algorithm
-  selectedAlgorithms.value.forEach((algorithm) => {
-    logs.value[algorithm].push(`${algorithm} - Starting simulation...`);
-
-    // Add a few dummy iterations
-    for (let i = 1; i <= Math.min(5, parameters.num_iterations); i++) {
-      const currentBest = 1800 + Math.random() * 200 - i * 10;
-      logs.value[algorithm].push(
-        `${algorithm} - Iteration ${i}: Best Makespan so far = ${currentBest.toFixed(
-          2
-        )}`
-      );
-
-      chartData.value[algorithm].labels.push(i);
-      chartData.value[algorithm].values.push(currentBest);
-    }
-
-    logs.value[algorithm].push(`${algorithm} - Simulation completed!`);
-  });
-
-  // After 2 seconds, complete the simulation and show dummy final assignment
-  setTimeout(() => {
-    isRunning.value = false;
-
-    // Set status to Completed for all algorithms
-    selectedAlgorithms.value.forEach((algo) => {
-      status.value[algo] = "Completed";
-    });
-
-    dummyFinalAssignment.value = {
-      agents: [
-        { id: 1, tasks: [1, 3, 5, 7, 9, 11], time: 1826.21 },
-        { id: 2, tasks: [2, 4, 6, 8, 10, 12], time: 1825.9 },
-        { id: 3, tasks: [13, 14, 15, 16], time: 1824.89 },
-      ],
-      bestMakespan: 1826.21,
+  try {
+    // Prepare request body for API
+    console.log("Sending tasks data to API:", filteredTasks.value);
+    console.log("Tasks data length:", filteredTasks.value?.length);
+    console.log("Selected algorithms:", selectedAlgorithms.value);
+    
+    const requestBody = {
+      algorithms: selectedAlgorithms.value,
+      tasks: filteredTasks.value || [],
+      parameters: {
+        num_default_agents: parameters.num_default_agents,
+        n_iterations: parameters.n_iterations,
+        task_id_col: parameters.task_id_col,
+        agent_id_col: parameters.agent_id_col,
+        // ACO specific parameters
+        n_ants: parameters.n_ants,
+        alpha: parameters.alpha,
+        beta: parameters.beta,
+        evaporation_rate: parameters.evaporation_rate,
+        pheromone_deposit: parameters.pheromone_deposit,
+        // PSO specific parameters
+        n_particles: parameters.n_particles,
+        w: parameters.w,
+        c1: parameters.c1,
+        c2: parameters.c2
+      }
     };
 
-    // Add final assignment data for each algorithm
-    selectedAlgorithms.value.forEach((algorithm) => {
-      const tasksPerAgent = Math.floor(numTasks / numAgents);
-      const remainingTasks = numTasks % numAgents;
-
-      let taskIndex = 0;
-      const assignmentData = [];
-
-      for (let agent = 1; agent <= numAgents; agent++) {
-        const agentTasks = [];
-        const tasksForThisAgent =
-          tasksPerAgent + (agent <= remainingTasks ? 1 : 0);
-
-        for (let j = 0; j < tasksForThisAgent; j++) {
-          if (taskIndex < numTasks) {
-            agentTasks.push(taskIndex + 1);
-            taskIndex++;
-          }
+    logs.value.ACO = logs.value.ACO || [];
+    logs.value.ACO.push("📤 Sending request to simulation API...");
+    logs.value.ACO.push(`📊 Data being sent: ${filteredTasks.value?.length} tasks`);
+    logs.value.PSO = logs.value.PSO || [];
+    logs.value.PSO.push("📤 Sending request to simulation API...");
+    logs.value.PSO.push(`📊 Data being sent: ${filteredTasks.value?.length} tasks`);
+    
+    let response;
+    let usedSchedulingEndpoint = false;
+    
+    // Try the new scheduling endpoint first
+    try {
+      const schedulingPromises = selectedAlgorithms.value.map(async (algorithm) => {
+        try {
+          logs.value[algorithm] = logs.value[algorithm] || [];
+          logs.value[algorithm].push(`🔄 Trying scheduling endpoint for ${algorithm}...`);
+          const result = await runScheduling(algorithm.toLowerCase());
+          logs.value[algorithm].push("✅ Scheduling endpoint successful!");
+          return {
+            algorithm,
+            success: true,
+            data: result
+          };
+        } catch (error) {
+          logs.value[algorithm] = logs.value[algorithm] || [];
+          logs.value[algorithm].push(`❌ Scheduling endpoint failed: ${error.message}`);
+          return {
+            algorithm,
+            success: false,
+            error: error.message
+          };
         }
+      });
 
-        const totalTime =
-          (algorithm === "ACO" ? 1825 : 1826) + Math.random() * 10;
-
-        const assignment = {
-          agent: `${algorithm} Agent ${agent}`,
-          tasks: agentTasks,
-          total_time: Array.isArray(totalTime) ? totalTime[0] : totalTime,
+      const results = await Promise.all(schedulingPromises);
+      
+      // Check if any scheduling call succeeded
+      const successfulResults = results.filter(r => r.success);
+      
+      if (successfulResults.length > 0) {
+        usedSchedulingEndpoint = true;
+        logs.value.ACO = logs.value.ACO || [];
+        logs.value.ACO.push("✅ Using scheduling endpoint results");
+        logs.value.PSO = logs.value.PSO || [];
+        logs.value.PSO.push("✅ Using scheduling endpoint results");
+        
+        // Create a mock response format for the scheduling results
+        response = {
+          status: 'success',
+          results: {}
         };
 
-        finalAssignment.value[algorithm].push(assignment);
-        assignmentData.push(assignment);
+        successfulResults.forEach((result) => {
+          response.results[result.algorithm.toUpperCase()] = {
+            bestMakespan: result.data.makespan,
+            executionTime: result.data.executionTime || 0,
+            loadBalanceIndex: result.data.loadBalanceIndex || 0,
+            loadbalancing: result.data.loadbalancing || result.data.loadBalanceIndex || 0,
+            computationTime: result.data.computing_time || result.data.computationTime || 0,
+            // Use results array from backend response for final assignment
+            results: result.data.results || [],
+            totalExecutionTime: result.data.total_execution_time || result.data.executionTime || 0,
+            // Extract convergence data from iterations
+            convergenceData: result.data.iterations ? {
+              bestValues: result.data.iterations.map(iter => iter.makespan),
+              loadBalancingValues: result.data.iterations.map(iter => iter.loadbalancing),
+              computingTimeValues: result.data.iterations.map(iter => iter.computing_time)
+            } : null
+          };
+        });
+      } else {
+        throw new Error('All scheduling endpoints failed');
       }
+      
+    } catch (error) {
+      console.log('Scheduling endpoint failed, falling back to original API:', error);
+      logs.value.ACO = logs.value.ACO || [];
+      logs.value.ACO.push("🔄 Falling back to original simulation API...");
+      logs.value.PSO = logs.value.PSO || [];
+      logs.value.PSO.push("🔄 Falling back to original simulation API...");
+      
+      // Fallback to original API
+      response = await $fetch('http://127.0.0.1:5000/run_scheduling', {
+        method: 'POST',
+        body: requestBody,
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'omit', // Handle CORS
+        mode: 'cors' // Enable CORS
+      });
+    }
 
-      // Replace dummy data with actual backend results
+    logs.value.ACO = logs.value.ACO || [];
+    logs.value.ACO.push("✅ Simulation completed successfully!");
+    logs.value.PSO = logs.value.PSO || [];
+    logs.value.PSO.push("✅ Simulation completed successfully!");
+
+    // Process API response
+    console.log("Raw API response:", response);
+    
+    // Check if response has valid structure
+    const isValidResponse = response && 
+                          (response.status === 'success' || 
+                           (response.results && Object.keys(response.results).length > 0));
+    
+    if (isValidResponse) {
+      const data = response;
+      
+      console.log("Full API response:", data);
+      
+      // Update simulation results for each algorithm
+      selectedAlgorithms.value.forEach((algorithm) => {
+        let result;
+        if (data.results && data.results[algorithm] && Object.keys(data.results[algorithm]).length > 0) {
+          console.log(`${algorithm} data structure is valid`);
+          result = data.results[algorithm];
+          console.log(`${algorithm} result data:`, result);
+        } else {
+          console.warn(`${algorithm} data structure is invalid or empty, using fallback data`);
+          // Initialize empty assignments
+          if (algorithm === "ACO") {
+            initializeACOAssignments();
+          } else if (algorithm === "PSO") {
+            initializePSOAssignments();
+          }
+        }
+        
+        // Update best results dengan pengecekan yang lebih robust
+        bestMakespan.value[algorithm] = result.bestMakespan || result.makespan || 0;
+        executionTime.value[algorithm] = result.totalExecutionTime || result.executionTime || 0;
+        loadBalanceIndex.value[algorithm] = result.loadbalancing || result.loadBalanceIndex || 0;
+        computationTime.value[algorithm] = result.computationTime || result.computing_time || 0;
+
+          // Update final assignment - use results array from API response
+          if (algorithm === "ACO") {
+            console.log("ACO response data:", result);
+            
+            // Gunakan data dari results array yang berisi array of objects
+            if (result.results && Array.isArray(result.results) && result.results.length > 0) {
+              // Map langsung dari format API ke format UI
+              acoFinalAssignment.value = result.results.map(item => ({
+                agent: item.agent || 'Default Agent',
+                tasks: Array.isArray(item.task_list) ? item.task_list : [],
+                total_time: item.total_time || 0
+              }));
+              console.log("Processed ACO results from API:", acoFinalAssignment.value);
+            } else if (result.finalAssignment && Array.isArray(result.finalAssignment) && result.finalAssignment.length > 0) {
+              // Fallback ke data dari finalAssignment jika results tidak ada
+              console.log("Using finalAssignment data as fallback");
+              acoFinalAssignment.value = result.finalAssignment;
+            } else {
+              // Jika kedua struktur tidak ada, inisialisasi kosong
+              console.log("No assignment data found, initializing empty");
+              initializeACOAssignments();
+            }
+          } else if (algorithm === "PSO") {
+            console.log("PSO response data:", result);
+            
+            // Gunakan data dari results array yang berisi array of objects
+            if (result.results && Array.isArray(result.results) && result.results.length > 0) {
+              // Map langsung dari format API ke format UI
+              psoFinalAssignment.value = result.results.map(item => ({
+                agent: item.agent || 'Default Agent',
+                tasks: Array.isArray(item.task_list) ? item.task_list : [],
+                total_time: item.total_time || 0
+              }));
+              console.log("Processed PSO results from API:", psoFinalAssignment.value);
+            } else if (result.finalAssignment && Array.isArray(result.finalAssignment) && result.finalAssignment.length > 0) {
+              // Fallback ke data dari finalAssignment jika results tidak ada
+              console.log("Using finalAssignment data as fallback");
+              psoFinalAssignment.value = result.finalAssignment;
+            } else {
+              // Jika kedua struktur tidak ada, inisialisasi kosong
+              console.log("No assignment data found, initializing empty");
+              initializePSOAssignments();
+            }
+          }
+
+          // Update convergence charts
+          if (result.convergenceData) {
+            chartData.value[algorithm] = {
+              labels: result.convergenceData.bestValues.map((_, index) => index + 1),
+              values: result.convergenceData.bestValues
+            };
+          }
+
+          status.value[algorithm] = "Completed";
+        
+      });
+
+      // Send results to AI chat
+      await sendUserMessage();
+      
+    } else {
+      console.error('Invalid response format from API:', response);
+      logs.value.ACO = logs.value.ACO || [];
+      logs.value.ACO.push('❌ Invalid response format from API');
+      logs.value.PSO = logs.value.PSO || [];
+      logs.value.PSO.push('❌ Invalid response format from API');
+      
+      // Initialize empty assignments
+      selectedAlgorithms.value.forEach((algorithm) => {
+        if (algorithm === "ACO") {
+          initializeACOAssignments();
+        } else if (algorithm === "PSO") {
+          initializePSOAssignments();
+        }
+      });
+      
+      throw new Error('Invalid response format from API - missing results or status');
+    }
+  } catch (error) {
+    console.error('Simulation error:', error);
+    const errorMessage = error.message || 'Unknown error occurred';
+    
+    // Handle specific CORS/network errors
+    if (errorMessage.includes('CORS') || errorMessage.includes('Network')) {
+      logs.value.ACO = logs.value.ACO || [];
+      logs.value.ACO.push('❌ CORS/Network error: Please ensure Flask server is running with CORS enabled');
+      logs.value.PSO = logs.value.PSO || [];
+      logs.value.PSO.push('❌ CORS/Network error: Please ensure Flask server is running with CORS enabled');
+    } else {
+      logs.value.ACO = logs.value.ACO || [];
+      logs.value.ACO.push(`❌ Simulation failed: ${errorMessage}`);
+      logs.value.PSO = logs.value.PSO || [];
+      logs.value.PSO.push(`❌ Simulation failed: ${errorMessage}`);
+    }
+    
+    // Clear assignments and show error state
+    selectedAlgorithms.value.forEach((algorithm) => {
       if (algorithm === "ACO") {
-        acoFinalAssignment.value = assignmentData.map((item) => ({
-          agent: item.agent,
-          tasks: item.tasks,
-          total_time: parseFloat(item.total_time.toFixed(2)),
-        }));
+        initializeACOAssignments();
       } else if (algorithm === "PSO") {
-        psoFinalAssignment.value = assignmentData.map((item) => ({
-          agent: item.agent,
-          tasks: item.tasks,
-          total_time: parseFloat(item.total_time.toFixed(2)),
-        }));
+        initializePSOAssignments();
       }
-
-      // Set values based on the actual algorithm being simulated
-      bestMakespan.value[algorithm] = (
-        algorithm === "ACO" ? 1825.5 : 1826.21
-      ).toFixed(2);
-      executionTime.value[algorithm] = (
-        algorithm === "ACO" ? 45.2 : 38.7
-      ).toFixed(1);
-      loadBalanceIndex.value[algorithm] = (
-        algorithm === "ACO" ? 0.15 : 0.18
-      ).toFixed(3);
-      computationTime.value[algorithm] = (
-        algorithm === "ACO" ? 245 : 189
-      ).toFixed(0);
+      
+      bestMakespan.value[algorithm] = "N/A";
+      executionTime.value[algorithm] = "N/A";
+      loadBalanceIndex.value[algorithm] = "N/A";
+      computationTime.value[algorithm] = "N/A";
+      status.value[algorithm] = "Failed";
     });
-
+  } finally {
+    isRunning.value = false;
     simulationStatus.value = "completed";
-
     updateCharts();
-  }, 2000);
+  }
 };
 
 // Watch for algorithms prop changes
@@ -2042,13 +2452,13 @@ watch(simulationStatus, (newStatus) => {
   }
 });
 
-// Watch for num_agents changes to regenerate dummy assignments
+// Watch for num_default_agents changes to reset assignments
 watch(
-  () => parameters.num_agents,
+  () => parameters.num_default_agents,
   (newNumAgents) => {
     if (simulationStatus.value === "idle") {
-      generateDummyACOAssignments();
-      generateDummyPSOAssignments();
+      initializeACOAssignments();
+      initializePSOAssignments();
     }
   }
 );
@@ -2079,9 +2489,9 @@ onMounted(() => {
     );
   }
 
-  // Initialize dummy assignments
-  generateDummyACOAssignments();
-  generateDummyPSOAssignments();
+  // Initialize assignments
+  initializeACOAssignments();
+  initializePSOAssignments();
 
   validateData();
   initCharts();
@@ -2112,9 +2522,9 @@ const resetSimulation = () => {
   expandedTasks.value = { ACO: {}, PSO: {} };
   dummyFinalAssignment.value = null;
 
-  // Reset backend result arrays and regenerate dummy assignments
-  generateDummyACOAssignments();
-  generateDummyPSOAssignments();
+  // Reset backend result arrays
+  initializeACOAssignments();
+  initializePSOAssignments();
   simulationStatus.value = "idle";
 
   // Reset charts
@@ -2133,6 +2543,78 @@ const resetSimulation = () => {
   });
 };
 
+// Scheduling API Methods
+const runScheduling = async (algorithmType = 'pso') => {
+  try {
+    // Prepare request body sesuai dengan endpoint Flask
+    const requestBody = {
+      algorithm: algorithmType,
+      parameters: {
+        num_default_agents: parameters.num_default_agents,
+        task_id_col: parameters.task_id_col,
+        agent_id_col: parameters.agent_id_col,
+        // Include other algorithm-specific parameters
+        ...(algorithmType === 'aco' && {
+          n_iterations: parameters.n_iterations,
+          n_ants: parameters.n_ants,
+          alpha: parameters.alpha,
+          beta: parameters.beta,
+          evaporation_rate: parameters.evaporation_rate,
+          pheromone_deposit: parameters.pheromone_deposit
+        }),
+        ...(algorithmType === 'pso' && {
+          n_iterations: parameters.n_iterations,
+          n_particles: parameters.n_particles,
+          w: parameters.w,
+          c1: parameters.c1,
+          c2: parameters.c2
+        })
+      },
+      tasks_data: filteredTasks.value || []
+    };
+
+    console.log('Sending scheduling request:', requestBody);
+
+    const response = await fetch('http://127.0.0.1:5000/run_scheduling', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    
+    if (result.success) {
+        console.log('Scheduling successful:', result);
+        // Return formatted result for simulation processing
+        return {
+          makespan: result.makespan,
+          gantt_chart_html: result.gantt_chart_html,
+          // Extract iterations data for charting
+          iterations: result.iterations || [],
+          computing_time: result.computing_time || 0,
+          // Include results array from backend for final assignment
+          results: result.results || [],
+          // Map backend properties to frontend properties
+          executionTime: result.total_execution_time || 0,
+          loadBalanceIndex: result.loadbalancing || 0,
+          computationTime: result.computing_time || 0,
+          finalAssignment: []
+        };
+      } else {
+        throw new Error(result.message || 'Scheduling failed');
+      }
+  } catch (error) {
+    console.error('Error running scheduling:', error);
+    throw error;
+  }
+};
+
 // AI Chat Methods
 const sendUserMessage = async () => {
   if (!userMessage.value.trim()) return;
@@ -2148,23 +2630,23 @@ const sendUserMessage = async () => {
     // Always include complete simulation data
     const simulationData = {
       aco: {
-        bestMakespan: bestMakespan.value?.ACO ? parseFloat(bestMakespan.value.ACO) : null,
-        executionTime: executionTime.value?.ACO ? parseFloat(executionTime.value.ACO) : null,
-        loadBalanceIndex: loadBalanceIndex.value?.ACO ? parseFloat(loadBalanceIndex.value.ACO) : null,
-        computationTime: computationTime.value?.ACO ? parseInt(computationTime.value.ACO) : null,
+        bestMakespan: bestMakespan.value?.ACO,
+        executionTime: executionTime.value?.ACO,
+        loadBalanceIndex: loadBalanceIndex.value?.ACO,
+        computationTime: computationTime.value?.ACO,
         finalAssignment: acoFinalAssignment.value,
-        selected: selectedAlgorithms.value.includes("ACO"),
+        totalAgents: parameters.num_default_agents,
+        totalTasks: props.tasks?.length || 0,
       },
       pso: {
-        bestMakespan: bestMakespan.value?.PSO ? parseFloat(bestMakespan.value.PSO) : null,
-        executionTime: executionTime.value?.PSO ? parseFloat(executionTime.value.PSO) : null,
-        loadBalanceIndex: loadBalanceIndex.value?.PSO ? parseFloat(loadBalanceIndex.value.PSO) : null,
-        computationTime: computationTime.value?.PSO ? parseInt(computationTime.value.PSO) : null,
+        bestMakespan: bestMakespan.value?.PSO,
+        executionTime: executionTime.value?.PSO,
+        loadBalanceIndex: loadBalanceIndex.value?.PSO,
+        computationTime: computationTime.value?.PSO,
         finalAssignment: psoFinalAssignment.value,
-        selected: selectedAlgorithms.value.includes("PSO"),
-      },
-      algorithms: selectedAlgorithms.value,
-      simulationStatus: simulationStatus.value,
+        totalAgents: parameters.num_default_agents,
+        totalTasks: props.tasks?.length || 0,
+      }
     };
 
     console.log("Sending simulation data to AI:", simulationData);
@@ -2175,11 +2657,7 @@ const sendUserMessage = async () => {
       swarmType = selectedAlgorithms.value[0]; // "ACO" or "PSO"
     }
 
-    await sendMessage(userMessage.value || "explain results", {
-      userMessage: userMessage.value || "explain results",
-      simulationResults: simulationData,
-      swarmType: swarmType,
-    });
+    await sendMessage(userMessage.value || "explain results", simulationData, swarmType);
 
     userMessage.value = "";
     scrollToBottom();
@@ -2190,6 +2668,18 @@ const sendUserMessage = async () => {
 
 const renderMarkdown = (text) => {
   if (!text) return "";
+  
+  // Konfigurasi marked untuk menghindari overflow teks
+  marked.setOptions({
+    breaks: true,  // Mengonversi baris baru menjadi <br>
+    gfm: true,     // Mengaktifkan GitHub Flavored Markdown
+    sanitize: false,
+    smartLists: true,
+    smartypants: true,
+    mangle: true,  // Mencegah tautan terlalu panjang
+    headerIds: false
+  });
+  
   return marked(text);
 };
 
@@ -2200,9 +2690,9 @@ const exportJSON = (algorithm) => {
 
   if (!data || data.length === 0) return;
 
-  // Filter out dummy preview data
-  const exportData = data.filter((item) => item.total_time !== "Preview...");
-  if (exportData.length === 0) return;
+  // Use real data from backend
+  const exportData = data;
+  if (!exportData || exportData.length === 0) return;
 
   const jsonString = JSON.stringify(exportData, null, 2);
   const blob = new Blob([jsonString], { type: "application/json" });
@@ -2222,9 +2712,9 @@ const exportCSV = (algorithm) => {
 
   if (!data || data.length === 0) return;
 
-  // Filter out dummy preview data
-  const exportData = data.filter((item) => item.total_time !== "Preview...");
-  if (exportData.length === 0) return;
+  // Use real data from backend
+  const exportData = data;
+  if (!exportData || exportData.length === 0) return;
 
   const headers = ["Agent", "Tasks", "Total Time"];
   const rows = exportData.map((row) => [
@@ -2411,6 +2901,47 @@ const startDrag = (event) => {
   document.addEventListener("touchend", handleMouseUp);
 };
 
+const startResize = (event) => {
+  isResizing.value = true;
+  const clientX = event.clientX || (event.touches && event.touches[0].clientX);
+  const clientY = event.clientY || (event.touches && event.touches[0].clientY);
+
+  resizeStart.value = {
+    x: clientX,
+    y: clientY,
+    width: chatWindowSize.value.width,
+    height: chatWindowSize.value.height,
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isResizing.value) return;
+
+    const moveX = e.clientX || (e.touches && event.touches[0].clientX);
+    const moveY = e.clientY || (e.touches && event.touches[0].clientY);
+
+    const deltaX = moveX - resizeStart.value.x;
+    const deltaY = moveY - resizeStart.value.y;
+
+    chatWindowSize.value = {
+      width: Math.max(320, resizeStart.value.width + deltaX),
+      height: Math.max(400, resizeStart.value.height + deltaY),
+    };
+  };
+
+  const handleMouseUp = () => {
+    isResizing.value = false;
+    document.removeEventListener("mousemove", handleMouseMove);
+    document.removeEventListener("mouseup", handleMouseUp);
+    document.removeEventListener("touchmove", handleMouseMove);
+    document.removeEventListener("touchend", handleMouseUp);
+  };
+
+  document.addEventListener("mousemove", handleMouseMove);
+  document.addEventListener("mouseup", handleMouseUp);
+  document.addEventListener("touchmove", handleMouseMove);
+  document.addEventListener("touchend", handleMouseUp);
+};
+
 // Expose for parent component
 defineExpose({
   runSimulation,
@@ -2437,4 +2968,21 @@ defineExpose({
 .overflow-y-auto::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
 }
+
+/* Toast animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
 </style>
+

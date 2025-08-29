@@ -22,6 +22,10 @@ interface SimulationResults {
     loadBalanceIndex?: string | number
     computationTime?: string | number
     finalAssignment?: any[]
+    convergenceData?: number[]
+    ganttChartHtml?: string
+    totalAgents?: number
+    totalTasks?: number
   }
   pso?: {
     bestMakespan?: string | number
@@ -29,6 +33,10 @@ interface SimulationResults {
     loadBalanceIndex?: string | number
     computationTime?: string | number
     finalAssignment?: any[]
+    convergenceData?: number[]
+    ganttChartHtml?: string
+    totalAgents?: number
+    totalTasks?: number
   }
 }
 
@@ -70,7 +78,8 @@ export function useAiChatStream() {
       })
 
       if (!response.ok) {
-        throw new Error(`HTTP Error: ${response.status} ${response.statusText}`)
+        const errorText = await response.text()
+        throw new Error(`HTTP ${response.status}: ${errorText}`)
       }
 
       if (!response.body) {
@@ -134,7 +143,7 @@ export function useAiChatStream() {
                   throw new Error(event.data)
               }
             } catch (parseError) {
-              console.error('Parse error:', parseError, 'for line:', line)
+              console.warn('Parse error:', parseError, 'for line:', line)
               // Continue processing instead of breaking
             }
           }
@@ -319,9 +328,10 @@ export function useAiChatStream() {
         message: 'Streaming connection works! Response: ' + (result.substring(0, 100) + (result.length > 100 ? '...' : ''))
       }
     } catch (error: any) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       return { 
         success: false, 
-        message: `Streaming test failed: ${error.message || 'Unknown error'}` 
+        message: `Streaming test failed: ${errorMessage}` 
       }
     }
   }
@@ -352,7 +362,8 @@ export function useAiChatStream() {
       })
 
       if (!response.ok) {
-        throw new Error(`HTTP Error: ${response.status}`)
+        const errorText = await response.text()
+        throw new Error(`HTTP ${response.status}: ${errorText}`)
       }
 
       const data = await response.json()
