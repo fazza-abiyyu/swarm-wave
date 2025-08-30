@@ -1071,7 +1071,7 @@
 
       <!-- Overall Best Result Section -->
       <div
-        v-if="bestMakespan.ACO && bestMakespan.PSO"
+        v-if="bestMakespan.ACO && bestMakespan.PSO && selectedAlgorithms.includes('ACO') && selectedAlgorithms.includes('PSO')"
         class="bg-white rounded-xl shadow-sm p-6 mt-6"
       >
         <h2 class="text-xl font-semibold text-gray-900 mb-4">
@@ -1434,14 +1434,21 @@
 
               <!-- Loading Indicator -->
               <div v-if="aiLoading && !isStreaming" class="flex justify-start">
-                <div class="bg-white border border-gray-200 text-gray-900 px-4 py-3 rounded-lg shadow-sm mr-8">
-                  <div class="flex items-center space-x-2">
-                    <div class="flex space-x-1">
-                      <div class="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
-                      <div class="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
-                      <div class="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
-                    </div>
-                    <span class="text-xs text-gray-600">Analyzing your simulation...</span>
+                <div
+                  class="bg-white border border-gray-200 text-gray-900 px-3 py-2 rounded-lg"
+                >
+                  <div class="flex items-center space-x-1">
+                    <div
+                      class="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                    ></div>
+                    <div
+                      class="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                      style="animation-delay: 0.1s"
+                    ></div>
+                    <div
+                      class="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                      style="animation-delay: 0.2s"
+                    ></div>
                   </div>
                 </div>
               </div>
@@ -1566,7 +1573,7 @@
           @click="resetSimulation"
           class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition duration-200"
         >
-          Run Again
+          Reset Result
         </button>
         <button
           @click="$emit('back-to-table')"
@@ -1765,14 +1772,14 @@ const runSimulation = async () => {
     return;
   }
 
+  await resetSimulation();
+
   isRunning.value = true;
   
   // Ensure charts are initialized for selected algorithms
   await nextTick();
   initCharts();
   await nextTick();
-  
-  selectedAlgorithms.value.forEach(resetSimulationStateForAlgo);
   
   // Clear any existing abort controllers
   abortControllers.value.clear();
@@ -2119,8 +2126,9 @@ const validateData = () => {
   };
 };
 
-const resetSimulation = () => {
-  selectedAlgorithms.value.forEach(resetSimulationStateForAlgo);
+const resetSimulation = async () => {
+  // Reset ALL algorithms, not just selected ones
+  ['ACO', 'PSO'].forEach(resetSimulationStateForAlgo);
   isRunning.value = false;
 };
 
@@ -2230,23 +2238,7 @@ const messagesContainer = ref(null);
 
 const openChat = () => isChatOpen.value = true;
 const closeChat = () => isChatOpen.value = false;
-
-// Enhanced markdown rendering with better configuration
-const renderMarkdown = (text) => {
-  if (!text) return '';
-  
-  // Configure marked options for better rendering
-  marked.setOptions({
-    breaks: true, // Convert line breaks to <br>
-    gfm: true, // Enable GitHub flavored markdown
-    tables: true, // Enable table parsing
-    sanitize: false, // Allow HTML (be careful with user input)
-    smartypants: true, // Use smart quotes and dashes
-  });
-  
-  return marked(text);
-};
-
+const renderMarkdown = (text) => marked(text || '');
 const copyToClipboard = (text) => navigator.clipboard.writeText(text).then(() => showToast('Copied to clipboard', 'success'));
 
 const getDataTypes = () => {
@@ -2424,17 +2416,6 @@ watch(chatHistory, () => {
         }
     });
 }, { deep: true });
-
-// Listen for custom scroll events from streaming updates
-if (typeof window !== 'undefined') {
-    window.addEventListener('chat-scroll', () => {
-        nextTick(() => {
-            if (messagesContainer.value) {
-                messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight;
-            }
-        });
-    });
-}
 
 </script>
 
