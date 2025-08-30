@@ -4,8 +4,13 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   modules: ["@nuxtjs/tailwindcss"],
   runtimeConfig: {
+    // Private keys (only available on server-side)
     GEMINI_API_KEY: process.env.GEMINI_API_KEY,
-    OPEN_API_KEY: process.env.OPEN_API_KEY,
+    
+    // Public keys (exposed to client-side)
+    public: {
+      API_URL: process.env.API_URL || 'http://127.0.0.1:5001',
+    }
   },
   app: {
     head: {

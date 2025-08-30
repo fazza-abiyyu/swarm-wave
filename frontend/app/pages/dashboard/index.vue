@@ -83,7 +83,7 @@
         <!-- Simulation View -->
         <div v-else>
           <SimulationPage 
-            :tasks="currentTasks" 
+            :tasks="rawTasks" 
             :algorithms="selectedAlgorithms" 
             @back-to-table="showSimulation = false" 
             @edit-data="onEditData"
@@ -131,7 +131,8 @@ import SimulationPage from '~/components/SimulationPage.vue'
 // State
 const showSimulation = ref(false)
 const isMobileMenuOpen = ref(false)
-const currentTasks = ref([])
+const currentTasks = ref([]) // Processed tasks for simulation
+const rawTasks = ref([]) // Original raw tasks data
 const selectedAlgorithms = ref([])
 
 // Reactive data
@@ -139,7 +140,21 @@ const tableData = ref([])
 
 // Handle data updates from DynamicTable - preserve all original fields
 const onDataUpdated = (data) => {
+  if (!data || !Array.isArray(data)) {
+    currentTasks.value = []
+    rawTasks.value = []
+    return
+  }
+  
+  // Store raw data as-is for editing purposes
+  rawTasks.value = [...data]
+  
+  // Process data for simulation
   currentTasks.value = data.map(task => {
+    if (!task || typeof task !== 'object') {
+      return {}
+    }
+    
     const processedTask = {}
     Object.keys(task).forEach(key => {
       const value = task[key]
@@ -152,10 +167,21 @@ const onDataUpdated = (data) => {
 
 // Handle edit data request from SimulationPage
 const onEditData = (data) => {
-  tableData.value = data;
-  onDataUpdated(data);
-  showSimulation.value = false;
-};
+  // If data provided, use it; otherwise use rawTasks (original data)
+  const dataToEdit = data || rawTasks.value || []
+  
+  if (!Array.isArray(dataToEdit)) {
+    tableData.value = []
+    rawTasks.value = []
+    currentTasks.value = []
+    showSimulation.value = false
+    return
+  }
+  
+  tableData.value = dataToEdit
+  onDataUpdated(dataToEdit)
+  showSimulation.value = false
+}
 
 // Handle simulation request from DynamicTable
 const onRunSimulation = (simulationData) => {
@@ -169,6 +195,10 @@ const onRunSimulation = (simulationData) => {
   
   // Ensure tasks are updated before running simulation - preserve all original fields
   if (simulationData.tasks && simulationData.tasks.length > 0) {
+    // Store raw data
+    rawTasks.value = [...simulationData.tasks]
+    
+    // Process data for simulation
     currentTasks.value = simulationData.tasks.map(task => {
       const processedTask = {}
       Object.keys(task).forEach(key => {
@@ -189,7 +219,12 @@ const onRunSimulation = (simulationData) => {
 
 // Initialize currentTasks with initial data
 onMounted(() => {
-  onDataUpdated(tableData.value)
+  if (tableData.value && Array.isArray(tableData.value) && tableData.value.length > 0) {
+    onDataUpdated(tableData.value)
+  } else {
+    currentTasks.value = []
+    rawTasks.value = []
+  }
 })
 </script>
 

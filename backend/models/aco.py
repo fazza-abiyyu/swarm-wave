@@ -100,6 +100,9 @@ class ACO_MultiAgent_Scheduler:
             self.pheromones[tour[-1], tour[0]] += pheromone_to_add
     
     def run(self):
+        import time
+        computation_start_time = time.time()
+        
         log_message = "Starting ACO optimization..."
         yield json.dumps({"type": "log", "message": log_message})
         
@@ -130,10 +133,13 @@ class ACO_MultiAgent_Scheduler:
                 "log_message": progress_log
             })
 
+        computation_time = time.time() - computation_start_time
+
         # Kirim hasil final
         yield json.dumps({
             "type": "done",
             "schedule": self.best_schedule,
             "makespan": self.best_cost,
+            "computation_time": round(computation_time * 1000, 2),  # Convert to milliseconds
             "log_message": "ACO Optimization Finished!"
         })
