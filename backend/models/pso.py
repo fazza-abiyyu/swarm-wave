@@ -46,6 +46,9 @@ class PSO_MultiAgent_Scheduler:
         return self.cost_function(schedule, makespan), schedule
 
     def run(self):
+        import time
+        computation_start_time = time.time()
+        
         log_message = "Starting PSO optimization..."
         yield json.dumps({"type": "log", "message": log_message})
         
@@ -84,10 +87,13 @@ class PSO_MultiAgent_Scheduler:
                 "log_message": progress_log
             })
 
+        computation_time = time.time() - computation_start_time
+
         # Kirim hasil final
         yield json.dumps({
             "type": "done",
             "schedule": self.gbest_schedule,
             "makespan": self.gbest_cost,
+            "computation_time": round(computation_time * 1000, 2),  # Convert to milliseconds
             "log_message": "PSO Optimization Finished!"
         })

@@ -109,6 +109,7 @@ def stream_scheduling():
         def generate():
             start_time = time.time()
             final_result = None
+            algorithm_computation_time = 0
             
             # Mengirim data awal
             initial_data = {"type": "start", "message": f"Starting {algorithm} simulation..."}
@@ -121,8 +122,9 @@ def stream_scheduling():
                 chunk_obj = json.loads(data_chunk)
                 if chunk_obj.get("type") == "done":
                     final_result = chunk_obj
+                    algorithm_computation_time = chunk_obj.get('computation_time', 0)
             
-            execution_time = time.time() - start_time
+            total_execution_time = time.time() - start_time
             
             # Hitung load balancing dari hasil akhir
             best_schedule = final_result.get('schedule', [])
@@ -143,7 +145,8 @@ def stream_scheduling():
             # Kirim data metrik final
             final_metrics = {
                 "type": "final_metrics",
-                "execution_time": execution_time,
+                "total_execution_time": round(total_execution_time * 1000, 2),  # Convert to milliseconds
+                "computation_time": algorithm_computation_time,  # Already in milliseconds from algorithm
                 "load_balance_index": load_balance_index
             }
             yield f"data: {json.dumps(final_metrics)}\n\n"
