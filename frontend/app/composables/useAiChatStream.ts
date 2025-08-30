@@ -26,6 +26,13 @@ interface SimulationResults {
     ganttChartHtml?: string
     totalAgents?: number
     totalTasks?: number
+    parameters?: {
+      alpha?: number
+      beta?: number
+      evaporation_rate?: number
+      pheromone_deposit?: number
+      n_ants?: number
+    }
   }
   pso?: {
     bestMakespan?: string | number
@@ -37,6 +44,35 @@ interface SimulationResults {
     ganttChartHtml?: string
     totalAgents?: number
     totalTasks?: number
+    parameters?: {
+      n_particles?: number
+      w?: number
+      c1?: number
+      c2?: number
+    }
+  }
+  dataSpecification?: {
+    totalRows?: number
+    totalColumns?: number
+    columns?: string[]
+    sampleData?: any[]
+    dataTypes?: Record<string, string>
+    dataLimitations?: {
+      originalRows?: number
+      filteredRows?: number
+      showAllData?: boolean
+      dataLimit?: number
+    }
+  }
+  algorithmParameters?: {
+    common?: {
+      num_default_agents?: number
+      n_iterations?: number
+      task_id_col?: string
+      agent_id_col?: string
+    }
+    aco?: any
+    pso?: any
   }
 }
 

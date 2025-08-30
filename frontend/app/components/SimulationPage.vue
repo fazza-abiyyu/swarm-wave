@@ -40,7 +40,7 @@
           </button>
         </div>
         <div
-          v-if="filteredTasks.length === 0"
+          v-if="!filteredTasks || filteredTasks.length === 0"
           class="text-center py-8 text-gray-500"
         >
           <svg
@@ -61,7 +61,7 @@
             <thead class="bg-gray-50">
               <tr>
                 <th
-                  v-for="header in Object.keys(filteredTasks[0] || {})"
+                  v-for="header in datasetHeaders"
                   :key="header"
                   class="px-4 py-2 text-left text-xs font-medium text-gray-500 tracking-wider"
                 >
@@ -76,7 +76,7 @@
                 class="hover:bg-gray-50"
               >
                 <td
-                  v-for="header in Object.keys(filteredTasks[0] || {})"
+                  v-for="header in datasetHeaders"
                   :key="header"
                   class="px-4 py-2 whitespace-nowrap text-sm text-gray-900"
                 >
@@ -237,6 +237,10 @@
               <label class="block text-sm font-medium text-gray-700">
                 Task ID Column
               </label>
+              <span v-if="parameters.task_id_col === datasetHeaders[0] && datasetHeaders.length > 0" 
+                    class="px-2 py-1 text-xs bg-blue-100 text-blue-600 rounded-md">
+                Auto-selected
+              </span>
               <span
                 class="relative group cursor-pointer text-gray-400 text-xs font-bold"
               >
@@ -244,8 +248,7 @@
                 <div
                   class="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded-md shadow-lg p-2 left-4 top-0 w-64 z-10"
                 >
-                  Column name for task IDs in your dataset.
-                  Default: 'id'
+                  Column name for task IDs in your dataset. Automatically set to the first column of your data.
                 </div>
               </span>
             </div>
@@ -253,6 +256,9 @@
               v-model="parameters.task_id_col"
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
+              <option v-if="datasetHeaders.length === 0" value="" disabled>
+                No columns available
+              </option>
               <option v-for="header in datasetHeaders" :key="header" :value="header">
                 {{ header }}
               </option>
@@ -286,7 +292,6 @@
               </option>
             </select>
           </div>
-
           <!-- ACO Specific Parameters -->
           <template v-if="selectedAlgorithms.includes('ACO')">
             <div class="col-span-1">
@@ -560,7 +565,7 @@
           </template>
         </div>
 
-        <div class="mt-6">
+        <div class="mt-6 flex gap-3">
           <button
           @click="runSimulation"
           :disabled="
@@ -569,7 +574,7 @@
             !dataValidation.isValid ||
             filteredTasks.length === 0
           "
-          class="w-full md:w-auto px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+          class="flex-1 md:flex-none px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
         >
           <span v-if="isRunning">Running...</span>
           <span v-else-if="filteredTasks.length === 0">No Data Available</span>
@@ -577,6 +582,17 @@
           <span v-else>{{
             `Run ${selectedAlgorithms.join(" & ")} Simulation`
           }}</span>
+        </button>
+        
+        <button
+          v-if="isRunning"
+          @click="stopSimulation"
+          class="px-6 py-3 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
+        >
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+            <rect x="6" y="6" width="8" height="8" rx="1" />
+          </svg>
+          Stop
         </button>
         </div>
       </div>
@@ -1079,7 +1095,7 @@
                 <th
                   class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
                 >
-                  Total Execution Time (s)
+                  Total Execution Time (ms)
                 </th>
                 <th
                   class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
@@ -1096,7 +1112,7 @@
             <tbody class="bg-white divide-y divide-gray-200">
               <tr
                 :class="[
-                  bestMakespan.ACO <= bestMakespan.PSO
+                  isWinner.ACO
                     ? 'bg-blue-50 text-blue-700 font-bold'
                     : 'text-gray-900',
                 ]"
@@ -1104,10 +1120,7 @@
                 <td
                   class="px-6 py-4 whitespace-nowrap text-sm"
                   :class="{
-                    'font-bold':
-                      bestMakespan.ACO &&
-                      bestMakespan.PSO &&
-                      bestMakespan.ACO <= bestMakespan.PSO,
+                    'font-bold': isWinner.ACO,
                   }"
                 >
                   ACO
@@ -1115,10 +1128,7 @@
                 <td
                   class="px-6 py-4 whitespace-nowrap text-sm text-right font-mono"
                   :class="{
-                    'font-bold':
-                      bestMakespan.ACO &&
-                      bestMakespan.PSO &&
-                      bestMakespan.ACO <= bestMakespan.PSO,
+                    'font-bold': isWinner.ACO,
                   }"
                 >
                   {{
@@ -1130,10 +1140,7 @@
                 <td
                   class="px-6 py-4 whitespace-nowrap text-sm text-right font-mono"
                   :class="{
-                    'font-bold':
-                      bestMakespan.ACO &&
-                      bestMakespan.PSO &&
-                      bestMakespan.ACO <= bestMakespan.PSO,
+                    'font-bold': isWinner.ACO,
                   }"
                 >
                   {{
@@ -1145,10 +1152,7 @@
                 <td
                   class="px-6 py-4 whitespace-nowrap text-sm text-right font-mono"
                   :class="{
-                    'font-bold':
-                      bestMakespan.ACO &&
-                      bestMakespan.PSO &&
-                      bestMakespan.ACO <= bestMakespan.PSO,
+                    'font-bold': isWinner.ACO,
                   }"
                 >
                   {{
@@ -1160,10 +1164,7 @@
                 <td
                   class="px-6 py-4 whitespace-nowrap text-sm text-right font-mono"
                   :class="{
-                    'font-bold':
-                      bestMakespan.ACO &&
-                      bestMakespan.PSO &&
-                      bestMakespan.ACO <= bestMakespan.PSO,
+                    'font-bold': isWinner.ACO,
                   }"
                 >
                   {{
@@ -1175,9 +1176,7 @@
               </tr>
               <tr
                 :class="[
-                  bestMakespan.ACO &&
-                  bestMakespan.PSO &&
-                  bestMakespan.PSO < bestMakespan.ACO
+                  isWinner.PSO
                     ? 'bg-blue-50 text-blue-700 font-bold'
                     : 'text-gray-900',
                 ]"
@@ -1185,10 +1184,7 @@
                 <td
                   class="px-6 py-4 whitespace-nowrap text-sm"
                   :class="{
-                    'font-bold':
-                      bestMakespan.ACO &&
-                      bestMakespan.PSO &&
-                      bestMakespan.PSO < bestMakespan.ACO,
+                    'font-bold': isWinner.PSO,
                   }"
                 >
                   PSO
@@ -1196,10 +1192,7 @@
                 <td
                   class="px-6 py-4 whitespace-nowrap text-sm text-right font-mono"
                   :class="{
-                    'font-bold':
-                      bestMakespan.ACO &&
-                      bestMakespan.PSO &&
-                      bestMakespan.PSO < bestMakespan.ACO,
+                    'font-bold': isWinner.PSO,
                   }"
                 >
                   {{
@@ -1211,10 +1204,7 @@
                 <td
                   class="px-6 py-4 whitespace-nowrap text-sm text-right font-mono"
                   :class="{
-                    'font-bold':
-                      bestMakespan.ACO &&
-                      bestMakespan.PSO &&
-                      bestMakespan.PSO < bestMakespan.ACO,
+                    'font-bold': isWinner.PSO,
                   }"
                 >
                   {{
@@ -1226,10 +1216,7 @@
                 <td
                   class="px-6 py-4 whitespace-nowrap text-sm text-right font-mono"
                   :class="{
-                    'font-bold':
-                      bestMakespan.ACO &&
-                      bestMakespan.PSO &&
-                      bestMakespan.PSO < bestMakespan.ACO,
+                    'font-bold': isWinner.PSO,
                   }"
                 >
                   {{
@@ -1241,10 +1228,7 @@
                 <td
                   class="px-6 py-4 whitespace-nowrap text-sm text-right font-mono"
                   :class="{
-                    'font-bold':
-                      bestMakespan.ACO &&
-                      bestMakespan.PSO &&
-                      bestMakespan.PSO < bestMakespan.ACO,
+                    'font-bold': isWinner.PSO,
                   }"
                 >
                   {{
@@ -1260,15 +1244,16 @@
 
         <div class="mt-6 pt-4 border-t border-gray-200 text-center">
           <span class="text-lg font-bold text-blue-600">
-            Winner:
-            {{
-              bestMakespan.ACO && bestMakespan.PSO
-                ? bestMakespan.ACO <= bestMakespan.PSO
-                  ? "ACO"
-                  : "PSO"
-                : "Pending"
-            }}
+            Winner: {{ winner }}
           </span>
+          <div v-if="winner !== 'Pending' && bestMakespan.ACO && bestMakespan.PSO" class="text-sm text-gray-600 mt-2">
+            <span v-if="parseFloat(bestMakespan.ACO) === parseFloat(bestMakespan.PSO)">
+              (Tied on makespan - {{ winner }} wins by execution time)
+            </span>
+            <span v-else>
+              ({{ winner }} has better makespan: {{ winner === 'ACO' ? parseFloat(bestMakespan.ACO).toFixed(2) : parseFloat(bestMakespan.PSO).toFixed(2) }}s vs {{ winner === 'ACO' ? parseFloat(bestMakespan.PSO).toFixed(2) : parseFloat(bestMakespan.ACO).toFixed(2) }}s)
+            </span>
+          </div>
         </div>
       </div>
 
@@ -1380,7 +1365,7 @@
               </p>
             </div>
 
-            <div v-else class="space-y-3">
+            <div v-else class="space-y-4">
               <div
                 v-for="(message, index) in chatHistory"
                 :key="index"
@@ -1391,63 +1376,72 @@
               >
                 <div
                     :class="[
-                      'max-w-[90%] px-3 py-2 rounded-lg text-sm whitespace-normal',
+                      'max-w-[85%] rounded-lg shadow-sm',
                       message.role === 'user'
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-white border border-gray-200 text-gray-900',
+                        ? 'bg-blue-500 text-white ml-8 px-4 py-3'
+                        : 'bg-white border border-gray-200 text-gray-900 mr-8',
+                      message.isStreaming ? 'streaming-message' : ''
                     ]"
                   >
-                    <div
-                      class="prose prose-sm max-w-none break-words overflow-wrap-break-word overflow-x-auto"
-                      v-html="renderMarkdown(message.content)"
-                    ></div>
+                    <!-- User Message -->
+                    <div v-if="message.role === 'user'" class="text-sm font-medium">
+                      {{ message.content }}
+                    </div>
 
-                    <!-- Copy Button for AI responses -->
-                    <div
-                      v-if="message.role === 'assistant'"
-                      class="mt-2 flex justify-end"
-                    >
-                      <button
-                        @click="copyToClipboard(message.content)"
-                        class="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-100 transition-colors"
-                        title="Copy response"
-                      >
-                        <svg
-                          class="w-3 h-3"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
+                    <!-- Assistant Message with Enhanced Markdown -->
+                    <div v-else class="ai-message-content px-4 py-3">
+                      <div
+                        class="markdown-content text-sm leading-relaxed"
+                        v-html="renderMarkdown(message.content)"
+                      ></div>
+
+                      <!-- Streaming indicator -->
+                      <div v-if="message.isStreaming" class="flex items-center mt-3 text-xs text-gray-500">
+                        <div class="flex space-x-1">
+                          <div class="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce"></div>
+                          <div class="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
+                          <div class="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                        </div>
+                        <span class="ml-2">AI is typing...</span>
+                      </div>
+
+                      <!-- Copy Button for AI responses -->
+                      <div v-if="!message.isStreaming" class="mt-3 flex justify-end border-t border-gray-100 pt-2">
+                        <button
+                          @click="copyToClipboard(message.content)"
+                          class="text-xs text-gray-500 hover:text-blue-600 flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-50 transition-colors"
+                          title="Copy response"
                         >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                          />
-                        </svg>
-                        Copy
-                      </button>
+                          <svg
+                            class="w-3 h-3"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                            />
+                          </svg>
+                          Copy
+                        </button>
+                      </div>
                     </div>
                   </div>
               </div>
 
               <!-- Loading Indicator -->
               <div v-if="aiLoading && !isStreaming" class="flex justify-start">
-                <div
-                  class="bg-white border border-gray-200 text-gray-900 px-3 py-2 rounded-lg"
-                >
-                  <div class="flex items-center space-x-1">
-                    <div
-                      class="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                    ></div>
-                    <div
-                      class="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                      style="animation-delay: 0.1s"
-                    ></div>
-                    <div
-                      class="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                      style="animation-delay: 0.2s"
-                    ></div>
+                <div class="bg-white border border-gray-200 text-gray-900 px-4 py-3 rounded-lg shadow-sm mr-8">
+                  <div class="flex items-center space-x-2">
+                    <div class="flex space-x-1">
+                      <div class="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
+                      <div class="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
+                      <div class="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                    </div>
+                    <span class="text-xs text-gray-600">Analyzing your simulation...</span>
                   </div>
                 </div>
               </div>
@@ -1629,27 +1623,113 @@ let chartACO = null;
 let chartPSO = null;
 const toast = ref({ show: false, message: "", type: "error" });
 const dataValidation = ref({ isValid: true, errors: [], warnings: [], summary: {} });
-const dataLimit = ref(Math.max(1, props.tasks.length));
+const dataLimit = ref(Math.max(1, Array.isArray(props.tasks) ? props.tasks.length : 1));
 const showAllData = ref(false);
+
+// Computed property for determining winner
+const winner = computed(() => {
+  if (!bestMakespan.value.ACO || !bestMakespan.value.PSO) {
+    return "Pending";
+  }
+  
+  const acoMakespan = parseFloat(bestMakespan.value.ACO);
+  const psoMakespan = parseFloat(bestMakespan.value.PSO);
+  
+  // First priority: Best makespan (lower is better)
+  if (acoMakespan < psoMakespan) {
+    return "ACO";
+  } else if (psoMakespan < acoMakespan) {
+    return "PSO";
+  }
+  
+  // If makespan is tied, use execution time as tiebreaker (lower is better)
+  if (executionTime.value.ACO && executionTime.value.PSO) {
+    const acoTime = parseFloat(executionTime.value.ACO);
+    const psoTime = parseFloat(executionTime.value.PSO);
+    
+    if (acoTime < psoTime) {
+      return "ACO";
+    } else if (psoTime < acoTime) {
+      return "PSO";
+    }
+  }
+  
+  // If still tied, use load balancing index as second tiebreaker (higher is better)
+  if (loadBalanceIndex.value.ACO && loadBalanceIndex.value.PSO) {
+    const acoBalance = parseFloat(loadBalanceIndex.value.ACO);
+    const psoBalance = parseFloat(loadBalanceIndex.value.PSO);
+    
+    if (acoBalance > psoBalance) {
+      return "ACO";
+    } else if (psoBalance > acoBalance) {
+      return "PSO";
+    }
+  }
+  
+  // If completely tied, default to ACO
+  return "ACO";
+});
+
+const isWinner = computed(() => ({
+  ACO: winner.value === "ACO",
+  PSO: winner.value === "PSO"
+}));
+
 const parameters = reactive({
-  num_default_agents: 3, n_iterations: 100, task_id_col: 'id', agent_id_col: '',
+  num_default_agents: 3, n_iterations: 100, task_id_col: '', agent_id_col: '',
   n_ants: 10, alpha: 1.0, beta: 2.0, evaporation_rate: 0.5, pheromone_deposit: 100.0,
   n_particles: 30, w: 0.5, c1: 1.5, c2: 1.5,
 });
 const expandedTasks = ref({ ACO: {}, PSO: {} });
+const abortControllers = ref(new Map()); // Store abort controllers for each algorithm
+
+// Toast notification function
+const showToast = (message, type = 'error') => {
+  toast.value = { show: true, message, type };
+  setTimeout(() => {
+    toast.value.show = false;
+  }, 3000);
+};
 
 // --- COMPUTED PROPERTIES ---
 const filteredTasks = computed(() => {
-  if (!props.tasks || props.tasks.length === 0) return [];
-  if (showAllData.value) return props.tasks;
+  if (!props.tasks || !Array.isArray(props.tasks) || props.tasks.length === 0) {
+    return [];
+  }
+  if (showAllData.value) {
+    return props.tasks;
+  }
   const actualLimit = Math.max(1, Math.min(dataLimit.value, props.tasks.length));
   return props.tasks.slice(0, actualLimit);
 });
 
 const datasetHeaders = computed(() => {
-  if (props.tasks.length === 0) return [];
-  return Object.keys(props.tasks[0]);
+  if (!props.tasks || !Array.isArray(props.tasks) || props.tasks.length === 0) {
+    return [];
+  }
+  const firstTask = props.tasks[0];
+  if (!firstTask || typeof firstTask !== 'object') {
+    return [];
+  }
+  return Object.keys(firstTask);
 });
+
+// Auto-set task_id_col to the first column header when data changes
+watch(datasetHeaders, (newHeaders) => {
+  if (newHeaders.length > 0 && (!parameters.task_id_col || parameters.task_id_col === '')) {
+    parameters.task_id_col = newHeaders[0];
+  }
+}, { immediate: true });
+
+// Also watch for props.tasks changes to ensure task_id_col is set
+watch(() => props.tasks, (newTasks) => {
+  if (newTasks && newTasks.length > 0 && (!parameters.task_id_col || parameters.task_id_col === '')) {
+    const headers = datasetHeaders.value;
+    if (headers.length > 0) {
+      parameters.task_id_col = headers[0];
+    }
+  }
+}, { immediate: true });
 
 // --- SIMULATION LOGIC (STREAMING) ---
 
@@ -1669,12 +1749,14 @@ const resetSimulationStateForAlgo = (algo) => {
     chart.data.datasets[0].data = [];
     chart.data.datasets[1].data = [];
     chart.update();
+  } else {
+    console.warn(`Chart for ${algo} not initialized yet`);
   }
 };
 
 const runSimulation = async () => {
   validateData();
-  if (filteredTasks.value.length === 0) {
+  if (!filteredTasks.value || filteredTasks.value.length === 0) {
     showToast("Please add at least one task to the data.", 'error');
     return;
   }
@@ -1684,7 +1766,16 @@ const runSimulation = async () => {
   }
 
   isRunning.value = true;
+  
+  // Ensure charts are initialized for selected algorithms
+  await nextTick();
+  initCharts();
+  await nextTick();
+  
   selectedAlgorithms.value.forEach(resetSimulationStateForAlgo);
+  
+  // Clear any existing abort controllers
+  abortControllers.value.clear();
 
   const runningSims = selectedAlgorithms.value.map(async (algorithm) => {
     const requestBody = {
@@ -1693,11 +1784,18 @@ const runSimulation = async () => {
       parameters: { ...parameters }
     };
 
+    // Create abort controller for this algorithm
+    const controller = new AbortController();
+    abortControllers.value.set(algorithm, controller);
+
+    const config = useRuntimeConfig();
+
     try {
-      const response = await fetch('https://awkward-gilda-fazza-abiyyu-85e5defd.koyeb.app/stream_scheduling', {
+      const response = await fetch(`${config.public.API_URL}/stream_scheduling`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify(requestBody),
+        signal: controller.signal // Add abort signal
       });
 
       if (!response.ok || !response.body) {
@@ -1706,112 +1804,243 @@ const runSimulation = async () => {
 
       status.value[algorithm] = "Running...";
       const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
+      let buffer = ''; // Buffer for incomplete JSON data
 
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
         
-        const lines = value.split('\n\n').filter(line => line.startsWith('data:'));
-        for (const line of lines) {
-          const jsonData = line.substring(5);
-          if (jsonData) {
-            handleStreamEvent(algorithm, JSON.parse(jsonData));
+        // Check if request was aborted
+        if (controller.signal.aborted) {
+          break;
+        }
+        
+        // Add new chunk to buffer
+        buffer += value;
+        
+        // Split by double newlines to get complete SSE messages
+        const messages = buffer.split('\n\n');
+        
+        // Keep the last incomplete message in buffer
+        buffer = messages.pop() || '';
+        
+        // Process complete messages
+        for (const message of messages) {
+          if (message.startsWith('data:')) {
+            const jsonData = message.substring(5).trim();
+            if (jsonData && jsonData !== '') {
+              try {
+                const parsedData = JSON.parse(jsonData);
+                handleStreamEvent(algorithm, parsedData);
+              } catch (jsonError) {
+                console.warn(`JSON parse error for ${algorithm}:`, jsonError.message);
+                console.warn('Problematic data:', jsonData);
+                // Log the error but continue processing
+                logs.value[algorithm].push(`⚠️ Data parsing warning: ${jsonError.message}`);
+              }
+            }
+          }
+        }
+      }
+      
+      // Process any remaining buffer data
+      if (buffer.trim() && buffer.startsWith('data:')) {
+        const jsonData = buffer.substring(5).trim();
+        if (jsonData) {
+          try {
+            const parsedData = JSON.parse(jsonData);
+            handleStreamEvent(algorithm, parsedData);
+          } catch (jsonError) {
+            console.warn(`Final buffer JSON parse error for ${algorithm}:`, jsonError.message);
+            logs.value[algorithm].push(`⚠️ Final data parsing warning: ${jsonError.message}`);
           }
         }
       }
     } catch (error) {
-      console.error(`Error with ${algorithm} simulation:`, error);
-      logs.value[algorithm].push(`❌ Simulation failed: ${error.message}`);
-      status.value[algorithm] = "Failed";
+      if (error.name === 'AbortError') {
+        // Don't show error for user-initiated stops
+        console.log(`${algorithm} simulation was aborted by user`);
+      } else {
+        console.error(`Error with ${algorithm} simulation:`, error);
+        logs.value[algorithm].push(`❌ Simulation failed: ${error.message}`);
+        status.value[algorithm] = "Failed";
+      }
+    } finally {
+      // Remove abort controller when done
+      abortControllers.value.delete(algorithm);
     }
   });
 
   await Promise.all(runningSims);
+  
+  // Clear any remaining abort controllers
+  abortControllers.value.clear();
   isRunning.value = false;
 };
 
 const handleStreamEvent = (algorithm, data) => {
-  const chart = algorithm === 'ACO' ? chartACO : chartPSO;
-  const logsContainer = algorithm === 'ACO' ? acoLogsContainer.value : psoLogsContainer.value;
+  try {
+    // Validate data structure
+    if (!data || typeof data !== 'object') {
+      console.warn(`Invalid data received for ${algorithm}:`, data);
+      return;
+    }
 
-  const processLog = (message) => {
-      logs.value[algorithm].push(message);
-      nextTick(() => {
-          if (logsContainer) {
-              logsContainer.scrollTop = logsContainer.scrollHeight;
+    const chart = algorithm === 'ACO' ? chartACO : chartPSO;
+    const logsContainer = algorithm === 'ACO' ? acoLogsContainer.value : psoLogsContainer.value;
+
+    const processLog = (message) => {
+        if (message && typeof message === 'string') {
+          logs.value[algorithm].push(message);
+          nextTick(() => {
+              if (logsContainer) {
+                  logsContainer.scrollTop = logsContainer.scrollHeight;
+              }
+          });
+        }
+    };
+
+    switch (data.type) {
+      case 'log':
+      case 'start':
+        if (data.message) {
+          processLog(data.message);
+        }
+        break;
+      
+      case 'iteration':
+        if (data.log_message) {
+          processLog(data.log_message);
+        }
+        if (typeof data.makespan === 'number') {
+          bestMakespan.value[algorithm] = data.makespan;
+        }
+        if (chart && typeof data.iteration === 'number' && typeof data.makespan === 'number') {
+          try {
+            chart.data.labels.push(data.iteration);
+            chart.data.datasets[0].data.push(data.makespan);
+            // Only show the best point marker
+            const bestVal = Math.min(...chart.data.datasets[0].data);
+            const bestIndex = chart.data.datasets[0].data.indexOf(bestVal);
+            chart.data.datasets[1].data = chart.data.datasets[0].data.map((val, idx) => idx === bestIndex ? val : null);
+
+            chart.update('none'); // Use 'none' for smoother updates
+          } catch (chartError) {
+            console.warn(`Chart update error for ${algorithm}:`, chartError.message);
           }
-      });
-  };
+        } else if (!chart && typeof data.iteration === 'number' && typeof data.makespan === 'number') {
+          // Chart not available, try to initialize it
+          console.warn(`Chart for ${algorithm} not available during iteration update, attempting to initialize...`);
+          nextTick(() => {
+            initCharts();
+          });
+        }
+        break;
 
-  switch (data.type) {
-    case 'log':
-    case 'start':
-      processLog(data.message);
-      break;
-    
-    case 'iteration':
-      processLog(data.log_message);
-      bestMakespan.value[algorithm] = data.makespan;
-      if (chart) {
-        chart.data.labels.push(data.iteration);
-        chart.data.datasets[0].data.push(data.makespan);
-        // Only show the best point marker
-        const bestVal = Math.min(...chart.data.datasets[0].data);
-        const bestIndex = chart.data.datasets[0].data.indexOf(bestVal);
-        chart.data.datasets[1].data = chart.data.datasets[0].data.map((val, idx) => idx === bestIndex ? val : null);
+      case 'done':
+        if (data.log_message) {
+          processLog(data.log_message);
+        }
+        if (typeof data.makespan === 'number') {
+          bestMakespan.value[algorithm] = data.makespan;
+        }
+        if (typeof data.computation_time === 'number') {
+          computationTime.value[algorithm] = data.computation_time;
+        }
+        if (data.schedule && Array.isArray(data.schedule)) {
+          try {
+            const finalAssignments = transformAssignmentData(data.schedule);
+            if (algorithm === 'ACO') acoFinalAssignment.value = finalAssignments;
+            if (algorithm === 'PSO') psoFinalAssignment.value = finalAssignments;
+          } catch (transformError) {
+            console.warn(`Data transformation error for ${algorithm}:`, transformError.message);
+            processLog(`⚠️ Assignment data processing warning: ${transformError.message}`);
+          }
+        }
+        break;
 
-        chart.update('none'); // Use 'none' for smoother updates
-      }
-      break;
+      case 'final_metrics':
+        if (typeof data.total_execution_time === 'number') {
+          executionTime.value[algorithm] = data.total_execution_time;
+        }
+        if (typeof data.computation_time === 'number') {
+          computationTime.value[algorithm] = data.computation_time;
+        }
+        if (typeof data.load_balance_index === 'number') {
+          loadBalanceIndex.value[algorithm] = data.load_balance_index;
+        }
+        status.value[algorithm] = "Completed";
+        break;
 
-    case 'done':
-      processLog(data.log_message);
-      bestMakespan.value[algorithm] = data.makespan;
-      const finalAssignments = transformAssignmentData(data.schedule);
-      if (algorithm === 'ACO') acoFinalAssignment.value = finalAssignments;
-      if (algorithm === 'PSO') psoFinalAssignment.value = finalAssignments;
-      break;
-
-    case 'final_metrics':
-      executionTime.value[algorithm] = data.execution_time;
-      computationTime.value[algorithm] = data.execution_time;
-      loadBalanceIndex.value[algorithm] = data.load_balance_index;
-      status.value[algorithm] = "Completed";
-      break;
-
-    case 'error':
-      processLog(`❌ ERROR: ${data.message}`);
-      status.value[algorithm] = "Failed";
-      break;
+      case 'error':
+        const errorMessage = data.message || 'Unknown error occurred';
+        processLog(`❌ ERROR: ${errorMessage}`);
+        status.value[algorithm] = "Failed";
+        break;
+        
+      default:
+        console.warn(`Unknown event type for ${algorithm}:`, data.type, data);
+        break;
+    }
+  } catch (error) {
+    console.error(`Error handling stream event for ${algorithm}:`, error);
+    logs.value[algorithm].push(`⚠️ Event processing error: ${error.message}`);
   }
 };
 
 const transformAssignmentData = (schedule) => {
-  if (!schedule || schedule.length === 0) return [];
+  if (!schedule || !Array.isArray(schedule) || schedule.length === 0) {
+    console.warn('Invalid or empty schedule data:', schedule);
+    return [];
+  }
+  
   const agentMap = new Map();
 
-  schedule.forEach(task => {
-    const agentId = task.agent_id;
-    if (!agentMap.has(agentId)) {
-      agentMap.set(agentId, { tasks: [], finish_time: 0 });
-    }
-    const agentData = agentMap.get(agentId);
-    agentData.tasks.push(task.task_id);
-    agentData.finish_time = Math.max(agentData.finish_time, task.finish_time);
-  });
+  try {
+    schedule.forEach((task, index) => {
+      // Validate task structure
+      if (!task || typeof task !== 'object') {
+        console.warn(`Invalid task at index ${index}:`, task);
+        return;
+      }
+      
+      if (!task.hasOwnProperty('agent_id') || !task.hasOwnProperty('task_id')) {
+        console.warn(`Missing required fields in task at index ${index}:`, task);
+        return;
+      }
 
-  return Array.from(agentMap.entries()).map(([agent, data]) => ({
-    agent: agent,
-    tasks: data.tasks,
-    total_time: data.finish_time
-  }));
+      const agentId = task.agent_id;
+      const taskId = task.task_id;
+      const finishTime = typeof task.finish_time === 'number' ? task.finish_time : 0;
+      
+      if (!agentMap.has(agentId)) {
+        agentMap.set(agentId, { tasks: [], finish_time: 0 });
+      }
+      
+      const agentData = agentMap.get(agentId);
+      agentData.tasks.push(taskId);
+      agentData.finish_time = Math.max(agentData.finish_time, finishTime);
+    });
+
+    return Array.from(agentMap.entries()).map(([agent, data]) => ({
+      agent: agent,
+      tasks: data.tasks,
+      total_time: data.finish_time
+    }));
+  } catch (error) {
+    console.error('Error transforming assignment data:', error);
+    return [];
+  }
 };
 
 // --- UI & HELPER FUNCTIONS ---
 
 const initCharts = () => {
     const createChart = (canvasRef, label, color) => {
-        if (!canvasRef.value) return null;
+        if (!canvasRef.value) {
+            console.warn(`Canvas ref for ${label} not available yet`);
+            return null;
+        }
         const ctx = canvasRef.value.getContext("2d");
         return new Chart(ctx, {
             type: "line",
@@ -1833,24 +2062,60 @@ const initCharts = () => {
             }
         });
     };
-    if (chartACO) chartACO.destroy();
-    if (chartPSO) chartPSO.destroy();
+    
+    // Destroy existing charts
+    if (chartACO) {
+        chartACO.destroy();
+        chartACO = null;
+    }
+    if (chartPSO) {
+        chartPSO.destroy();
+        chartPSO = null;
+    }
+    
+    // Initialize charts for selected algorithms only
     nextTick(() => {
-        chartACO = createChart(chartCanvasACO, 'ACO', 'rgb(59, 130, 246)');
-        chartPSO = createChart(chartCanvasPSO, 'PSO', 'rgb(239, 68, 68)');
+        if (selectedAlgorithms.value.includes('ACO')) {
+            chartACO = createChart(chartCanvasACO, 'ACO', 'rgb(59, 130, 246)');
+        }
+        if (selectedAlgorithms.value.includes('PSO')) {
+            chartPSO = createChart(chartCanvasPSO, 'PSO', 'rgb(239, 68, 68)');
+        }
     });
 };
 
 const validateData = () => {
   const errors = [];
-  if (props.tasks.length === 0) {
+  const warnings = [];
+  
+  if (!props.tasks || !Array.isArray(props.tasks)) {
+    errors.push("Invalid tasks data format.");
+  } else if (props.tasks.length === 0) {
     errors.push("No tasks available.");
+  } else {
+    // Check if all tasks have consistent structure
+    const firstTask = props.tasks[0];
+    if (!firstTask || typeof firstTask !== 'object') {
+      errors.push("Invalid task data structure.");
+    } else {
+      const expectedKeys = Object.keys(firstTask);
+      const inconsistentTasks = props.tasks.filter(task => {
+        if (!task || typeof task !== 'object') return true;
+        const taskKeys = Object.keys(task);
+        return expectedKeys.length !== taskKeys.length || 
+               !expectedKeys.every(key => taskKeys.includes(key));
+      });
+      
+      if (inconsistentTasks.length > 0) {
+        warnings.push(`${inconsistentTasks.length} tasks have inconsistent structure.`);
+      }
+    }
   }
-  // Add more comprehensive validation if needed
+  
   dataValidation.value = {
     isValid: errors.length === 0,
     errors,
-    warnings: [],
+    warnings,
   };
 };
 
@@ -1859,7 +2124,25 @@ const resetSimulation = () => {
   isRunning.value = false;
 };
 
-const editData = () => emit("edit-data");
+const stopSimulation = () => {
+  // Abort all running requests
+  abortControllers.value.forEach((controller, algorithm) => {
+    controller.abort();
+    logs.value[algorithm].push(`🛑 Simulation stopped by user`);
+    status.value[algorithm] = "Stopped";
+  });
+  
+  // Clear abort controllers
+  abortControllers.value.clear();
+  isRunning.value = false;
+  
+  showToast("Simulation stopped", 'info');
+};
+
+const editData = () => {
+  // Send the original/raw tasks data back to parent for editing, not filtered data
+  emit("edit-data", props.tasks);
+};
 
 const exportData = (algorithm, format) => {
     const assignment = algorithm === 'ACO' ? acoFinalAssignment.value : psoFinalAssignment.value;
@@ -1913,10 +2196,25 @@ onMounted(() => {
   initCharts();
 });
 
+onUnmounted(() => {
+  // Cleanup: abort all running requests when component unmounts
+  abortControllers.value.forEach((controller) => {
+    controller.abort();
+  });
+  abortControllers.value.clear();
+});
+
 watch(props.tasks, () => {
     validateData();
     dataLimit.value = props.tasks.length;
 }, { deep: true, immediate: true });
+
+// Watch for changes in selected algorithms to reinitialize charts
+watch(selectedAlgorithms, () => {
+    nextTick(() => {
+        initCharts();
+    });
+}, { deep: true });
 
 // --- AI & CHAT WINDOW (UNCHANGED) ---
 const userMessage = ref("");
@@ -1932,8 +2230,64 @@ const messagesContainer = ref(null);
 
 const openChat = () => isChatOpen.value = true;
 const closeChat = () => isChatOpen.value = false;
-const renderMarkdown = (text) => marked(text || '');
+
+// Enhanced markdown rendering with better configuration
+const renderMarkdown = (text) => {
+  if (!text) return '';
+  
+  // Configure marked options for better rendering
+  marked.setOptions({
+    breaks: true, // Convert line breaks to <br>
+    gfm: true, // Enable GitHub flavored markdown
+    tables: true, // Enable table parsing
+    sanitize: false, // Allow HTML (be careful with user input)
+    smartypants: true, // Use smart quotes and dashes
+  });
+  
+  return marked(text);
+};
+
 const copyToClipboard = (text) => navigator.clipboard.writeText(text).then(() => showToast('Copied to clipboard', 'success'));
+
+const getDataTypes = () => {
+  if (!filteredTasks.value.length || !datasetHeaders.value.length) return {};
+  
+  const types = {};
+  const sampleSize = Math.min(10, filteredTasks.value.length); // Check first 10 rows
+  
+  datasetHeaders.value.forEach(header => {
+    const sampleValues = filteredTasks.value.slice(0, sampleSize)
+      .map(task => task[header])
+      .filter(val => val !== null && val !== undefined && val !== '');
+    
+    if (sampleValues.length === 0) {
+      types[header] = 'empty';
+      return;
+    }
+    
+    // Check if all values are numbers
+    const numericValues = sampleValues.filter(val => !isNaN(val) && isFinite(val));
+    if (numericValues.length === sampleValues.length) {
+      // Check if integers or floats
+      const hasDecimals = numericValues.some(val => val % 1 !== 0);
+      types[header] = hasDecimals ? 'float' : 'integer';
+    } else {
+      // Check for common patterns
+      const stringValues = sampleValues.map(val => String(val).toLowerCase());
+      const uniqueValues = [...new Set(stringValues)];
+      
+      if (uniqueValues.length <= 5 && sampleValues.length > 5) {
+        types[header] = 'categorical';
+      } else if (stringValues.some(val => val.includes('-') && val.length === 10)) {
+        types[header] = 'date';
+      } else {
+        types[header] = 'text';
+      }
+    }
+  });
+  
+  return types;
+};
 
 const sendUserMessage = async () => {
     if (!userMessage.value.trim() && chatHistory.value.length === 0) {
@@ -1941,20 +2295,67 @@ const sendUserMessage = async () => {
     }
     if (!userMessage.value.trim()) return;
 
+    // Prepare data specification
+    const dataSpecification = {
+        totalRows: filteredTasks.value.length,
+        totalColumns: datasetHeaders.value.length,
+        columns: datasetHeaders.value,
+        sampleData: filteredTasks.value.slice(0, 3), // First 3 rows as sample
+        dataTypes: getDataTypes(),
+        dataLimitations: {
+            originalRows: props.tasks.length,
+            filteredRows: filteredTasks.value.length,
+            showAllData: showAllData.value,
+            dataLimit: dataLimit.value
+        }
+    };
+
+    // Prepare algorithm parameters
+    const algorithmParameters = {
+        common: {
+            num_default_agents: parameters.num_default_agents,
+            n_iterations: parameters.n_iterations,
+            task_id_col: parameters.task_id_col,
+            agent_id_col: parameters.agent_id_col
+        },
+        aco: selectedAlgorithms.value.includes('ACO') ? {
+            alpha: parameters.alpha,
+            beta: parameters.beta,
+            evaporation_rate: parameters.evaporation_rate,
+            pheromone_deposit: parameters.pheromone_deposit,
+            n_ants: parameters.n_ants
+        } : null,
+        pso: selectedAlgorithms.value.includes('PSO') ? {
+            n_particles: parameters.n_particles,
+            w: parameters.w,
+            c1: parameters.c1,
+            c2: parameters.c2
+        } : null
+    };
+
     const simulationData = {
         aco: selectedAlgorithms.value.includes('ACO') ? {
             bestMakespan: bestMakespan.value.ACO,
             executionTime: executionTime.value.ACO,
             loadBalanceIndex: loadBalanceIndex.value.ACO,
             finalAssignment: acoFinalAssignment.value,
+            totalAgents: parameters.num_default_agents,
+            totalTasks: filteredTasks.value.length,
+            parameters: algorithmParameters.aco
         } : null,
         pso: selectedAlgorithms.value.includes('PSO') ? {
             bestMakespan: bestMakespan.value.PSO,
             executionTime: executionTime.value.PSO,
             loadBalanceIndex: loadBalanceIndex.value.PSO,
             finalAssignment: psoFinalAssignment.value,
+            totalAgents: parameters.num_default_agents,
+            totalTasks: filteredTasks.value.length,
+            parameters: algorithmParameters.pso
         } : null,
+        dataSpecification: dataSpecification,
+        algorithmParameters: algorithmParameters
     };
+    
     await sendMessage(userMessage.value, simulationData, selectedAlgorithms.value.join('_'));
     userMessage.value = "";
 };
@@ -2024,6 +2425,17 @@ watch(chatHistory, () => {
     });
 }, { deep: true });
 
+// Listen for custom scroll events from streaming updates
+if (typeof window !== 'undefined') {
+    window.addEventListener('chat-scroll', () => {
+        nextTick(() => {
+            if (messagesContainer.value) {
+                messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight;
+            }
+        });
+    });
+}
+
 </script>
 
 <style scoped>
@@ -2060,5 +2472,185 @@ watch(chatHistory, () => {
 
 .animate-fade-in {
   animation: fadeIn 0.3s ease-out;
+}
+
+/* Chat Markdown Styling */
+.markdown-content {
+  line-height: 1.6;
+}
+
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3,
+.markdown-content h4,
+.markdown-content h5,
+.markdown-content h6 {
+  font-weight: 600;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  color: #1f2937;
+}
+
+.markdown-content h1 {
+  font-size: 1.5rem;
+  border-bottom: 2px solid #e5e7eb;
+  padding-bottom: 0.5rem;
+}
+
+.markdown-content h2 {
+  font-size: 1.25rem;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 0.25rem;
+}
+
+.markdown-content h3 {
+  font-size: 1.125rem;
+}
+
+.markdown-content h4 {
+  font-size: 1rem;
+}
+
+.markdown-content p {
+  margin-bottom: 1rem;
+  color: #374151;
+}
+
+.markdown-content ul,
+.markdown-content ol {
+  margin-bottom: 1rem;
+  padding-left: 1.5rem;
+}
+
+.markdown-content li {
+  margin-bottom: 0.25rem;
+  color: #374151;
+}
+
+.markdown-content strong {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.markdown-content em {
+  font-style: italic;
+  color: #4b5563;
+}
+
+.markdown-content code {
+  background-color: #f3f4f6;
+  color: #dc2626;
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.875rem;
+}
+
+.markdown-content pre {
+  background-color: #1f2937;
+  color: #f9fafb;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  margin-bottom: 1rem;
+}
+
+.markdown-content pre code {
+  background: none;
+  color: inherit;
+  padding: 0;
+  font-size: 0.875rem;
+}
+
+.markdown-content blockquote {
+  border-left: 4px solid #3b82f6;
+  padding-left: 1rem;
+  margin: 1rem 0;
+  background-color: #f8fafc;
+  color: #475569;
+  font-style: italic;
+}
+
+.markdown-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+}
+
+.markdown-content th,
+.markdown-content td {
+  border: 1px solid #d1d5db;
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+}
+
+.markdown-content th {
+  background-color: #f9fafb;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.markdown-content td {
+  background-color: #ffffff;
+  color: #374151;
+}
+
+.markdown-content tr:nth-child(even) td {
+  background-color: #f9fafb;
+}
+
+.markdown-content a {
+  color: #3b82f6;
+  text-decoration: underline;
+}
+
+.markdown-content a:hover {
+  color: #2563eb;
+}
+
+.markdown-content hr {
+  border: none;
+  border-top: 1px solid #e5e7eb;
+  margin: 1.5rem 0;
+}
+
+/* Streaming animation */
+.streaming-message {
+  position: relative;
+}
+
+.streaming-message::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.1), transparent);
+  animation: shimmer 2s infinite;
+  border-radius: inherit;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Enhanced spacing for chat messages */
+.ai-message-content {
+  max-width: none;
+}
+
+.ai-message-content .markdown-content > *:first-child {
+  margin-top: 0;
+}
+
+.ai-message-content .markdown-content > *:last-child {
+  margin-bottom: 0;
 }
 </style>
