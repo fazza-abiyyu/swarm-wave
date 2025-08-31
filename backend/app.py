@@ -3,11 +3,27 @@ from flask_cors import CORS
 import json
 import time
 import traceback
+import os
+import platform
+import sys
+from datetime import datetime
 from models.aco import ACO_MultiAgent_Scheduler as ACOScheduler
 from models.pso import PSO_MultiAgent_Scheduler as PSOScheduler
 
 app = Flask(__name__)
-CORS(app, origins=['http://localhost:3000', 'http://127.0.0.1:3000', 'http://127.0.0.1:3001', 'http://localhost:5000', 'http://127.0.0.1:5000', 'https://swarm-lab.vercel.app'], supports_credentials=True, allow_headers=['Content-Type', 'Authorization'], methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
+app.start_time = time.time()  # Track application start time
+CORS(app, origins=[
+    'http://localhost:3000', 
+    'http://127.0.0.1:3000', 
+    'http://0.0.0.0:3000',
+    'http://frontend:3000',
+    'http://127.0.0.1:3001', 
+    'http://localhost:5000', 
+    'http://127.0.0.1:5000',
+    'http://localhost:5001', 
+    'http://127.0.0.1:5001',
+    'https://swarm-lab.vercel.app'
+], supports_credentials=True, allow_headers=['Content-Type', 'Authorization'], methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
 
 @app.route('/')
 def home():
@@ -15,7 +31,111 @@ def home():
 
 @app.route('/health')
 def health_check():
-    return jsonify({"status": "healthy", "timestamp": time.time()})
+    """
+    Comprehensive health check endpoint
+    Returns detailed system and application health information
+    """
+    try:
+        # Basic health info
+        current_time = time.time()
+        uptime = current_time - app.start_time if hasattr(app, 'start_time') else 0
+        
+        # System information
+        system_info = {
+            "platform": platform.system(),
+            "platform_release": platform.release(),
+            "platform_version": platform.version(),
+            "architecture": platform.machine(),
+            "hostname": platform.node(),
+            "python_version": platform.python_version(),
+            "python_implementation": platform.python_implementation(),
+        }
+        
+        # Application information
+        app_info = {
+            "name": "Swarm Lab Backend API",
+            "version": "1.0.0",
+            "status": "healthy",
+            "timestamp": current_time,
+            "datetime": datetime.fromtimestamp(current_time).isoformat(),
+            "uptime_seconds": round(uptime, 2),
+            "environment": os.getenv('FLASK_ENV', 'development'),
+            "port": os.getenv('PORT', '5001'),
+            "debug_mode": app.debug
+        }
+        
+        # Algorithm availability check
+        algorithms_status = {}
+        try:
+            # Test ACO import and basic functionality
+            test_tasks = [{"id": "test", "length": 1}]
+            test_agents = [{"id": "test-agent"}]
+            aco_scheduler = ACOScheduler(
+                tasks=test_tasks, 
+                agents=test_agents, 
+                cost_function=lambda x, y: y,
+                heuristic_function=lambda x: 1.0,
+                n_iterations=1
+            )
+            algorithms_status["ACO"] = {"available": True, "status": "operational"}
+        except Exception as e:
+            algorithms_status["ACO"] = {"available": False, "error": str(e)}
+        
+        try:
+            # Test PSO import and basic functionality
+            pso_scheduler = PSOScheduler(
+                tasks=test_tasks, 
+                agents=test_agents, 
+                cost_function=lambda x, y: y,
+                n_iterations=1
+            )
+            algorithms_status["PSO"] = {"available": True, "status": "operational"}
+        except Exception as e:
+            algorithms_status["PSO"] = {"available": False, "error": str(e)}
+        
+        # Memory and resource info (basic)
+        resource_info = {
+            "process_id": os.getpid(),
+            "parent_process_id": os.getppid(),
+            "current_working_directory": os.getcwd(),
+            "python_path": sys.executable,
+            "python_paths": sys.path[:3]  # First 3 paths to avoid too much data
+        }
+        
+        # Health score calculation
+        health_score = 100
+        if not algorithms_status["ACO"]["available"]:
+            health_score -= 40
+        if not algorithms_status["PSO"]["available"]:
+            health_score -= 40
+        
+        overall_status = "healthy" if health_score >= 80 else "degraded" if health_score >= 50 else "unhealthy"
+        
+        return jsonify({
+            "status": overall_status,
+            "health_score": health_score,
+            "timestamp": current_time,
+            "datetime": app_info["datetime"],
+            "uptime_seconds": app_info["uptime_seconds"],
+            "application": app_info,
+            "system": system_info,
+            "algorithms": algorithms_status,
+            "resources": resource_info,
+            "endpoints": {
+                "health": "/health",
+                "algorithms": "/algorithms", 
+                "stream_scheduling": "/stream_scheduling"
+            }
+        })
+        
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "health_score": 0,
+            "timestamp": time.time(),
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }), 500
 
 @app.route('/stream_scheduling', methods=['POST'])
 def stream_scheduling():
@@ -159,6 +279,16 @@ def stream_scheduling():
         return Response(f"data: {json.dumps(error_details)}\n\n", mimetype='text/event-stream')
 
 
+@app.route('/health/simple')
+def simple_health_check():
+    """
+    Simple health check for Docker and load balancers
+    Returns minimal response for quick health verification
+    """
+    return jsonify({
+        "status": "ok",
+        "timestamp": time.time()
+    })
 @app.route('/algorithms', methods=['GET'])
 def get_algorithms():
     return jsonify({
@@ -170,4 +300,5 @@ def get_algorithms():
     })
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5001)
+    port = int(os.getenv('PORT', 5001))  # Use PORT env var, default to 5001
+    app.run(debug=True, host='0.0.0.0', port=port)

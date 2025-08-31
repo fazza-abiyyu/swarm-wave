@@ -115,7 +115,7 @@
             </div>
           </div>
           <p class="text-gray-500 text-sm">
-            © 2024 Swarm Lab. Experimental data platform for swarm intelligence research.
+            © 2025 Swarm Lab. Experimental data platform for swarm intelligence research.
           </p>
         </div>
       </div>
