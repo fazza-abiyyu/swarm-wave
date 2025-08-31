@@ -176,8 +176,8 @@
                   </svg>
                 </div>
                 <div>
-                  <p class="text-sm text-gray-500">Styling</p>
-                  <p class="font-medium text-gray-900">Tailwind CSS</p>
+                  <p class="text-sm text-gray-500">Backend Framework</p>
+                  <p class="font-medium text-gray-900">Flask</p>
                 </div>
               </div>
               <div class="flex items-center space-x-3">
@@ -294,7 +294,7 @@
             </div>
           </div>
           <p class="text-gray-500 text-sm">
-            © 2024 Swarm Lab. Experimental data platform for swarm intelligence research.
+            © 2025 Swarm Lab. Experimental data platform for swarm intelligence research.
           </p>
         </div>
       </div>
