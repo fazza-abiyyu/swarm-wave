@@ -530,7 +530,6 @@ This implementation is based on the following research:
 - 📖 **Documentation**: Check `/docs` directory
 - 🐛 **Issues**: [GitHub Issues](https://github.com/fazza-abiyyu/swarm-lab/issues)
 - 💬 **Discussions**: [GitHub Discussions](https://github.com/fazza-abiyyu/swarm-lab/discussions)
-- 📧 **Contact**: [Your Email]
 
 ### Troubleshooting
 
