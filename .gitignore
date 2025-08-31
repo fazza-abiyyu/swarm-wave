@@ -2,10 +2,19 @@
 logs
 *.log
 
+# Python Cache Files
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+
+# Environment Variables
+.env
+.env.local
+.env.production
+
 # Misc
 .DS_Store
 .fleet
 .idea
-__pycache__/
-*.py[cod]
-.env
