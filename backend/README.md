@@ -69,7 +69,8 @@ backend/
 ├── Dockerfile                 # Docker Configuration
 ├── Procfile                   # Heroku Deployment
 ├── .dockerignore              # Docker Ignore Rules
-└── cloud_task_scheduling_dataset.csv  # Sample Dataset
+└── data                       # Dataset files
+    └──cloud_task_scheduling_dataset.csv  # Sample Dataset
 ```
 
 ## ⚙️ Installation & Setup
