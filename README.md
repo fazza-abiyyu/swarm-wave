@@ -1,10 +1,26 @@
-# Swarm Lab - Multi-Agent AI System
+# 🐜 Swarm Lab - Intelligent Cloud Task Scheduling System
 
-A comprehensive multi-agent AI system built with Nuxt 4 (frontend) and Flask (backend) for orchestrating and managing AI agent swarms.
+A comprehensive web application for **Cloud Task Scheduling** using **Swarm Intelligence algorithms** - specifically **Ant Colony Optimization (ACO)** and **Particle Swarm Optimization (PSO)**. Built with Nuxt 4 (frontend) and Flask (backend).
 
 ## 🚀 Project Overview
 
-Swarm Lab is a cutting-edge platform designed to create, manage, and deploy AI agent swarms. The system provides an intuitive web interface for configuring agents, monitoring their performance, and orchestrating complex multi-agent workflows.
+Swarm Lab is an intelligent task scheduling platform that leverages bio-inspired optimization algorithms to efficiently allocate computational tasks across cloud resources. The system provides an intuitive web interface for:
+
+- 📊 **Interactive simulation** of ACO and PSO algorithms
+- 📈 **Real-time visualization** of optimization progress 
+- 🔧 **Parameter tuning** for algorithm customization
+- 📋 **Task management** with CSV data import
+- 📉 **Performance metrics** and comparative analysis
+
+## 🎯 Key Features
+
+- **🐜 Ant Colony Optimization (ACO)**: Bio-inspired algorithm mimicking ant foraging behavior
+- **🐦 Particle Swarm Optimization (PSO)**: Population-based optimization inspired by bird flocking
+- **📊 Interactive Dashboard**: Real-time monitoring and visualization
+- **🔄 Streaming Results**: Live updates during algorithm execution
+- **📱 Responsive Design**: Works seamlessly across all devices
+- **🐳 Docker Support**: Easy deployment with containerization
+- **🧪 Performance Testing**: Metrics validation and benchmarking
 
 ## 🏗️ Architecture
 
@@ -12,261 +28,572 @@ This project follows a modern microservices architecture with clear separation b
 
 ```
 swarm-lab/
-├── .gitignore
-├── LICENSE
-├── README.md
-├── backend
-    └── app.py
-└── frontend
-    ├── .gitignore
-    ├── AI_CHAT_SETUP.md
-    ├── README.md
-    ├── app.vue
-    ├── app
-        ├── app.vue
-        ├── components
-        │   ├── DynamicTable.vue
-        │   └── SimulationPage.vue
-        ├── composables
-        │   └── useAiChatStream.ts
-        └── pages
-        │   ├── about.vue
-        │   ├── dashboard
-        │       └── index.vue
-        │   └── index.vue
-    ├── assets
-        └── css
-        │   └── main.css
-    ├── nuxt.config.ts
-    ├── package.json
-    ├── public
-        ├── afavicon.ico
-        ├── favicon.ico
-        └── robots.txt
-    ├── server
-        └── api
-        │   ├── chat-stream.post.ts
-        │   └── test.get.ts
-    ├── tailwind.config.js
-    └── tsconfig.json
+├── backend/                    # Flask API Server
+│   ├── models/                 # Algorithm Implementations
+│   │   ├── aco.py             # Ant Colony Optimization
+│   │   └── pso.py             # Particle Swarm Optimization
+│   ├── templates/             # Flask Templates
+│   ├── app.py                 # Main Flask Application
+│   ├── requirements.txt       # Python Dependencies
+│   ├── test_health.py         # Health Endpoint Tests
+│   └── cloud_task_scheduling_dataset.csv
+├── frontend/                   # Nuxt 4 Web Application
+│   ├── app/
+│   │   ├── components/
+│   │   │   ├── SimulationPage.vue  # Main Simulation Interface
+│   │   │   └── DynamicTable.vue    # Data Visualization
+│   │   ├── pages/
+│   │   │   ├── index.vue           # Landing Page
+│   │   │   ├── about.vue           # About Page
+│   │   │   └── dashboard/          # Dashboard Views
+│   │   └── composables/
+│   │       └── useAiChatStream.ts  # Streaming API Client
+│   ├── server/
+│   │   └── api/               # Server API Routes
+│   │       ├── chat-stream.post.ts
+│   │       └── test.get.ts
+│   ├── assets/css/            # Global Styles
+│   ├── public/                # Static Assets
+│   ├── nuxt.config.ts         # Nuxt Configuration
+│   └── package.json           # Node.js Dependencies
+├── docker-compose.yml         # Docker Orchestration
+└── example.env               # Environment Variables Template
 ```
 
 ## 🛠️ Technology Stack
 
 ### Frontend (Nuxt 4)
-- **Framework**: Nuxt 4 with Vue 3
-- **Styling**: Tailwind CSS
-- **HTTP Client**: Nuxt HTTP module
-- **Icons**: Nuxt Icon module
-- **Development**: TypeScript, ESLint, Prettier
+- **Framework**: Nuxt 4 with Vue 3 and TypeScript
+- **Styling**: Tailwind CSS with custom components
+- **Visualization**: Chart.js for real-time plotting
+- **HTTP Client**: Native Fetch API with streaming support
+- **Icons**: Custom SVG icons
+- **State Management**: Vue 3 Composition API
 
 ### Backend (Flask)
-- **Framework**: Flask with Flask-RESTX
-- **Validation**: Flask-Marshmallow
-- **CORS**: Flask-CORS
-- **Environment**: Python 3.9+
+- **Framework**: Flask with CORS support
+- **Algorithms**: Custom ACO/PSO implementations
+- **Data Processing**: Pandas and NumPy
+- **Visualization**: Matplotlib and Plotly
+- **Performance**: Progress tracking with tqdm
+- **Deployment**: Gunicorn WSGI server
+
+### Algorithms Implemented
+
+#### 🐜 Ant Colony Optimization (ACO)
+- **Multi-agent pheromone-based optimization**
+- **Parameters**: Ants count, Alpha (pheromone influence), Beta (heuristic influence), Evaporation rate
+- **Application**: Efficient task-to-resource mapping
+
+#### 🐦 Particle Swarm Optimization (PSO) 
+- **Swarm intelligence optimization**
+- **Parameters**: Particles count, Inertia weight (w), Acceleration coefficients (c1, c2)
+- **Application**: Global optimization of resource allocation
+
+## 📊 Algorithm Parameters
+
+### ACO Parameters
+| Parameter | Description | Default | Range |
+|-----------|-------------|---------|-------|
+| `n_ants` | Number of ants in colony | 10 | 5-50 |
+| `alpha` | Pheromone influence | 1.0 | 0.1-5.0 |
+| `beta` | Heuristic influence | 2.0 | 0.1-5.0 |
+| `evaporation_rate` | Pheromone decay | 0.1 | 0.01-0.9 |
+| `pheromone_deposit` | Pheromone strength | 1.0 | 0.1-10.0 |
+
+### PSO Parameters
+| Parameter | Description | Default | Range |
+|-----------|-------------|---------|-------|
+| `n_particles` | Number of particles | 10 | 5-50 |
+| `w` | Inertia weight | 0.7 | 0.1-1.0 |
+| `c1` | Cognitive coefficient | 1.4 | 0.1-4.0 |
+| `c2` | Social coefficient | 1.4 | 0.1-4.0 |
 
 ## 🚦 Getting Started
 
 ### Prerequisites
 
-- Node.js 18+ and npm/yarn
-- Python 3.9+
+- **Node.js** 18+ and npm/yarn
+- **Python** 3.9+
+- **Docker** (optional, for containerized deployment)
 
-### Frontend Setup
+### 🐳 Quick Start with Docker (Recommended)
 
-1. Navigate to the frontend directory:
+The fastest way to get started:
+
+```bash
+# Clone the repository
+git clone https://github.com/fazza-abiyyu/swarm-lab.git
+cd swarm-lab
+
+# Copy example environment file
+cp example.env .env
+
+# Edit .env file and add your GEMINI_API_KEY
+# GEMINI_API_KEY=your_actual_api_key_here
+
+# Build and run with Docker Compose
+docker compose up --build
+
+# Access the application
+# Frontend: http://localhost:3000
+# Backend API: http://localhost:5001
+```
+
+### 🔧 Manual Setup
+
+#### Environment Setup (Required)
+
+1. **Set up environment variables:**
+   ```bash
+   # Copy environment template
+   cp example.env .env
+   
+   # Edit .env and add your GEMINI_API_KEY
+   nano .env  # or use your preferred editor
+   ```
+
+#### Frontend Setup
+
+2. Navigate to the frontend directory:
    ```bash
    cd frontend
    ```
 
-2. Install dependencies:
+3. Install dependencies:
    ```bash
-   # Using yarn
-   yarn install
-   
-   # Or using npm
+   # Using npm
    npm install
+   
+   # Or using yarn
+   yarn install
    ```
 
-3. Development server:
+4. Development server:
    ```bash
-   # Using yarn
-   yarn dev
-   
-   # Or using npm
    npm run dev
+   # or
+   yarn dev
    ```
-
-4. Build for production:
-   ```bash
-   # Using yarn
-   yarn build
    
-   # Or using npm
+   Frontend will be available at: http://localhost:3000
+
+5. Build for production:
+   ```bash
    npm run build
+   # or
+   yarn build
    ```
 
-### Backend Setup
+#### Backend Setup
 
-1. Navigate to the backend directory:
+6. Navigate to the backend directory:
    ```bash
    cd backend
    ```
 
-2. Create a virtual environment:
+7. Create and activate virtual environment:
    ```bash
    python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   
+   # On macOS/Linux:
+   source venv/bin/activate
+   
+   # On Windows:
+   venv\Scripts\activate
    ```
 
-3. Install dependencies:
+8. Install dependencies:
    ```bash
    pip install -r requirements.txt
    ```
 
-4. Set up environment variables:
+9. Run the development server:
    ```bash
-   cp .env.example .env
-   # Edit .env with your configuration
+   python app.py
    ```
+   
+   Backend API will be available at: http://localhost:5001
 
-5. Initialize the database:
-   ```bash
-   python manage.py db init
-   python manage.py db migrate
-   python manage.py db upgrade
-   ```
+## 🎮 Usage Guide
 
-6. Run the development server:
-   ```bash
-   python run.py
-   ```
+### 1. **Data Input**
+- Upload CSV files with task and resource data
+- Or use the sample dataset provided
+- Required columns: task_id, resource_requirements, execution_time
+
+### 2. **Algorithm Selection**
+- Choose between ACO or PSO algorithms
+- Adjust algorithm parameters using the interactive controls
+- Set number of iterations and convergence criteria
+
+### 3. **Run Simulation**
+- Click "Start Simulation" to begin optimization
+- Watch real-time progress with streaming updates
+- Monitor convergence through interactive charts
+
+### 4. **Analyze Results**
+- View detailed metrics: makespan, resource utilization, load balancing
+- Compare algorithm performance
+- Export results for further analysis
+
+## 📊 API Endpoints
+
+### Core Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/` | Health check |
+| `GET` | `/health` | Detailed health status |
+| `POST` | `/stream_scheduling` | Run optimization with streaming results |
+
+### Example API Usage
+
+```bash
+# Run ACO algorithm
+curl -X POST http://localhost:5001/stream_scheduling \
+  -H "Content-Type: application/json" \
+  -d '{
+    "algorithm": "ACO",
+    "tasks": [
+      {"id": "task1", "length": 25},
+      {"id": "task2", "length": 30},
+      {"id": "task3", "length": 20}
+    ],
+    "parameters": {
+      "n_ants": 15,
+      "alpha": 1.2,
+      "beta": 2.5,
+      "n_iterations": 100
+    }
+  }'
+
+# Run PSO algorithm
+curl -X POST http://localhost:5001/stream_scheduling \
+  -H "Content-Type: application/json" \
+  -d '{
+    "algorithm": "PSO", 
+    "tasks": [
+      {"id": "task1", "length": 25},
+      {"id": "task2", "length": 30}
+    ],
+    "parameters": {
+      "n_particles": 20,
+      "w": 0.8,
+      "c1": 1.5,
+      "c2": 1.5,
+      "n_iterations": 50
+    }
+  }'
+```
 
 ## 🔧 Configuration
 
-### Frontend Configuration
+### Environment Variables
 
-The frontend configuration is managed through `nuxt.config.ts` and environment variables:
-
-```typescript
-// nuxt.config.ts
-export default defineNuxtConfig({
-  devtools: { enabled: true },
-  modules: [
-    '@nuxtjs/tailwindcss',
-    '@nuxtjs/google-fonts',
-    'nuxt-icon',
-    '@pinia/nuxt',
-    '@vueuse/nuxt',
-  ],
-  runtimeConfig: {
-    public: {
-      apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:5000/api',
-    },
-  },
-})
-```
-
-### Backend Configuration
-
-Environment variables for the backend:
+#### Root Project (.env)
+The project includes an `example.env` file that you should copy to `.env`:
 
 ```bash
-# .env
+# Copy the example file
+cp example.env .env
+```
+
+**Root .env file structure:**
+```bash
+# Environment variables for Docker Compose
+GEMINI_API_KEY=your_gemini_api_key_here
+
+# Docker-specific settings
+COMPOSE_PROJECT_NAME=swarm-lab
+
+# API URL for backend service (host access via port 5001)  
+API_URL=http://localhost:5001
+BACKEND_URL=http://localhost:5001
+```
+
+#### Frontend (.env)
+```bash
+# API Configuration
+NUXT_PUBLIC_API_BASE=http://localhost:5001
+
+# Development
+NUXT_HOST=0.0.0.0
+NUXT_PORT=3000
+```
+
+#### Backend (.env)
+```bash
+# Flask Configuration
 FLASK_ENV=development
-SECRET_KEY=your-secret-key-here
-DATABASE_URL=postgresql://user:password@localhost/swarm_lab
-JWT_SECRET_KEY=your-jwt-secret-key
-CORS_ORIGINS=http://localhost:3000
+FLASK_DEBUG=1
+FLASK_APP=app.py
+
+# CORS Configuration
+CORS_ORIGINS=http://localhost:3000,https://swarm-lab.vercel.app
 ```
 
-## 🧪 Development
+### Algorithm Configuration
 
-### Frontend Development
+You can modify default algorithm parameters in the backend:
+
+```python
+# backend/app.py
+DEFAULT_PARAMS = {
+    'ACO': {
+        'n_ants': 10,
+        'alpha': 1.0,
+        'beta': 2.0,
+        'evaporation_rate': 0.1,
+        'pheromone_deposit': 1.0
+    },
+    'PSO': {
+        'n_particles': 10,
+        'w': 0.7,
+        'c1': 1.4,
+        'c2': 1.4
+    }
+}
+```
+
+## 🧪 Testing
+
+### Backend Tests
 
 ```bash
-# Development server with hot reload
-yarn dev
+cd backend
+
+# Run performance tests
+python test_direct_metrics.py
+
+# Run with Python's unittest module
+python -m unittest test_direct_metrics.py
+
+# Check algorithm performance
+python test_direct_metrics.py -v
+```
+
+### Frontend Tests
+
+```bash
+cd frontend
+
+# Run unit tests
+npm run test
+
+# Run E2E tests
+npm run test:e2e
 
 # Type checking
-yarn type-check
-
-# Linting
-yarn lint
-
-# Formatting
-yarn format
-```
-
-### Backend Development
-
-```bash
-# Run tests
-python -m pytest
-
-# Run with debug mode
-python run.py --debug
-
-# Database migration
-python manage.py db migrate -m "migration message"
-python manage.py db upgrade
+npm run type-check
 ```
 
 ## 🚀 Deployment
 
-### Frontend Deployment
-
-Build the frontend for production:
+### Docker Deployment (Production)
 
 ```bash
-yarn build
-yarn preview
+# Production build and run
+docker compose up -d --build
+
+# View logs
+docker compose logs -f
+
+# Stop services
+docker compose down
 ```
 
-The built files will be in `.output/public/` directory, ready to be served by any static hosting service.
+### Manual Deployment
 
-### Backend Deployment
-
-For production deployment, use a WSGI server like Gunicorn:
+#### Frontend (Static Hosting)
 
 ```bash
-pip install gunicorn
-gunicorn run:app
+cd frontend
+npm run build
+
+# Deploy .output/public/ to your static hosting provider
+# (Vercel, Netlify, GitHub Pages, etc.)
 ```
 
-### Docker Deployment
+#### Backend (Cloud Platforms)
 
-Both frontend and backend include Docker configurations:
-
+For **Heroku**:
 ```bash
-# Build and run with Docker Compose
-docker-compose up --build
+# Already configured with Procfile
+git push heroku main
 ```
+
+For **Railway**, **Render**, or **DigitalOcean**:
+- Use the provided `Dockerfile`
+- Set environment variables in your platform
+- Deploy from GitHub repository
+
+### Environment-Specific Configurations
+
+#### Development
+```bash
+# Use main compose file (optimized for development)
+docker compose up
+```
+
+#### Production
+```bash
+# Use production-optimized settings
+docker compose up -d
+```
+
+## 📈 Performance Metrics
+
+The system tracks comprehensive performance metrics:
+
+### Optimization Metrics
+- **Makespan**: Total time to complete all tasks
+- **Resource Utilization**: Efficiency of resource usage
+- **Load Balancing**: Distribution evenness across resources
+- **Convergence Rate**: Speed of algorithm convergence
+- **Solution Quality**: Fitness function improvements over time
+
+### System Metrics
+- **Response Time**: API endpoint performance
+- **Memory Usage**: Algorithm memory consumption
+- **Throughput**: Tasks processed per second
+- **Scalability**: Performance with increasing problem size
 
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+We welcome contributions! Please follow these steps:
+
+### Development Setup
+
+1. **Fork the repository**
+   ```bash
+   git fork https://github.com/fazza-abiyyu/swarm-lab.git
+   ```
+
+2. **Clone your fork**
+   ```bash
+   git clone https://github.com/YOUR_USERNAME/swarm-lab.git
+   cd swarm-lab
+   ```
+
+3. **Create a feature branch**
+   ```bash
+   git checkout -b feature/amazing-feature
+   ```
+
+4. **Set up development environment**
+   ```bash
+   # Use Docker for quick setup
+   docker compose up
+   ```
+
+### Contribution Guidelines
+
+- **Code Style**: Follow existing code patterns
+- **Testing**: Add tests for new features
+- **Documentation**: Update relevant documentation
+- **Commit Messages**: Use conventional commit format
+
+```bash
+# Example commit messages
+feat: add enhanced PSO algorithm
+fix: resolve memory leak in PSO implementation
+docs: update API documentation
+test: add performance tests for optimization metrics
+```
+
+### Pull Request Process
+
+1. **Update documentation** if needed
+2. **Add/update tests** for your changes  
+3. **Ensure all tests pass**
+4. **Create pull request** with detailed description
+5. **Address review feedback**
+
+## � Research & References
+
+This implementation is based on the following research:
+
+### Key Papers
+- **ACO**: Dorigo, M., & Stützle, T. (2004). "Ant Colony Optimization"
+- **PSO**: Kennedy, J., & Eberhart, R. (1995). "Particle Swarm Optimization"
+- **Cloud Scheduling**: Chen, H., et al. (2018). "Task Scheduling in Cloud Computing"
+
+### Algorithm Implementations
+- Multi-agent systems with communication protocols
+- Adaptive parameter tuning mechanisms
+- Advanced optimization strategies
+
+## 🆘 Support & Documentation
+
+### Getting Help
+- 📖 **Documentation**: Check `/docs` directory
+- 🐛 **Issues**: [GitHub Issues](https://github.com/fazza-abiyyu/swarm-lab/issues)
+- 💬 **Discussions**: [GitHub Discussions](https://github.com/fazza-abiyyu/swarm-lab/discussions)
+- 📧 **Contact**: [Your Email]
+
+### Troubleshooting
+
+#### Common Issues
+
+**Frontend won't start:**
+```bash
+# Clear cache and reinstall
+rm -rf node_modules package-lock.json
+npm install
+```
+
+**Backend API errors:**
+```bash
+# Check Python environment
+python --version
+pip list
+
+# Reinstall dependencies
+pip install -r requirements.txt --force-reinstall
+```
+
+**Docker issues:**
+```bash
+# Clean Docker cache
+docker system prune -a
+
+# Rebuild without cache
+docker compose build --no-cache
+```
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
 
-## 🆘 Support
+### Citation
 
-For support and questions:
-- Create an issue in the GitHub repository
-- Check the documentation in the `/docs` directory
-- Join our community discussions
+If you use this work in your research, please cite:
 
-## 🔄 Changelog
+```bibtex
+@software{swarm_lab_2025,
+  title={Swarm Lab: Intelligent Cloud Task Scheduling System},
+  author={Fazza Abiyyu},
+  year={2025},
+  url={https://github.com/fazza-abiyyu/swarm-lab}
+}
+```
 
-See [CHANGELOG.md](CHANGELOG.md) for a detailed history of changes and updates.
+## 🔄 Project Status
+
+This project is actively maintained and developed. Check the [GitHub repository](https://github.com/fazza-abiyyu/swarm-lab) for the latest updates and releases.
+
+## 🌟 Acknowledgments
+
+- **Bio-inspired Computing Research Community**
+- **Open Source Contributors**
+- **Flask and Nuxt.js Communities**
 
 ---
 
-**Built with ❤️ using Nuxt 4 and Flask**
+**Built with ❤️ using Swarm Intelligence, Nuxt 4, and Flask**
+
+[![GitHub stars](https://img.shields.io/github/stars/fazza-abiyyu/swarm-lab?style=social)](https://github.com/fazza-abiyyu/swarm-lab/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/fazza-abiyyu/swarm-lab?style=social)](https://github.com/fazza-abiyyu/swarm-lab/network/members)
+[![GitHub issues](https://img.shields.io/github/issues/fazza-abiyyu/swarm-lab)](https://github.com/fazza-abiyyu/swarm-lab/issues)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
