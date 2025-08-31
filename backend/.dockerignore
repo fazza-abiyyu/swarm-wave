@@ -1,0 +1,22 @@
+# Docker ignore file for backend
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+pip-log.txt
+.pytest_cache
+.coverage
+.tox
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+.git
+.mypy_cache
+.DS_Store
+.vscode
+.idea
+*.env

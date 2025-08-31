@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  # Backend Service - Flask API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "5001:5000"
+    environment:
+      - FLASK_ENV=development
+      - FLASK_APP=app.py
+      - PORT=5000
+    volumes:
+      - ./backend:/app
+    networks:
+      - swarm-lab-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health/simple"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend Service - Nuxt 4
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - GEMINI_API_KEY=${GEMINI_API_KEY}
+    ports:
+      - "3000:3000"
+    environment:
+      - NUXT_HOST=0.0.0.0
+      - NUXT_PORT=3000
+      - NODE_ENV=development
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.nuxt
+    networks:
+      - swarm-lab-network
+    depends_on:
+      - backend
+    command: ["yarn", "dev"]
+
+networks:
+  swarm-lab-network:
+    driver: bridge
+
+volumes:
+  node_modules:
