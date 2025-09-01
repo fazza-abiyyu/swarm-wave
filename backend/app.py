@@ -11,7 +11,9 @@ from models.aco import ACO_MultiAgent_Scheduler as ACOScheduler
 from models.pso import PSO_MultiAgent_Scheduler as PSOScheduler
 
 app = Flask(__name__)
-app.start_time = time.time()  # Track application start time
+app.start_time = time.time()
+
+# CORS configuration
 CORS(app, origins=[
     'http://localhost:3000', 
     'http://127.0.0.1:3000', 
@@ -31,12 +33,8 @@ def home():
 
 @app.route('/health')
 def health_check():
-    """
-    Comprehensive health check endpoint
-    Returns detailed system and application health information
-    """
+    """Comprehensive health check with system information"""
     try:
-        # Basic health info
         current_time = time.time()
         uptime = current_time - app.start_time if hasattr(app, 'start_time') else 0
         
@@ -67,7 +65,6 @@ def health_check():
         # Algorithm availability check
         algorithms_status = {}
         try:
-            # Test ACO import and basic functionality
             test_tasks = [{"id": "test", "length": 1}]
             test_agents = [{"id": "test-agent"}]
             aco_scheduler = ACOScheduler(
@@ -82,7 +79,6 @@ def health_check():
             algorithms_status["ACO"] = {"available": False, "error": str(e)}
         
         try:
-            # Test PSO import and basic functionality
             pso_scheduler = PSOScheduler(
                 tasks=test_tasks, 
                 agents=test_agents, 
@@ -93,13 +89,13 @@ def health_check():
         except Exception as e:
             algorithms_status["PSO"] = {"available": False, "error": str(e)}
         
-        # Memory and resource info (basic)
+        # Resource information
         resource_info = {
             "process_id": os.getpid(),
             "parent_process_id": os.getppid(),
             "current_working_directory": os.getcwd(),
             "python_path": sys.executable,
-            "python_paths": sys.path[:3]  # First 3 paths to avoid too much data
+            "python_paths": sys.path[:3]
         }
         
         # Health score calculation
@@ -139,66 +135,112 @@ def health_check():
 
 @app.route('/stream_scheduling', methods=['POST'])
 def stream_scheduling():
-    # ... (Kode parsing data dari request body tetap sama)
+    """Stream-enabled scheduling endpoint with real-time progress updates"""
     try:
         data = request.get_json()
-        if not data: return jsonify({"error": "No data provided"}), 400
+        if not data: 
+            return jsonify({"error": "No data provided"}), 400
         
         tasks = data.get('tasks', data.get('tasks_data', []))
         parameters = data.get('parameters', {})
-        if not tasks: return jsonify({"error": "No tasks provided"}), 400
+        if not tasks: 
+            return jsonify({"error": "No tasks provided"}), 400
         
         algorithm = data.get('algorithm', '').upper()
-        if not algorithm: return jsonify({"error": "Algorithm not specified"}), 400
+        if not algorithm: 
+            return jsonify({"error": "Algorithm not specified"}), 400
 
-        # Ekstrak parameter dengan nilai default (sama seperti sebelumnya)
-        num_default_agents = parameters.get('num_default_agents', 3)
+        # Extract parameters with default values
+        num_default_agents = parameters.get('num_default_agents', 10)
         n_iterations = parameters.get('n_iterations', 100)
         task_id_col_for_scheduler = parameters.get('task_id_col', 'id')
         agent_id_col_for_scheduler = parameters.get('agent_id_col', 'id')
         
-        # Parameter spesifik ACO
+        # ACO parameters
         n_ants = parameters.get('n_ants', 10)
         alpha = parameters.get('alpha', 1.0)
         beta = parameters.get('beta', 2.0)
         evaporation_rate = parameters.get('evaporation_rate', 0.1)
         pheromone_deposit = parameters.get('pheromone_deposit', 1.0)
         
-        # Parameter spesifik PSO
+        # PSO parameters
         n_particles = parameters.get('n_particles', 10)
         w = parameters.get('w', 0.7)
         c1 = parameters.get('c1', 1.4)
         c2 = parameters.get('c2', 1.4)
+        
+        # Dependency settings
+        enable_dependencies = parameters.get('enable_dependencies', False)
 
-        # ... (Kode formatting tasks tetap sama)
+        # Task formatting with flexible ID handling
         formatted_tasks = []
-        flexible_task_id_candidates = ['TaskID', 'task_id', 'id', 'name', 'Name']
+        flexible_task_id_candidates = ['Task_ID', 'TaskID', 'task_id', 'id', 'ID', 'name', 'Name']
+        
+        def safe_convert_to_float(value, default=0.0):
+            """Convert value to float safely"""
+            if value is None or value == '' or str(value).lower() in ['null', 'nan', 'none']:
+                return default
+            try:
+                return float(value)
+            except (ValueError, TypeError):
+                return default
+        
+        def safe_convert_to_string(value, default=''):
+            """Convert value to string safely"""
+            if value is None or str(value).lower() in ['null', 'nan', 'none']:
+                return default
+            return str(value).strip()
+        
         for task in tasks:
+            # Flexible Task ID handling
             task_id_value = None
             for field in flexible_task_id_candidates:
-                if field in task and task[field] is not None:
-                    task_id_value = str(task[field])
+                if field in task and task[field] is not None and str(task[field]).strip():
+                    task_id_value = safe_convert_to_string(task[field])
                     break
-            if task_id_value is None: task_id_value = str(len(formatted_tasks) + 1)
+            if not task_id_value: 
+                task_id_value = f"Task_{len(formatted_tasks) + 1}"
 
+            # Duration/Length with null handling
             task_length = None
             for field in ['Duration', 'duration', 'length', 'Length', 'Weight', 'weight', 'execution_time', 'Execution_Time (s)']:
-                if field in task and task[field] is not None:
-                    try: task_length = float(task[field]); break
-                    except ValueError: pass
-            if task_length is None: task_length = 1.0
+                if field in task:
+                    task_length = safe_convert_to_float(task[field])
+                    if task_length > 0:  # Only use positive values
+                        break
+            if task_length is None or task_length <= 0: 
+                task_length = 1.0
             
+            # Cost with null handling
             cost = 0.0
             for field in ['Cost', 'cost', 'price', 'Price']:
-                if field in task and task[field] is not None:
-                    try: cost = float(task[field]); break
-                    except ValueError: pass
+                if field in task:
+                    cost = safe_convert_to_float(task[field])
+                    if cost >= 0:  # Allow 0 cost
+                        break
+            
+            # Additional fields with null handling
+            priority = safe_convert_to_float(task.get('Priority', task.get('priority', 1)), 1)
+            cpu_usage = safe_convert_to_float(task.get('CPU_Usage', task.get('cpu_usage', 0)), 0)
+            ram_usage = safe_convert_to_float(task.get('RAM_Usage', task.get('ram_usage', 0)), 0)
             
             formatted_task = {
                 task_id_col_for_scheduler: task_id_value,
-                'length': task_length, 'cost': cost
+                'length': task_length, 
+                'cost': cost,
+                'priority': priority,
+                'cpu_usage': cpu_usage,
+                'ram_usage': ram_usage
             }
-            formatted_task.update(task)
+            
+            # Add all original fields, replacing null values
+            for key, value in task.items():
+                if key not in formatted_task:
+                    if isinstance(value, (int, float)):
+                        formatted_task[key] = safe_convert_to_float(value, 0)
+                    else:
+                        formatted_task[key] = safe_convert_to_string(value, '')
+            
             formatted_tasks.append(formatted_task)
         
         agents = parameters.get('agents')
@@ -214,18 +256,20 @@ def stream_scheduling():
                 heuristic_function=heuristic_function, num_default_agents=num_default_agents,
                 task_id_col=task_id_col_for_scheduler, agent_id_col=agent_id_col_for_scheduler,
                 n_ants=n_ants, n_iterations=n_iterations, alpha=alpha, beta=beta,
-                evaporation_rate=evaporation_rate, pheromone_deposit=pheromone_deposit
+                evaporation_rate=evaporation_rate, pheromone_deposit=pheromone_deposit,
+                enable_dependencies=enable_dependencies
             )
         elif algorithm == 'PSO':
             scheduler = PSOScheduler(
                 tasks=formatted_tasks, agents=agents, cost_function=cost_function,
                 task_id_col=task_id_col_for_scheduler, agent_id_col=agent_id_col_for_scheduler,
-                n_particles=n_particles, n_iterations=n_iterations, w=w, c1=c1, c2=c2
+                n_particles=n_particles, n_iterations=n_iterations, w=w, c1=c1, c2=c2,
+                enable_dependencies=enable_dependencies
             )
         else:
             return jsonify({"error": f"Unsupported algorithm: {algorithm}"}), 400
 
-        # Fungsi generator untuk streaming
+        # Generator function for streaming
         def generate():
             start_time = time.time()
             final_result = None
@@ -246,7 +290,7 @@ def stream_scheduling():
             
             total_execution_time = time.time() - start_time
             
-            # Hitung load balancing dari hasil akhir
+            # Calculate load balancing from final result with improved calculation
             best_schedule = final_result.get('schedule', [])
             agent_times = {}
             for assignment in best_schedule:
@@ -255,12 +299,14 @@ def stream_scheduling():
                 agent_times[agent_id] = max(agent_times.get(agent_id, 0), finish_time)
             
             load_balance_index = 0
-            if agent_times:
-                max_time = max(agent_times.values())
-                min_time = min(agent_times.values())
-                avg_time = sum(agent_times.values()) / len(agent_times)
-                if avg_time > 0:
-                    load_balance_index = (max_time - min_time) / avg_time
+            if agent_times and len(agent_times) > 1:
+                times = list(agent_times.values())
+                mean_time = sum(times) / len(times)
+                if mean_time > 0:
+                    # Use standard deviation normalized by mean (same as algorithms)
+                    variance = sum((t - mean_time) ** 2 for t in times) / len(times)
+                    std_dev = variance ** 0.5
+                    load_balance_index = std_dev / mean_time
 
             # Kirim data metrik final
             final_metrics = {
@@ -275,7 +321,7 @@ def stream_scheduling():
 
     except Exception as e:
         error_details = {"type": "error", "message": str(e), "traceback": traceback.format_exc()}
-        # Walaupun ini bukan stream, kita kirim sebagai event error
+        # Although this is not a stream, we send it as an error event
         return Response(f"data: {json.dumps(error_details)}\n\n", mimetype='text/event-stream')
 
 
