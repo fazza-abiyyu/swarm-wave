@@ -14,7 +14,30 @@ __pycache__/
 .env.local
 .env.production
 
-# Misc
+# MATLAB Specific
+# =================
+# Experiment Results - Keep folder structure, ignore contents
+matlab/experiments/results/*
+!matlab/experiments/results/.gitkeep
+matlab/experiments/plots/*
+!matlab/experiments/plots/.gitkeep
+
+# MATLAB temporary and cache files
+*.asv                # MATLAB autosave files
+*.m~                 # MATLAB backup files
+slprj/               # Simulink cache
+*.slx.autosave       # Simulink autosave
+*.fig                # MATLAB figure files (if generated)
+*.mat                # MATLAB data files (experiment outputs)
+
+# Octave specific
+octave-workspace     # Octave workspace file
+.octave_hist         # Octave command history
+
+# System and Editor files
+# ======================
 .DS_Store
 .fleet
 .idea
+.vscode
+*.bak                # Backup files (from sed operations)
