@@ -11,41 +11,6 @@
 
 A comprehensive web application for **Cloud Task Scheduling** using **Swarm Intelligence algorithms** - specifically **Ant Colony Optimization (ACO)** and **Particle Swarm Optimization (PSO)**. Built with Nuxt 4 (frontend) and Flask (backend).
 
-## 📺 Live Demo & Screenshots
-
-> 🚀 **Live Demo**: [swarm-lab.vercel.app](https://swarm-lab.vercel.app) (Coming Soon)
-
-### 🖼️ Application Screenshots
-
-<details>
-<summary>📊 Dashboard Overview</summary>
-
-![Dashboard](./docs/screenshots/dashboard.png)
-*Main dashboard with real-time algorithm visualization and parameter controls*
-
-</details>
-
-<details>
-<summary>⚙️ Algorithm Configuration</summary>
-
-![Algorithm Config](./docs/screenshots/config.png)
-*Interactive parameter tuning for ACO and PSO algorithms*
-
-</details>
-
-<details>
-<summary>📈 Results Visualization</summary>
-
-![Results](./docs/screenshots/results.png)
-*Real-time convergence plots and performance metrics*
-
-</details>
-
-### 🎬 Demo Video
-
-[![Swarm Lab Demo](https://img.youtube.com/vi/YOUR_VIDEO_ID/0.jpg)](https://youtu.be/YOUR_VIDEO_ID)
-*Click to watch the full demonstration video*
-
 ## 🚀 Project Overview
 
 **Swarm Lab** is an advanced web-based platform for **Cloud Task Scheduling** that harnesses the power of **Swarm Intelligence algorithms**. The system implements bio-inspired optimization techniques - **Ant Colony Optimization (ACO)** and **Particle Swarm Optimization (PSO)** - to solve complex resource allocation problems in cloud computing environments.
