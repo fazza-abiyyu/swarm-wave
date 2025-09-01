@@ -121,7 +121,7 @@
                   type="checkbox"
                   class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
                 />
-                <span class="ml-2 text-sm text-gray-700">Show all data</span>
+                <span class="ml-2 text-sm text-gray-700">Select all data</span>
               </label>
             </div>
 
@@ -292,6 +292,46 @@
               </option>
             </select>
           </div>
+          
+          <!-- Dependency Column Selection -->
+          <div>
+            <div class="flex items-center gap-1 mb-2">
+              <label class="block text-sm font-medium text-gray-700">
+                Dependencies Column
+              </label>
+              <span v-if="hasDependencyColumn && parameters.dependency_col === dependencyColumn" 
+                    class="px-2 py-1 text-xs bg-blue-100 text-blue-600 rounded-md">
+                Auto-selected
+              </span>
+              <span v-if="hasDependencyColumn && parameters.enable_dependencies" 
+                    class="px-2 py-1 text-xs bg-green-100 text-green-600 rounded-md">
+                Enabled
+              </span>
+              <span
+                class="relative group cursor-pointer text-gray-400 text-xs font-bold"
+              >
+                ?
+                <div
+                  class="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded-md shadow-lg p-2 left-4 top-0 w-64 z-10"
+                >
+                  Column containing task dependencies/prerequisites. 
+                  Auto-detected from columns with names like 'dependencies', 'depends_on', 'prerequisites', or 'requires'.
+                  Dependencies are automatically enabled when this column is selected.
+                </div>
+              </span>
+            </div>
+            <select
+              v-model="parameters.dependency_col"
+              @change="parameters.enable_dependencies = parameters.dependency_col !== ''"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="">None (No Dependencies)</option>
+              <option v-for="header in datasetHeaders" :key="header" :value="header">
+                {{ header }}
+              </option>
+            </select>
+          </div>
+          
           <!-- ACO Specific Parameters -->
           <template v-if="selectedAlgorithms.includes('ACO')">
             <div class="col-span-1">
@@ -1289,7 +1329,12 @@
             'translate-y-0 opacity-100': isChatOpen,
             'translate-y-full opacity-0': !isChatOpen,
             'cursor-move': isDragging,
-            'cursor-se-resize': isResizing,
+            'cursor-se-resize': isResizing && resizeDirection === 'bottom-right',
+            'cursor-sw-resize': isResizing && resizeDirection === 'bottom-left',
+            'cursor-ne-resize': isResizing && resizeDirection === 'top-right',
+            'cursor-nw-resize': isResizing && resizeDirection === 'top-left',
+            'cursor-ew-resize': isResizing && (resizeDirection === 'right' || resizeDirection === 'left'),
+            'cursor-ns-resize': isResizing && (resizeDirection === 'bottom' || resizeDirection === 'top'),
           }"
           :style="{
             transform: `translate(${draggablePosition.x}px, ${draggablePosition.y}px)`,
@@ -1376,10 +1421,10 @@
               >
                 <div
                     :class="[
-                      'max-w-[85%] rounded-lg shadow-sm',
+                      'rounded-lg shadow-sm',
                       message.role === 'user'
-                        ? 'bg-blue-500 text-white ml-8 px-4 py-3'
-                        : 'bg-white border border-gray-200 text-gray-900 mr-8',
+                        ? 'bg-blue-500 text-white ml-8 px-4 py-3 max-w-[85%]'
+                        : 'bg-white border border-gray-200 text-gray-900 mr-4 max-w-[95%] overflow-hidden',
                       message.isStreaming ? 'streaming-message' : ''
                     ]"
                   >
@@ -1390,10 +1435,12 @@
 
                     <!-- Assistant Message with Enhanced Markdown -->
                     <div v-else class="ai-message-content px-4 py-3">
-                      <div
-                        class="markdown-content text-sm leading-relaxed"
-                        v-html="renderMarkdown(message.content)"
-                      ></div>
+                      <div class="markdown-wrapper overflow-x-auto">
+                        <div
+                          class="markdown-content text-sm leading-relaxed min-w-0"
+                          v-html="renderMarkdown(message.content)"
+                        ></div>
+                      </div>
 
                       <!-- Streaming indicator -->
                       <div v-if="message.isStreaming" class="flex items-center mt-3 text-xs text-gray-500">
@@ -1476,15 +1523,69 @@
             </div>
           </div>
 
-          <!-- Resize Handle -->
+          <!-- Resize Handles -->
+          <!-- Left edge resize handle -->
           <div 
-            class="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize"
-            @mousedown="startResize"
-            @touchstart="startResize"
+            class="absolute top-0 left-0 w-2 h-full cursor-ew-resize bg-transparent hover:bg-blue-200 hover:bg-opacity-30 transition-colors"
+            @mousedown="startResize($event, 'left')"
+            @touchstart="startResize($event, 'left')"
+          ></div>
+          
+          <!-- Top edge resize handle -->
+          <div 
+            class="absolute top-0 left-0 w-full h-2 cursor-ns-resize bg-transparent hover:bg-blue-200 hover:bg-opacity-30 transition-colors"
+            @mousedown="startResize($event, 'top')"
+            @touchstart="startResize($event, 'top')"
+          ></div>
+          
+          <!-- Right edge resize handle -->
+          <div 
+            class="absolute top-0 right-0 w-2 h-full cursor-ew-resize bg-transparent hover:bg-blue-200 hover:bg-opacity-30 transition-colors"
+            @mousedown="startResize($event, 'right')"
+            @touchstart="startResize($event, 'right')"
+          ></div>
+          
+          <!-- Bottom edge resize handle -->
+          <div 
+            class="absolute bottom-0 left-0 w-full h-2 cursor-ns-resize bg-transparent hover:bg-blue-200 hover:bg-opacity-30 transition-colors"
+            @mousedown="startResize($event, 'bottom')"
+            @touchstart="startResize($event, 'bottom')"
+          ></div>
+          
+          <!-- Corner resize handles -->
+          <!-- Top-left corner -->
+          <div 
+            class="absolute top-0 left-0 w-4 h-4 cursor-nw-resize bg-transparent hover:bg-blue-200 hover:bg-opacity-50 transition-colors"
+            @mousedown="startResize($event, 'top-left')"
+            @touchstart="startResize($event, 'top-left')"
+          ></div>
+          
+          <!-- Top-right corner -->
+          <div 
+            class="absolute top-0 right-0 w-4 h-4 cursor-ne-resize bg-transparent hover:bg-blue-200 hover:bg-opacity-50 transition-colors"
+            @mousedown="startResize($event, 'top-right')"
+            @touchstart="startResize($event, 'top-right')"
+          ></div>
+          
+          <!-- Bottom-left corner -->
+          <div 
+            class="absolute bottom-0 left-0 w-4 h-4 cursor-sw-resize bg-transparent hover:bg-blue-200 hover:bg-opacity-50 transition-colors"
+            @mousedown="startResize($event, 'bottom-left')"
+            @touchstart="startResize($event, 'bottom-left')"
+          ></div>
+          
+          <!-- Bottom-right corner -->
+          <div 
+            class="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize bg-transparent hover:bg-blue-200 hover:bg-opacity-50 transition-colors group"
+            @mousedown="startResize($event, 'bottom-right')"
+            @touchstart="startResize($event, 'bottom-right')"
           >
-            <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd" />
-            </svg>
+            <!-- Visual indicator -->
+            <div class="absolute bottom-1 right-1 w-3 h-3">
+              <svg class="w-3 h-3 text-gray-400 group-hover:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7l10 10M17 7l-10 10" />
+              </svg>
+            </div>
           </div>
 
           <!-- Footer Input -->
@@ -1683,9 +1784,10 @@ const isWinner = computed(() => ({
 }));
 
 const parameters = reactive({
-  num_default_agents: 3, n_iterations: 100, task_id_col: '', agent_id_col: '',
+  num_default_agents: 3, n_iterations: 100, task_id_col: '', agent_id_col: '', dependency_col: '',
   n_ants: 10, alpha: 1.0, beta: 2.0, evaporation_rate: 0.5, pheromone_deposit: 100.0,
   n_particles: 30, w: 0.5, c1: 1.5, c2: 1.5,
+  enable_dependencies: false
 });
 const expandedTasks = ref({ ACO: {}, PSO: {} });
 const abortControllers = ref(new Map()); // Store abort controllers for each algorithm
@@ -1721,6 +1823,20 @@ const datasetHeaders = computed(() => {
   return Object.keys(firstTask);
 });
 
+// Detect dependency columns automatically
+const dependencyColumn = computed(() => {
+  const headers = datasetHeaders.value;
+  const dependencyFields = ['dependencies', 'depends_on', 'prerequisites', 'requires'];
+  return headers.find(header => 
+    dependencyFields.some(field => header.toLowerCase().includes(field.toLowerCase()))
+  ) || '';
+});
+
+// Check if dependency column exists
+const hasDependencyColumn = computed(() => {
+  return dependencyColumn.value !== '';
+});
+
 // Auto-set task_id_col to the first column header when data changes
 watch(datasetHeaders, (newHeaders) => {
   if (newHeaders.length > 0 && (!parameters.task_id_col || parameters.task_id_col === '')) {
@@ -1728,12 +1844,31 @@ watch(datasetHeaders, (newHeaders) => {
   }
 }, { immediate: true });
 
-// Also watch for props.tasks changes to ensure task_id_col is set
+// Auto-set dependency_col when dependency column is detected
+watch([datasetHeaders, dependencyColumn], ([newHeaders, newDependencyCol]) => {
+  if (newDependencyCol && (!parameters.dependency_col || parameters.dependency_col === '')) {
+    parameters.dependency_col = newDependencyCol;
+    parameters.enable_dependencies = true; // Auto-enable when dependency column found
+  } else if (!newDependencyCol && parameters.dependency_col) {
+    // Reset if dependency column is no longer available
+    parameters.dependency_col = '';
+    parameters.enable_dependencies = false;
+  }
+}, { immediate: true });
+
+// Also watch for props.tasks changes to ensure columns are set
 watch(() => props.tasks, (newTasks) => {
-  if (newTasks && newTasks.length > 0 && (!parameters.task_id_col || parameters.task_id_col === '')) {
+  if (newTasks && newTasks.length > 0) {
     const headers = datasetHeaders.value;
-    if (headers.length > 0) {
+    if (headers.length > 0 && (!parameters.task_id_col || parameters.task_id_col === '')) {
       parameters.task_id_col = headers[0];
+    }
+    
+    // Auto-set dependency column if available
+    const depCol = dependencyColumn.value;
+    if (depCol && (!parameters.dependency_col || parameters.dependency_col === '')) {
+      parameters.dependency_col = depCol;
+      parameters.enable_dependencies = true;
     }
   }
 }, { immediate: true });
@@ -2231,14 +2366,20 @@ const draggablePosition = ref({ x: 0, y: 0 });
 const isDragging = ref(false);
 const dragStart = ref({ x: 0, y: 0 });
 const chatWindow = ref(null);
-const chatWindowSize = ref({ width: 384, height: 500 });
+const chatWindowSize = ref({ width: 480, height: 520 });
 const isResizing = ref(false);
+const resizeDirection = ref('corner');
 const resizeStart = ref({ x: 0, y: 0, width: 0, height: 0 });
 const messagesContainer = ref(null);
 
 const openChat = () => isChatOpen.value = true;
 const closeChat = () => isChatOpen.value = false;
-const renderMarkdown = (text) => marked(text || '');
+const renderMarkdown = (text) => {
+  const html = marked(text || '');
+  // Wrap tables in scrollable div
+  return html.replace(/<table/g, '<div class="table-scroll-wrapper"><table')
+             .replace(/<\/table>/g, '</table></div>');
+};
 const copyToClipboard = (text) => navigator.clipboard.writeText(text).then(() => showToast('Copied to clipboard', 'success'));
 
 const getDataTypes = () => {
@@ -2378,11 +2519,19 @@ const startDrag = (event) => {
   document.addEventListener('touchend', handleUp);
 };
 
-const startResize = (event) => {
+const startResize = (event, direction = 'bottom-right') => {
   isResizing.value = true;
+  resizeDirection.value = direction;
   const clientX = event.clientX || event.touches[0].clientX;
   const clientY = event.clientY || event.touches[0].clientY;
-  resizeStart.value = { x: clientX, y: clientY, width: chatWindowSize.value.width, height: chatWindowSize.value.height };
+  resizeStart.value = { 
+    x: clientX, 
+    y: clientY, 
+    width: chatWindowSize.value.width, 
+    height: chatWindowSize.value.height,
+    startPosX: draggablePosition.value.x,
+    startPosY: draggablePosition.value.y
+  };
   
   const handleMove = (e) => {
     if (!isResizing.value) return;
@@ -2390,13 +2539,81 @@ const startResize = (event) => {
     const moveY = e.clientY || e.touches[0].clientY;
     const deltaX = moveX - resizeStart.value.x;
     const deltaY = moveY - resizeStart.value.y;
+    
+    let newWidth = chatWindowSize.value.width;
+    let newHeight = chatWindowSize.value.height;
+    let newPosX = draggablePosition.value.x;
+    let newPosY = draggablePosition.value.y;
+    
+    const minWidth = 320;
+    const minHeight = 400;
+    const maxWidth = window.innerWidth * 0.9;
+    const maxHeight = window.innerHeight * 0.9;
+    
+    // Apply changes based on resize direction
+    switch (resizeDirection.value) {
+      case 'right':
+        newWidth = Math.max(minWidth, Math.min(maxWidth, resizeStart.value.width + deltaX));
+        break;
+      case 'left':
+        newWidth = Math.max(minWidth, Math.min(maxWidth, resizeStart.value.width - deltaX));
+        if (newWidth > minWidth) {
+          newPosX = resizeStart.value.startPosX + deltaX;
+        }
+        break;
+      case 'bottom':
+        newHeight = Math.max(minHeight, Math.min(maxHeight, resizeStart.value.height + deltaY));
+        break;
+      case 'top':
+        newHeight = Math.max(minHeight, Math.min(maxHeight, resizeStart.value.height - deltaY));
+        if (newHeight > minHeight) {
+          newPosY = resizeStart.value.startPosY + deltaY;
+        }
+        break;
+      case 'bottom-right':
+        newWidth = Math.max(minWidth, Math.min(maxWidth, resizeStart.value.width + deltaX));
+        newHeight = Math.max(minHeight, Math.min(maxHeight, resizeStart.value.height + deltaY));
+        break;
+      case 'bottom-left':
+        newWidth = Math.max(minWidth, Math.min(maxWidth, resizeStart.value.width - deltaX));
+        newHeight = Math.max(minHeight, Math.min(maxHeight, resizeStart.value.height + deltaY));
+        if (newWidth > minWidth) {
+          newPosX = resizeStart.value.startPosX + deltaX;
+        }
+        break;
+      case 'top-right':
+        newWidth = Math.max(minWidth, Math.min(maxWidth, resizeStart.value.width + deltaX));
+        newHeight = Math.max(minHeight, Math.min(maxHeight, resizeStart.value.height - deltaY));
+        if (newHeight > minHeight) {
+          newPosY = resizeStart.value.startPosY + deltaY;
+        }
+        break;
+      case 'top-left':
+        newWidth = Math.max(minWidth, Math.min(maxWidth, resizeStart.value.width - deltaX));
+        newHeight = Math.max(minHeight, Math.min(maxHeight, resizeStart.value.height - deltaY));
+        if (newWidth > minWidth) {
+          newPosX = resizeStart.value.startPosX + deltaX;
+        }
+        if (newHeight > minHeight) {
+          newPosY = resizeStart.value.startPosY + deltaY;
+        }
+        break;
+    }
+    
     chatWindowSize.value = {
-      width: Math.max(320, resizeStart.value.width + deltaX),
-      height: Math.max(400, resizeStart.value.height + deltaY),
+      width: newWidth,
+      height: newHeight,
+    };
+    
+    draggablePosition.value = {
+      x: newPosX,
+      y: newPosY,
     };
   };
+  
   const handleUp = () => {
     isResizing.value = false;
+    resizeDirection.value = 'bottom-right';
     document.removeEventListener('mousemove', handleMove);
     document.removeEventListener('mouseup', handleUp);
     document.removeEventListener('touchmove', handleMove);
@@ -2555,26 +2772,35 @@ watch(chatHistory, () => {
 .markdown-content table {
   width: 100%;
   border-collapse: collapse;
-  margin-bottom: 1rem;
-  font-size: 0.875rem;
+  margin: 0;
+  font-size: 0.825rem;
+  background: white;
+  min-width: max-content;
 }
 
 .markdown-content th,
 .markdown-content td {
-  border: 1px solid #d1d5db;
-  padding: 0.5rem 0.75rem;
+  border: 1px solid #e5e7eb;
+  padding: 0.4rem 0.5rem;
   text-align: left;
+  vertical-align: top;
+  line-height: 1.3;
+  white-space: nowrap;
 }
 
 .markdown-content th {
-  background-color: #f9fafb;
+  background-color: #f8fafc;
   font-weight: 600;
   color: #1f2937;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
 }
 
 .markdown-content td {
   background-color: #ffffff;
   color: #374151;
+  font-size: 0.8rem;
 }
 
 .markdown-content tr:nth-child(even) td {
@@ -2627,11 +2853,41 @@ watch(chatHistory, () => {
   max-width: none;
 }
 
+.ai-message-content .markdown-wrapper {
+  max-width: 100%;
+}
+
 .ai-message-content .markdown-content > *:first-child {
   margin-top: 0;
 }
 
 .ai-message-content .markdown-content > *:last-child {
   margin-bottom: 0;
+}
+
+/* Table scroll wrapper - isolated scrolling */
+.table-scroll-wrapper {
+  overflow-x: auto;
+  margin: 1rem 0;
+  border-radius: 0.375rem;
+  border: 1px solid #e5e7eb;
+  max-width: 100%;
+}
+
+.table-scroll-wrapper::-webkit-scrollbar {
+  height: 6px;
+}
+
+.table-scroll-wrapper::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.table-scroll-wrapper::-webkit-scrollbar-thumb {
+  background: #cbd5e0;
+  border-radius: 3px;
+}
+
+.table-scroll-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
 }
 </style>

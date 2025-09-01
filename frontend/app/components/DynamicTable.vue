@@ -393,7 +393,30 @@ const currentDatasetIndex = ref(0)
 const simulationButton = ref(null)
 const showFloatingButton = ref(false)
 
-// Validation
+// Column type detection function
+const detectColumnType = (colIndex) => {
+  const columnValues = columnData.value[colIndex] || []
+  const nonEmptyValues = columnValues.filter(val => val && val.trim() !== '')
+  
+  if (nonEmptyValues.length === 0) return 'text' // Default to text for empty columns
+  
+  // Check if all values are numeric
+  const numericPattern = /^-?(?:\d+(?:\.\d*)?|\.\d+)$/
+  const allNumeric = nonEmptyValues.every(val => numericPattern.test(val.trim()))
+  
+  if (allNumeric) return 'numeric'
+  
+  // Check for Task ID patterns (common ID column names that can be strings)
+  const header = headers.value[colIndex]?.toLowerCase() || ''
+  const idPatterns = ['id', 'task_id', 'taskid', 'job_id', 'order_id', 'patient_id', 'investment_id']
+  const isIdColumn = idPatterns.some(pattern => header.includes(pattern))
+  
+  if (isIdColumn) return 'id'
+  
+  return 'text' // Default fallback
+}
+
+// Enhanced validation with flexible typing
 const validationErrors = computed(() => {
   const errors = []
   
@@ -404,29 +427,43 @@ const validationErrors = computed(() => {
     }
   })
   
-  // Check for empty cells
+  // Smart empty cell validation - only require essential columns
   headers.value.forEach((header, colIndex) => {
+    const headerLower = header.toLowerCase()
+    const isOptionalColumn = ['dependencies', 'dependency', 'deps', 'parent', 'prerequisite'].some(opt => headerLower.includes(opt))
+    
     columnData.value[colIndex]?.forEach((value, rowIndex) => {
-      if (!value || value.trim() === '') {
-        errors.push(`Row ${rowIndex + 1}, Column "${header}" is empty`)
+      if ((!value || value.trim() === '') && !isOptionalColumn) {
+        errors.push(`Row ${rowIndex + 1}, Column "${header}" is required`)
       }
     })
   })
 
-  // Check for non-numeric values
-headers.value.forEach((header, colIndex) => {
+  // Flexible type validation based on column content
+  headers.value.forEach((header, colIndex) => {
+    const columnType = detectColumnType(colIndex)
+    
     columnData.value[colIndex]?.forEach((value, rowIndex) => {
       const trimmed = typeof value === 'string' ? value.trim() : String(value ?? '')
       if (!trimmed) return
 
-      // Hanya gunakan satu regex validation yang kuat
-      if (!/^-?(?:\d+(?:\.\d*)?|\.\d+)$/.test(trimmed)) {
-    errors.push(`Row ${rowIndex + 1}, Column "${header}" must be a number`)
-    return
-  }
+      // Only validate numeric columns for numeric format
+      if (columnType === 'numeric' && !/^-?(?:\d+(?:\.\d*)?|\.\d+)$/.test(trimmed)) {
+        errors.push(`Row ${rowIndex + 1}, Column "${header}" should be numeric`)
+        return
+      }
+      
+      // ID columns can be strings or numbers
+      if (columnType === 'id') {
+        // Very lenient validation - just ensure it's not empty and reasonable length
+        if (trimmed.length > 50) {
+          errors.push(`Row ${rowIndex + 1}, Column "${header}" ID too long (max 50 characters)`)
+        }
+      }
+      
+      // Text columns - no specific format validation needed
     })
   })
-
 
   return errors
 })
@@ -446,15 +483,28 @@ const isTableValid = computed(() => {
 })
 
 // Validation functions
-const validateCell = (value, header = '') => {
-  if (value === null || value === undefined) return false
+const validateCell = (value, colIndex = 0) => {
+  const header = headers.value[colIndex] || ''
+  const headerLower = header.toLowerCase()
+  const isOptionalColumn = ['dependencies', 'dependency', 'deps', 'parent', 'prerequisite'].some(opt => headerLower.includes(opt))
+  
+  if (value === null || value === undefined) return isOptionalColumn
   if (typeof value !== 'string') return false
-  if (value.trim() === '') return false
+  if (value.trim() === '') return isOptionalColumn
   
-  // All columns must be numeric
-  if (!/^-?(?:\d+(?:\.\d*)?|\.\d+)$/.test(value.trim())) return false
+  const columnType = detectColumnType(colIndex)
+  const trimmed = value.trim()
   
-  return true
+  // Validate based on detected column type
+  if (columnType === 'numeric') {
+    return /^-?(?:\d+(?:\.\d*)?|\.\d+)$/.test(trimmed)
+  } else if (columnType === 'id') {
+    // ID columns: allow strings and numbers, reasonable length
+    return trimmed.length <= 50
+  } else {
+    // Text columns: just need to be non-empty (unless optional)
+    return true
+  }
 }
 
 const getValidatedValue = (value) => {
@@ -469,10 +519,23 @@ const hasCellError = (rowIndex, colIndex) => {
 
 const getCellErrorMessage = (rowIndex, colIndex) => {
   const value = columnData.value[colIndex]?.[rowIndex] || ''
-  if (value === null || value === undefined || value.trim() === '') return 'Required'
+  const header = headers.value[colIndex] || ''
+  const headerLower = header.toLowerCase()
+  const isOptionalColumn = ['dependencies', 'dependency', 'deps', 'parent', 'prerequisite'].some(opt => headerLower.includes(opt))
   
-  // All columns must be numeric
-  if (!/^-?(?:\d+(?:\.\d*)?|\.\d+)$/.test(value.trim())) return 'Must be a number'
+  if (value === null || value === undefined || value.trim() === '') {
+    return isOptionalColumn ? '' : 'Required'
+  }
+  
+  const columnType = detectColumnType(colIndex)
+  const trimmed = value.trim()
+  
+  // Provide appropriate error message based on column type
+  if (columnType === 'numeric' && !/^-?(?:\d+(?:\.\d*)?|\.\d+)$/.test(trimmed)) {
+    return 'Must be a number'
+  } else if (columnType === 'id' && trimmed.length > 50) {
+    return 'ID too long (max 50 chars)'
+  }
   
   return ''
 }
@@ -484,8 +547,8 @@ const validateAndUpdateCell = (rowIndex, colIndex, value) => {
   // Ensure string type and validate
   const stringValue = String(value)
   
-  // Validate - reject non-string inputs, empty strings, and invalid content
-  if (typeof value !== 'string' || !validateCell(stringValue, header)) {
+  // Validate based on column type
+  if (typeof value !== 'string' || !validateCell(stringValue, colIndex)) {
     cellErrors.value[key] = true
   } else {
     delete cellErrors.value[key]
@@ -528,7 +591,7 @@ const validateAllCells = () => {
   cellErrors.value = {}
   headers.value.forEach((header, colIndex) => {
     columnData.value[colIndex]?.forEach((value, rowIndex) => {
-      if (!validateCell(value, header)) {
+      if (!validateCell(value, colIndex)) {  // Updated to use colIndex
         const key = `${rowIndex}-${header}`
         cellErrors.value[key] = true
       }
