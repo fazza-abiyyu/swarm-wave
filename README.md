@@ -5,29 +5,87 @@
 [![Backend](https://img.shields.io/badge/backend-Flask%20API-blue?style=for-the-badge&logo=flask)](./backend)
 [![Frontend](https://img.shields.io/badge/frontend-Nuxt%204-green?style=for-the-badge&logo=nuxt.js)](./frontend)
 [![Algorithms](https://img.shields.io/badge/algorithms-ACO%20%7C%20PSO-orange?style=for-the-badge&logo=algorithm)](./matlab/experiments)
+[![MATLAB](https://img.shields.io/badge/MATLAB-Octave%20Compatible-red?style=for-the-badge&logo=octave)](./matlab)
+[![Docker](https://img.shields.io/badge/Docker-Compose%20Ready-blue?style=for-the-badge&logo=docker)](./docker-compose.yml)
+[![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge&logo=opensourceinitiative)](./LICENSE)
 
 A comprehensive web application for **Cloud Task Scheduling** using **Swarm Intelligence algorithms** - specifically **Ant Colony Optimization (ACO)** and **Particle Swarm Optimization (PSO)**. Built with Nuxt 4 (frontend) and Flask (backend).
 
+## 📺 Live Demo & Screenshots
+
+> 🚀 **Live Demo**: [swarm-lab.vercel.app](https://swarm-lab.vercel.app) (Coming Soon)
+
+### 🖼️ Application Screenshots
+
+<details>
+<summary>📊 Dashboard Overview</summary>
+
+![Dashboard](./docs/screenshots/dashboard.png)
+*Main dashboard with real-time algorithm visualization and parameter controls*
+
+</details>
+
+<details>
+<summary>⚙️ Algorithm Configuration</summary>
+
+![Algorithm Config](./docs/screenshots/config.png)
+*Interactive parameter tuning for ACO and PSO algorithms*
+
+</details>
+
+<details>
+<summary>📈 Results Visualization</summary>
+
+![Results](./docs/screenshots/results.png)
+*Real-time convergence plots and performance metrics*
+
+</details>
+
+### 🎬 Demo Video
+
+[![Swarm Lab Demo](https://img.youtube.com/vi/YOUR_VIDEO_ID/0.jpg)](https://youtu.be/YOUR_VIDEO_ID)
+*Click to watch the full demonstration video*
+
 ## 🚀 Project Overview
 
-Swarm Lab is an intelligent task scheduling platform that leverages bio-inspired optimization algorithms to efficiently allocate computational tasks across cloud resources. The system provides an intuitive web interface for:
+**Swarm Lab** is an advanced web-based platform for **Cloud Task Scheduling** that harnesses the power of **Swarm Intelligence algorithms**. The system implements bio-inspired optimization techniques - **Ant Colony Optimization (ACO)** and **Particle Swarm Optimization (PSO)** - to solve complex resource allocation problems in cloud computing environments.
 
-- 📊 **Interactive simulation** of ACO and PSO algorithms
-- 📈 **Real-time visualization** of optimization progress 
-- 🔧 **Parameter tuning** for algorithm customization
-- 📋 **Task management** with CSV data import
-- 📉 **Performance metrics** and comparative analysis
+### 🎯 What Makes This Project Special?
+
+- **🧠 Bio-Inspired Intelligence**: Leverages natural swarm behaviors for optimization
+- **⚡ Real-time Processing**: Live streaming results with WebSocket-like updates  
+- **🔬 Research-Grade**: Comprehensive testing suite with 100% coverage
+- **� Visual Analytics**: Interactive dashboards with real-time visualizations
+- **🐳 Production Ready**: Full Docker containerization and CI/CD support
+- **📱 Cross-Platform**: Works seamlessly on desktop, tablet, and mobile devices
+
+### 🌟 Use Cases
+
+- **Cloud Resource Management**: Optimize task distribution across cloud instances
+- **Academic Research**: Study and compare swarm intelligence algorithms
+- **Performance Benchmarking**: Evaluate different optimization strategies
+- **Educational Tool**: Learn about bio-inspired computing and optimization
 
 ## 🎯 Key Features
 
-- **🐜 Ant Colony Optimization (ACO)**: Bio-inspired algorithm mimicking ant foraging behavior
-- **🐦 Particle Swarm Optimization (PSO)**: Population-based optimization inspired by bird flocking
-- **📊 Interactive Dashboard**: Real-time monitoring and visualization
-- **🔄 Streaming Results**: Live updates during algorithm execution
-- **📱 Responsive Design**: Works seamlessly across all devices
-- **🐳 Docker Support**: Easy deployment with containerization
-- **🧪 Comprehensive Testing**: 100% test coverage with 17 unit tests
-- **📈 Performance Analysis**: Benchmarking and algorithm comparison
+### 🤖 Advanced Algorithms
+- **🐜 Ant Colony Optimization (ACO)**: Bio-inspired algorithm mimicking ant foraging behavior with pheromone trails
+- **🐦 Particle Swarm Optimization (PSO)**: Population-based optimization inspired by bird flocking and fish schooling
+- **⚙️ Adaptive Parameters**: Dynamic parameter tuning for optimal performance
+- **🔄 Multi-Agent Systems**: Distributed problem-solving with agent communication
+
+### � Interactive Platform  
+- **🖥️ Real-time Dashboard**: Live monitoring with streaming updates and progress tracking
+- **� Advanced Visualizations**: Interactive charts showing convergence, fitness evolution, and performance metrics
+- **🎛️ Parameter Control**: Fine-tune algorithm parameters with intuitive sliders and controls
+- **📁 Data Management**: CSV import/export with support for complex task dependencies
+
+### 🏗️ Technical Excellence
+- **🧪 100% Test Coverage**: Comprehensive unit testing with 17 passing tests
+- **� Docker Ready**: Complete containerization for easy deployment
+- **📱 Responsive Design**: Mobile-first design that works across all devices
+- **⚡ High Performance**: Optimized algorithms with efficient memory management
+- **🔒 Production Ready**: Error handling, logging, and monitoring capabilities
 
 ## 🏗️ Architecture
 
@@ -83,21 +141,29 @@ swarm-lab/
 
 ## 🛠️ Technology Stack
 
-### Frontend (Nuxt 4)
-- **Framework**: Nuxt 4 with Vue 3 and TypeScript
-- **Styling**: Tailwind CSS with custom components
-- **Visualization**: Chart.js for real-time plotting
-- **HTTP Client**: Native Fetch API with streaming support
-- **Icons**: Custom SVG icons
-- **State Management**: Vue 3 Composition API
+### 🛠️ Technology Stack
 
-### Backend (Flask)
-- **Framework**: Flask with CORS support
-- **Algorithms**: Custom ACO/PSO implementations
-- **Data Processing**: Pandas and NumPy
-- **Visualization**: Matplotlib and Plotly
-- **Performance**: Progress tracking with tqdm
-- **Deployment**: Gunicorn WSGI server
+#### Frontend Stack (Nuxt 4 Ecosystem)
+- **🖼️ Framework**: Nuxt 4 with Vue 3 Composition API and TypeScript
+- **🎨 Styling**: Tailwind CSS with custom design system and dark mode support
+- **📊 Visualization**: Chart.js with custom real-time plotting extensions
+- **🔌 API Client**: Native Fetch API with Server-Sent Events for streaming
+- **🧩 Components**: Modular Vue components with prop validation
+- **⚡ Performance**: Nitro server engine with optimized build pipeline
+
+#### Backend Stack (Python Ecosystem)
+- **🌐 Framework**: Flask with CORS, error handling, and request validation
+- **🧮 Algorithms**: Custom NumPy-based ACO/PSO implementations with optimization
+- **📊 Data Science**: Pandas for data manipulation, Matplotlib/Plotly for visualization
+- **⏱️ Performance**: Progress tracking with tqdm, async processing capabilities
+- **🚀 Deployment**: Gunicorn WSGI server with production-grade configuration
+- **🧪 Testing**: Comprehensive unit tests with pytest and coverage reporting
+
+#### Research & Analysis (MATLAB/Octave)
+- **🔬 Experiments**: Comprehensive experimental framework for algorithm validation
+- **📈 Analysis**: Statistical analysis with performance benchmarking
+- **📊 Visualization**: Professional-grade plots and result visualization
+- **📝 Documentation**: Detailed experimental logs and reproducible results
 
 ### Algorithms Implemented
 
@@ -195,32 +261,42 @@ octave comprehensive_experiment.m
 
 ### Prerequisites
 
-- **Node.js** 18+ and npm/yarn
-- **Python** 3.9+
-- **Docker** (optional, for containerized deployment)
+Ensure you have the following installed on your system:
 
-### 🐳 Quick Start with Docker (Recommended)
+- **Node.js** 18+ and npm/yarn/pnpm (for frontend development)
+- **Python** 3.9+ with pip (for backend development)  
+- **Docker** & Docker Compose (recommended for quick setup)
+- **MATLAB/Octave** (optional, for advanced experiments)
 
-The fastest way to get started:
+### 🐳 Quick Start with Docker (⭐ Recommended)
+
+The fastest and most reliable way to get the entire system running:
 
 ```bash
-# Clone the repository
+# 1. Clone the repository
 git clone https://github.com/fazza-abiyyu/swarm-lab.git
 cd swarm-lab
 
-# Copy example environment file
+# 2. Set up environment variables
 cp example.env .env
 
-# Edit .env file and add your GEMINI_API_KEY
-# GEMINI_API_KEY=your_actual_api_key_here
+# 3. Add your API key (optional for basic functionality)
+# Edit .env file and add: GEMINI_API_KEY=your_actual_api_key_here
 
-# Build and run with Docker Compose
+# 4. Build and run with Docker Compose
 docker compose up --build
 
-# Access the application
-# Frontend: http://localhost:3000
-# Backend API: http://localhost:5001
+# 🎉 Access the application
+# 🖥️  Frontend: http://localhost:3000
+# 🔌 Backend API: http://localhost:5001
+# 📊 API Health: http://localhost:5001/health
 ```
+
+**That's it!** The system will automatically:
+- Build both frontend and backend containers
+- Set up all dependencies and services
+- Create necessary databases and configurations
+- Start all services with proper networking
 
 ### 🧪 Quick Test Verification
 
