@@ -1,0 +1,2 @@
+# This file ensures the plots directory is tracked by git
+# while ignoring all plot files and subdirectories within it
