@@ -27,6 +27,10 @@ class PSO_MultiAgent_Scheduler:
         self.dependencies = self._parse_dependencies() if self.enable_dependencies else {}
         self.dependency_graph = self._build_dependency_graph() if self.enable_dependencies else None
         
+        # Check for circular dependencies
+        if self.enable_dependencies and self._detect_circular_dependencies():
+            print("Warning: Circular dependencies detected. Algorithm will use fallback mechanisms.")
+        
         # Swarm initialization
         self.positions = np.random.rand(self.n_particles, self.n_tasks)
         self.velocities = np.random.rand(self.n_particles, self.n_tasks) * 0.1
@@ -53,6 +57,37 @@ class PSO_MultiAgent_Scheduler:
         load_balance_index = std_dev / mean_time
         return load_balance_index
     
+    def _detect_circular_dependencies(self):
+        """Detect circular dependencies using DFS"""
+        if not self.enable_dependencies:
+            return False
+            
+        # Use DFS to detect cycles
+        visited = set()
+        rec_stack = set()
+        
+        def has_cycle(task_id):
+            if task_id in rec_stack:
+                return True
+            if task_id in visited:
+                return False
+                
+            visited.add(task_id)
+            rec_stack.add(task_id)
+            
+            for dep_id in self.dependencies.get(task_id, []):
+                if has_cycle(dep_id):
+                    return True
+                    
+            rec_stack.remove(task_id)
+            return False
+        
+        for task_id in self.dependencies:
+            if task_id not in visited:
+                if has_cycle(task_id):
+                    return True
+        return False
+
     def _parse_dependencies(self):
         """Parse task dependencies from tasks data with robust handling"""
         dependencies = {}
@@ -109,41 +144,64 @@ class PSO_MultiAgent_Scheduler:
         if not self.enable_dependencies:
             # Original sorting for independent tasks
             return np.argsort(position)
-        else:
-            # Dependency-aware sequence generation
-            task_priorities = [(i, position[i]) for i in range(self.n_tasks)]
-            sequence = []
-            remaining_tasks = set(range(self.n_tasks))
-            completed_tasks = set()
+        
+        # Dependency-aware sequence generation
+        task_priorities = sorted(enumerate(position), key=lambda x: x[1], reverse=True)
+        
+        sequence = []
+        scheduled_task_indices = set()
+        completed_task_ids = set()
+        
+        # Safety net to prevent infinite loops in case of bad dependencies
+        max_attempts = self.n_tasks * self.n_tasks 
+        attempts = 0
+
+        while len(scheduled_task_indices) < self.n_tasks and attempts < max_attempts:
+            made_progress = False
+            for task_idx, _ in task_priorities:
+                if task_idx not in scheduled_task_indices:
+                    task_id = str(self.tasks[task_idx][self.task_id_col])
+                    
+                    if self._is_dependency_satisfied(task_id, completed_task_ids):
+                        sequence.append(task_idx)
+                        scheduled_task_indices.add(task_idx)
+                        completed_task_ids.add(task_id)
+                        made_progress = True
             
-            # Sort by priority but respect dependencies
-            sorted_priorities = sorted(task_priorities, key=lambda x: x[1], reverse=True)
+            attempts += 1
+            # If a full pass makes no progress, there might be a circular dependency or issue
+            if not made_progress and len(scheduled_task_indices) < self.n_tasks:
+                # Fallback: add any remaining unscheduled task to avoid infinite loop
+                remaining = set(range(self.n_tasks)) - scheduled_task_indices
+                if remaining:
+                    # Add one task that has the fewest remaining dependencies to break the cycle
+                    min_deps_task = -1
+                    min_deps_count = float('inf')
+                    for rem_idx in remaining:
+                        rem_id = str(self.tasks[rem_idx][self.task_id_col])
+                        deps = self.dependencies.get(rem_id, [])
+                        unsatisfied_count = len([d for d in deps if d not in completed_task_ids])
+                        if unsatisfied_count < min_deps_count:
+                            min_deps_count = unsatisfied_count
+                            min_deps_task = rem_idx
+                    
+                    if min_deps_task != -1:
+                        sequence.append(min_deps_task)
+                        scheduled_task_indices.add(min_deps_task)
+                        completed_task_ids.add(str(self.tasks[min_deps_task][self.task_id_col]))
+
+        # Ensure all tasks are in the sequence, even if dependencies were problematic
+        if len(sequence) < self.n_tasks:
+            remaining_tasks = set(range(self.n_tasks)) - scheduled_task_indices
+            sequence.extend(sorted(list(remaining_tasks)))
             
-            while remaining_tasks:
-                # Find task with highest priority whose dependencies are satisfied
-                selected_task = None
-                for task_idx, priority in sorted_priorities:
-                    if task_idx in remaining_tasks:
-                        task_id = str(self.tasks[task_idx][self.task_id_col])
-                        if self._is_dependency_satisfied(task_id, completed_tasks):
-                            selected_task = task_idx
-                            break
-                
-                if selected_task is None:
-                    # Fallback: pick task with fewest dependencies
-                    selected_task = min(remaining_tasks, key=lambda t: len(self.dependencies.get(str(self.tasks[t][self.task_id_col]), [])))
-                
-                sequence.append(selected_task)
-                remaining_tasks.remove(selected_task)
-                completed_tasks.add(str(self.tasks[selected_task][self.task_id_col]))
-                
-            return np.array(sequence)
+        return np.array(sequence)
 
     def _evaluate_sequence(self, task_sequence):
         """Enhanced evaluation with dependency and load balancing consideration"""
         agent_finish_times = {agent[self.agent_id_col]: 0 for agent in self.agents}
+        task_finish_times = {}  # Optimization: O(1) lookup for dependency finish times
         schedule = []
-        completed_tasks = set()
         
         for task_idx in task_sequence:
             task = self.tasks[task_idx]
@@ -157,16 +215,14 @@ class PSO_MultiAgent_Scheduler:
             dependency_finish_time = 0
             if self.enable_dependencies and task_id in self.dependencies:
                 for dep_id in self.dependencies[task_id]:
-                    # Find when dependency finishes
-                    for completed_task in schedule:
-                        if completed_task['task_id'] == dep_id:
-                            dependency_finish_time = max(dependency_finish_time, completed_task['finish_time'])
-                            break
+                    # Optimization: Use dict for faster lookup
+                    dependency_finish_time = max(dependency_finish_time, task_finish_times.get(dep_id, 0))
             
             # Start time is max of agent availability and dependency completion
             start_time = max(agent_finish_times[best_agent_id], dependency_finish_time)
             finish_time = start_time + duration
             agent_finish_times[best_agent_id] = finish_time
+            task_finish_times[task_id] = finish_time # Optimization: Store finish time
             
             schedule.append({
                 'task_id': task_id, 
@@ -174,8 +230,6 @@ class PSO_MultiAgent_Scheduler:
                 'start_time': start_time, 
                 'finish_time': finish_time
             })
-            
-            completed_tasks.add(task_id)
         
         makespan = max(agent_finish_times.values()) if agent_finish_times else 0
         load_balance_index = self._calculate_load_balance_index(agent_finish_times)
@@ -207,7 +261,7 @@ class PSO_MultiAgent_Scheduler:
                 best_score = combined_score
                 best_agent = agent_id
         
-        return best_agent or min(agent_finish_times, key=agent_finish_times.get)
+        return best_agent
 
     def run(self):
         import time
@@ -259,6 +313,7 @@ class PSO_MultiAgent_Scheduler:
             "type": "done",
             "schedule": self.gbest_schedule,
             "makespan": self.gbest_cost,
+            "load_balance_index": self.gbest_load_balance_index,
             "computation_time": round(computation_time * 1000, 2),  # Convert to milliseconds
             "log_message": "PSO Optimization Finished!"
         })
