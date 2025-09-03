@@ -16,25 +16,30 @@ app.start_time = time.time()
 # Security headers middleware
 @app.after_request
 def add_security_headers(response):
-    # Content Security Policy (CSP) Header
+    # Content Security Policy (CSP) Header - More permissive for compatibility
     response.headers['Content-Security-Policy'] = (
-        "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com; "
-        "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; "
-        "font-src 'self' https://fonts.gstatic.com; "
-        "img-src 'self' data: https:; "
-        "connect-src 'self' http://localhost:* http://127.0.0.1:* https:; "
-        "object-src 'none'; "
+        "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https:; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com https://*.vercel.app https://*.vanila.app; "
+        "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com https://*.vercel.app https://*.vanila.app; "
+        "font-src 'self' data: https://fonts.gstatic.com https://*.vercel.app https://*.vanila.app; "
+        "img-src 'self' data: blob: https: http:; "
+        "connect-src 'self' http://localhost:* http://127.0.0.1:* https: wss: ws:; "
+        "media-src 'self' data: blob: https:; "
+        "object-src 'self' data:; "
         "base-uri 'self'; "
-        "form-action 'self'; "
-        "frame-ancestors 'none'"
+        "form-action 'self' https:; "
+        "frame-ancestors 'self'"
     )
     
-    # Anti-clickjacking Header (X-Frame-Options)
-    response.headers['X-Frame-Options'] = 'DENY'
+    # Anti-clickjacking Header (X-Frame-Options)  
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'  # Changed from DENY to SAMEORIGIN for compatibility
     
-    # Remove X-Powered-By header to prevent information leakage
+    # Remove server identification headers to prevent information leakage
     response.headers.pop('Server', None)
+    response.headers.pop('X-Powered-By', None)
+    
+    # Add custom server header to hide Flask
+    response.headers['Server'] = 'nginx'
     
     # X-Content-Type-Options Header to prevent MIME sniffing
     response.headers['X-Content-Type-Options'] = 'nosniff'
@@ -42,10 +47,23 @@ def add_security_headers(response):
     # Additional security headers
     response.headers['X-XSS-Protection'] = '1; mode=block'
     response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
-    response.headers['Permissions-Policy'] = 'geolocation=(), microphone=(), camera=()'
+    response.headers['Permissions-Policy'] = 'geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=()'
     
-    # Cache control for sensitive endpoints
-    if request.endpoint and 'health' not in request.endpoint:
+    # Improved cache control strategy
+    if request.endpoint:
+        if 'health' in request.endpoint or request.endpoint == 'home':
+            # Allow short-term caching for health checks and home
+            response.headers['Cache-Control'] = 'public, max-age=300'  # 5 minutes
+        elif 'simulate' in request.endpoint or 'algorithm' in request.endpoint:
+            # No caching for dynamic algorithm results
+            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, private'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '0'
+        else:
+            # Default: allow short caching but require revalidation
+            response.headers['Cache-Control'] = 'public, max-age=60, must-revalidate'
+    else:
+        # Default for undefined endpoints
         response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, private'
         response.headers['Pragma'] = 'no-cache'
         response.headers['Expires'] = '0'
