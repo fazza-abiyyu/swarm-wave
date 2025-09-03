@@ -39,9 +39,11 @@ export default defineNuxtConfig({
         },
         // Security meta tags
         { 'http-equiv': 'X-Content-Type-Options', content: 'nosniff' },
-        { 'http-equiv': 'X-Frame-Options', content: 'DENY' },
+        { 'http-equiv': 'X-Frame-Options', content: 'SAMEORIGIN' },
         { 'http-equiv': 'X-XSS-Protection', content: '1; mode=block' },
-        { 'http-equiv': 'Referrer-Policy', content: 'strict-origin-when-cross-origin' }
+        { 'http-equiv': 'Referrer-Policy', content: 'strict-origin-when-cross-origin' },
+        // Hide Nuxt generator info
+        { name: 'generator', content: '' }
       ],
       link: [{ rel: "icon", type: "image/x-icon", href: "/favicon.ico" }],
     },
@@ -51,14 +53,18 @@ export default defineNuxtConfig({
     routeRules: {
       '/**': {
         headers: {
-          'X-Frame-Options': 'DENY',
+          'X-Frame-Options': 'SAMEORIGIN',
           'X-Content-Type-Options': 'nosniff',
           'X-XSS-Protection': '1; mode=block',
           'Referrer-Policy': 'strict-origin-when-cross-origin',
-          'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
-          'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; connect-src 'self' http://localhost:* http://127.0.0.1:* https:; font-src 'self' https:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+          'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
+          'Content-Security-Policy': "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com https://*.vercel.app https://*.vanila.app; style-src 'self' 'unsafe-inline' https: https://*.vercel.app https://*.vanila.app; img-src 'self' data: blob: https: http:; connect-src 'self' http://localhost:* http://127.0.0.1:* https: wss: ws:; font-src 'self' data: https:; object-src 'self' data:; base-uri 'self'; form-action 'self' https:; frame-ancestors 'self'"
         }
       }
+    },
+    // Remove X-Powered-By header
+    experimental: {
+      payloadExtraction: false
     }
   }
 });
