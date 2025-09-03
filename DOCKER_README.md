@@ -1,4 +1,4 @@
-# Swarm Lab - Docker Setup
+# Swarm Wave - Docker Setup
 
 ## Quick Start
 
@@ -23,19 +23,19 @@ docker-compose logs -f
 ### Backend (Flask)
 ```bash
 # Build backend image
-docker build -t swarm-lab-backend ./backend
+docker build -t swarm-wave-backend ./backend
 
 # Run backend container
-docker run -p 5000:5000 swarm-lab-backend
+docker run -p 5000:5000 swarm-wave-backend
 ```
 
 ### Frontend (Nuxt 4)
 ```bash
 # Build frontend image
-docker build -t swarm-lab-frontend ./frontend
+docker build -t swarm-wave-frontend ./frontend
 
 # Run frontend container
-docker run -p 3000:3000 swarm-lab-frontend
+docker run -p 3000:3000 swarm-wave-frontend
 ```
 
 ## Services

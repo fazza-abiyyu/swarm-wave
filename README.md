@@ -1,4 +1,4 @@
-# 🐜 Swarm Lab - Intelligent Cloud Task Scheduling System
+# 🐜 Swarm Wave - Intelligent Multi-Agent Task Scheduling System
 
 [![Tests](https://img.shields.io/badge/tests-17%2F17%20passing-brightgreen?style=for-the-badge&logo=checkmarx)](./backend/tests)
 [![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen?style=for-the-badge&logo=codecov)](./backend/tests)
@@ -9,11 +9,11 @@
 [![Docker](https://img.shields.io/badge/Docker-Compose%20Ready-blue?style=for-the-badge&logo=docker)](./docker-compose.yml)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge&logo=opensourceinitiative)](./LICENSE)
 
-A comprehensive web application for **Cloud Task Scheduling** using **Swarm Intelligence algorithms** - specifically **Ant Colony Optimization (ACO)** and **Particle Swarm Optimization (PSO)**. Built with Nuxt 4 (frontend) and Flask (backend).
+A comprehensive web application for **Multi-Agent Task Scheduling** using **Swarm Intelligence algorithms** - specifically **Ant Colony Optimization (ACO)** and **Particle Swarm Optimization (PSO)**. Built with Nuxt 4 (frontend) and Flask (backend).
 
 ## 🚀 Project Overview
 
-**Swarm Lab** is an advanced web-based platform for **Cloud Task Scheduling** that harnesses the power of **Swarm Intelligence algorithms**. The system implements bio-inspired optimization techniques - **Ant Colony Optimization (ACO)** and **Particle Swarm Optimization (PSO)** - to solve complex resource allocation problems in cloud computing environments.
+**Swarm Wave** is an advanced web-based platform for **Multi-Agent Task Scheduling** that harnesses the power of **Swarm Intelligence algorithms**. The system implements bio-inspired optimization techniques - **Ant Colony Optimization (ACO)** and **Particle Swarm Optimization (PSO)** - to solve complex resource allocation problems in distributed computing environments.
 
 ### 🎯 What Makes This Project Special?
 
@@ -26,7 +26,7 @@ A comprehensive web application for **Cloud Task Scheduling** using **Swarm Inte
 
 ### 🌟 Use Cases
 
-- **Cloud Resource Management**: Optimize task distribution across cloud instances
+- **Distributed Computing**: Optimize task distribution across multiple computing nodes
 - **Academic Research**: Study and compare swarm intelligence algorithms
 - **Performance Benchmarking**: Evaluate different optimization strategies
 - **Educational Tool**: Learn about bio-inspired computing and optimization
@@ -57,7 +57,7 @@ A comprehensive web application for **Cloud Task Scheduling** using **Swarm Inte
 This project follows a modern microservices architecture with clear separation between frontend and backend:
 
 ```
-swarm-lab/
+swarm-wave/
 ├── backend/                    # Flask API Server
 │   ├── models/                 # Algorithm Implementations
 │   │   ├── aco.py             # Ant Colony Optimization
@@ -239,8 +239,8 @@ The fastest and most reliable way to get the entire system running:
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/fazza-abiyyu/swarm-lab.git
-cd swarm-lab
+git clone https://github.com/fazza-abiyyu/swarm-wave.git
+cd swarm-wave
 
 # 2. Set up environment variables
 cp example.env .env
@@ -446,21 +446,27 @@ cp example.env .env
 GEMINI_API_KEY=your_gemini_api_key_here
 
 # Docker-specific settings
-COMPOSE_PROJECT_NAME=swarm-lab
+COMPOSE_PROJECT_NAME=swarm-wave
 
-# API URL for backend service (host access via port 5001)  
+# Development URLs (used by frontend runtime config)
+NODE_ENV=development
 API_URL=http://localhost:5001
-BACKEND_URL=http://localhost:5001
+
+# Optional: Production API URL override
+# API_URL=https://your-production-api.com
 ```
 
 #### Frontend (.env)
 ```bash
-# API Configuration
-NUXT_PUBLIC_API_BASE=http://localhost:5001
+# Google Gemini API Key (required for AI chat functionality)
+GEMINI_API_KEY=your_gemini_api_key_here
 
-# Development
-NUXT_HOST=0.0.0.0
-NUXT_PORT=3000
+# API Base URL for development
+NODE_ENV=development
+API_URL=http://localhost:5001
+
+# Optional: Production API URL override
+# API_URL=https://your-production-api.com
 ```
 
 #### Backend (.env)
@@ -471,7 +477,7 @@ FLASK_DEBUG=1
 FLASK_APP=app.py
 
 # CORS Configuration
-CORS_ORIGINS=http://localhost:3000,https://swarm-lab.vercel.app
+CORS_ORIGINS=http://localhost:3000,https://swarm-wave.vercel.app
 ```
 
 ### Algorithm Configuration
@@ -608,13 +614,13 @@ We welcome contributions! Please follow these steps:
 
 1. **Fork the repository**
    ```bash
-   git fork https://github.com/fazza-abiyyu/swarm-lab.git
+   git fork https://github.com/fazza-abiyyu/swarm-wave.git
    ```
 
 2. **Clone your fork**
    ```bash
-   git clone https://github.com/YOUR_USERNAME/swarm-lab.git
-   cd swarm-lab
+   git clone https://github.com/YOUR_USERNAME/swarm-wave.git
+   cd swarm-wave
    ```
 
 3. **Create a feature branch**
@@ -696,8 +702,8 @@ This implementation is based on the following research:
 
 ### Getting Help
 - 📖 **Documentation**: Check `/docs` directory
-- 🐛 **Issues**: [GitHub Issues](https://github.com/fazza-abiyyu/swarm-lab/issues)
-- 💬 **Discussions**: [GitHub Discussions](https://github.com/fazza-abiyyu/swarm-lab/discussions)
+- 🐛 **Issues**: [GitHub Issues](https://github.com/fazza-abiyyu/swarm-wave/issues)
+- 💬 **Discussions**: [GitHub Discussions](https://github.com/fazza-abiyyu/swarm-wave/discussions)
 
 ### Troubleshooting
 
@@ -738,17 +744,17 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 If you use this work in your research, please cite:
 
 ```bibtex
-@software{swarm_lab_2025,
-  title={Swarm Lab: Intelligent Cloud Task Scheduling System},
-  author={Fazza Abiyyu},
+@software{swarm_wave_2025,
+  title={Swarm Wave: Intelligent Multi-Agent Task Scheduling System},
+  author={Muhammad Faza Abiyyu},
   year={2025},
-  url={https://github.com/fazza-abiyyu/swarm-lab}
+  url={https://github.com/fazza-abiyyu/swarm-wave}
 }
 ```
 
 ## 🔄 Project Status
 
-This project is actively maintained and developed. Check the [GitHub repository](https://github.com/fazza-abiyyu/swarm-lab) for the latest updates and releases.
+This project is actively maintained and developed. Check the [GitHub repository](https://github.com/fazza-abiyyu/swarm-wave) for the latest updates and releases.
 
 ## 🌟 Acknowledgments
 
@@ -760,7 +766,7 @@ This project is actively maintained and developed. Check the [GitHub repository]
 
 **Built with ❤️ using Swarm Intelligence, Nuxt 4, and Flask**
 
-[![GitHub stars](https://img.shields.io/github/stars/fazza-abiyyu/swarm-lab?style=social)](https://github.com/fazza-abiyyu/swarm-lab/stargazers)
-[![GitHub forks](https://img.shields.io/github/forks/fazza-abiyyu/swarm-lab?style=social)](https://github.com/fazza-abiyyu/swarm-lab/network/members)
-[![GitHub issues](https://img.shields.io/github/issues/fazza-abiyyu/swarm-lab)](https://github.com/fazza-abiyyu/swarm-lab/issues)
+[![GitHub stars](https://img.shields.io/github/stars/fazza-abiyyu/swarm-wave?style=social)](https://github.com/fazza-abiyyu/swarm-wave/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/fazza-abiyyu/swarm-wave?style=social)](https://github.com/fazza-abiyyu/swarm-wave/network/members)
+[![GitHub issues](https://img.shields.io/github/issues/fazza-abiyyu/swarm-wave)](https://github.com/fazza-abiyyu/swarm-wave/issues)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)

@@ -15,7 +15,7 @@ services:
     volumes:
       - ./backend:/app
     networks:
-      - swarm-lab-network
+      - swarm-wave-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/health/simple"]
       interval: 30s
@@ -42,13 +42,13 @@ services:
       - /app/node_modules
       - /app/.nuxt
     networks:
-      - swarm-lab-network
+      - swarm-wave-network
     depends_on:
       - backend
     command: ["yarn", "dev"]
 
 networks:
-  swarm-lab-network:
+  swarm-wave-network:
     driver: bridge
 
 volumes:

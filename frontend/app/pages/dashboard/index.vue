@@ -22,7 +22,7 @@
                 <line x1="13.5" y1="10" x2="10" y2="17" stroke="currentColor" stroke-width="0.5"/>
               </svg>
             </div>
-            <span @click="showSimulation = false"  class="text-xl font-bold text-gray-900">Swarm Lab</span>
+            <span @click="showSimulation = false"  class="text-xl font-bold text-gray-900">Swarm Wave</span>
           </div>
 
           <!-- Navigation Links -->
@@ -72,7 +72,7 @@
         <!-- Data Table View -->
         <div v-if="!showSimulation">
           <div class="text-center mb-8">
-            <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">Swarm Lab – Experimental Data Platform</h1>
+            <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">Swarm Wave – Experimental Data Platform</h1>
             <p class="text-lg text-gray-600">Manage, analyze, and integrate data for swarm intelligence research, with support for JSON and CSV</p>
           </div>
 
@@ -115,7 +115,7 @@
             </div>
           </div>
           <p class="text-gray-500 text-sm">
-            © 2025 Swarm Lab. Experimental data platform for swarm intelligence research.
+            © 2025 Swarm Wave. Experimental data platform for swarm intelligence research.
           </p>
         </div>
       </div>

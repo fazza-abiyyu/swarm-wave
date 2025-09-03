@@ -1,6 +1,6 @@
-# 🐜 Swarm Lab Backend - Cloud Task Scheduling API
+# 🐜 Swarm Wave Backend - Multi-Agent Task Scheduling API
 
-A **Flask-based REST API** implementing **Swarm Intelligence algorithms** for cloud task scheduling optimization. Supports **Ant Colony Optimization (ACO)** and **Particle Swarm Optimization (PSO)** with real-time streaming results.
+A **Flask-based REST API** implementing **Swarm Intelligence algorithms** for multi-agent task scheduling optimization. Supports **Ant Colony Optimization (ACO)** and **Particle Swarm Optimization (PSO)** with real-time streaming results.
 
 ## 🚀 Overview
 
@@ -108,10 +108,10 @@ The API will be available at: `http://localhost:5001`
 
 ```bash
 # Build Docker image
-docker build -t swarm-lab-backend .
+docker build -t swarm-wave-backend .
 
 # Run container
-docker run -p 5001:5000 swarm-lab-backend
+docker run -p 5001:5000 swarm-wave-backend
 
 # Or use docker-compose
 docker compose up backend
@@ -127,7 +127,7 @@ Basic health check endpoint.
 **Response:**
 ```json
 {
-  "message": "Cloud Task Scheduling API is running"
+  "message": "Multi-Agent Task Scheduling API is running"
 }
 ```
 
@@ -143,7 +143,7 @@ Comprehensive health status with system information, algorithm availability, and
   "datetime": "2025-08-31T15:20:24.512372",
   "uptime_seconds": 45.2,
   "application": {
-    "name": "Swarm Lab Backend API",
+    "name": "Swarm Wave Backend API",
     "version": "1.0.0",
     "environment": "development",
     "debug_mode": false
@@ -529,7 +529,7 @@ HOST=0.0.0.0
 PORT=5001
 
 # CORS Origins
-CORS_ORIGINS=http://localhost:3000,https://swarm-lab.vercel.app
+CORS_ORIGINS=http://localhost:3000,https://swarm-wave.vercel.app
 
 # Algorithm Defaults
 DEFAULT_ITERATIONS=100
@@ -544,7 +544,7 @@ For production deployment, update the CORS settings:
 # app.py
 CORS(app, origins=[
     'https://your-frontend-domain.com',
-    'https://swarm-lab.vercel.app'
+    'https://swarm-wave.vercel.app'
 ], supports_credentials=True)
 ```
 
@@ -554,8 +554,8 @@ CORS(app, origins=[
 
 ```bash
 # Build and run with Docker
-docker build -t swarm-lab-backend .
-docker run -p 5001:5000 -e FLASK_ENV=production swarm-lab-backend
+docker build -t swarm-wave-backend .
+docker run -p 5001:5000 -e FLASK_ENV=production swarm-wave-backend
 
 # Using docker-compose
 docker compose up -d backend
@@ -570,7 +570,7 @@ The backend includes a `Procfile` for Heroku deployment:
 heroku login
 
 # Create Heroku app
-heroku create your-swarm-lab-backend
+heroku create your-swarm-wave-backend
 
 # Set environment variables
 heroku config:set FLASK_ENV=production
@@ -592,7 +592,7 @@ pip install gunicorn
 gunicorn --bind 0.0.0.0:5001 --workers 4 --timeout 120 app:app
 
 # Or use systemd service
-sudo systemctl start swarm-lab-backend
+sudo systemctl start swarm-wave-backend
 ```
 
 ## 📈 Performance Optimization
@@ -752,7 +752,7 @@ CORS(app, origins=['*'], supports_credentials=True)
 # Production - Specific origins
 CORS(app, origins=[
     'https://your-frontend-domain.com',
-    'https://swarm-lab.vercel.app'
+    'https://swarm-wave.vercel.app'
 ], supports_credentials=True)
 ```
 
@@ -776,10 +776,10 @@ healthcheck:
 docker compose ps
 
 # View detailed health status
-docker inspect swarm-lab-backend --format='{{.State.Health.Status}}'
+docker inspect swarm-wave-backend --format='{{.State.Health.Status}}'
 
 # View health check logs
-docker inspect swarm-lab-backend --format='{{range .State.Health.Log}}{{.Output}}{{end}}'
+docker inspect swarm-wave-backend --format='{{range .State.Health.Log}}{{.Output}}{{end}}'
 
 # Test health endpoint manually
 docker compose exec backend curl http://localhost:5000/health/simple

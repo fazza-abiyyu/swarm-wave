@@ -1,6 +1,6 @@
 # Backend Unit Tests
 
-This directory contains comprehensive unit tests for the Swarm Lab backend components.
+This directory contains comprehensive unit tests for the Swarm Wave backend components.
 
 ## Test Structure
 

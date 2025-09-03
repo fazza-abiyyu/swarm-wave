@@ -108,9 +108,10 @@
                 :max="props.tasks.length"
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="Enter number of rows"
+                @input="validateDataLimitInput"
               />
               <p class="text-xs text-gray-500 mt-1">
-                Showing {{ Math.min(dataLimit, props.tasks.length) }} of {{ props.tasks.length }} rows
+                Showing {{ previewCount }} of {{ props.tasks.length }} rows
               </p>
             </div>
             
@@ -126,7 +127,7 @@
             </div>
 
             <div class="text-sm text-gray-600">
-              <p>Preview: {{ filteredTasks.length }} rows</p>
+              <p>Preview: {{ previewCount }} rows</p>
               <p class="text-xs">This affects simulation input only</p>
             </div>
           </div>
@@ -172,173 +173,180 @@
 
       <!-- Parameters Section -->
       <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
-        <h2 class="text-xl font-semibold text-gray-900 mb-4">
-          Common Parameters
+        <h2 class="text-xl font-semibold text-gray-900 mb-6">
+          Algorithm Parameters
         </h2>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <!-- Common Parameters -->
-          <div>
-            <div class="flex items-center gap-1 mb-2">
-              <label class="block text-sm font-medium text-gray-700">
-                Number of Agents
-              </label>
-              <span
-                class="relative group cursor-pointer text-gray-400 text-xs font-bold"
-              >
-                ?
-                <div
-                  class="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded-md shadow-lg p-2 left-4 top-0 w-64 z-10"
+        <!-- Common Parameters -->
+        <div class="mb-8">
+          <h3 class="text-lg font-medium text-gray-800 mb-4">Common Parameters</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Common Parameters -->
+            <div>
+              <div class="flex items-center gap-1 mb-2">
+                <label class="block text-sm font-medium text-gray-700">
+                  Number of Agents
+                </label>
+                <span
+                  class="relative group cursor-pointer text-gray-400 text-xs font-bold"
                 >
-                  Number of worker agents (ants or particles) that will process
-                  tasks simultaneously. More agents can explore more solutions
-                  but increase computation time. Range: 1-10. Example: 3
-                </div>
-              </span>
-            </div>
-            <input
-              v-model.number="parameters.num_default_agents"
-              type="number"
-              min="1"
-              max="10"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-
-          <div>
-            <div class="flex items-center gap-1 mb-2">
-              <label class="block text-sm font-medium text-gray-700">
-                Iterations
-              </label>
-              <span
-                class="relative group cursor-pointer text-gray-400 text-xs font-bold"
-              >
-                ?
-                <div
-                  class="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded-md shadow-lg p-2 left-4 top-0 w-64 z-10"
-                >
-                  Total number of optimization cycles the algorithm will
-                  perform. More iterations allow better convergence but take
-                  longer to complete. Range: 1-100. Example: 50
-                </div>
-              </span>
-            </div>
-            <input
-              v-model.number="parameters.n_iterations"
-              type="number"
-              min="1"
-              max="100"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-
-          <div>
-            <div class="flex items-center gap-1 mb-2">
-              <label class="block text-sm font-medium text-gray-700">
-                Task ID Column
-              </label>
-              <span v-if="parameters.task_id_col === datasetHeaders[0] && datasetHeaders.length > 0" 
-                    class="px-2 py-1 text-xs bg-blue-100 text-blue-600 rounded-md">
-                Auto-selected
-              </span>
-              <span
-                class="relative group cursor-pointer text-gray-400 text-xs font-bold"
-              >
-                ?
-                <div
-                  class="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded-md shadow-lg p-2 left-4 top-0 w-64 z-10"
-                >
-                  Column name for task IDs in your dataset. Automatically set to the first column of your data.
-                </div>
-              </span>
-            </div>
-            <select
-              v-model="parameters.task_id_col"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option v-if="datasetHeaders.length === 0" value="" disabled>
-                No columns available
-              </option>
-              <option v-for="header in datasetHeaders" :key="header" :value="header">
-                {{ header }}
-              </option>
-            </select>
-          </div>
-
-          <div>
-            <div class="flex items-center gap-1 mb-2">
-              <label class="block text-sm font-medium text-gray-700">
-                Agent ID Column
-              </label>
-              <span
-                class="relative group cursor-pointer text-gray-400 text-xs font-bold"
-              >
-                ?
-                <div
-                  class="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded-md shadow-lg p-2 left-4 top-0 w-64 z-10"
+                  ?
+                  <div
+                    class="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded-md shadow-lg p-2 left-4 top-0 w-64 z-10"
                   >
-                  Column name for agent IDs in your dataset.
-                  Default: 'id'
-                </div>
-              </span>
+                    Number of worker agents (ants or particles) that will process
+                    tasks simultaneously. More agents can explore more solutions
+                    but increase computation time. Range: 1-10. Example: 3
+                  </div>
+                </span>
+              </div>
+              <input
+                v-model.number="parameters.num_default_agents"
+                type="number"
+                min="1"
+                max="10"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
             </div>
-            <select
-              v-model="parameters.agent_id_col"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="">None</option>
-              <option v-for="header in datasetHeaders" :key="header" :value="header">
-                {{ header }}
-              </option>
-            </select>
-          </div>
-          
-          <!-- Dependency Column Selection -->
-          <div>
-            <div class="flex items-center gap-1 mb-2">
-              <label class="block text-sm font-medium text-gray-700">
-                Dependencies Column
-              </label>
-              <span v-if="hasDependencyColumn && parameters.dependency_col === dependencyColumn" 
-                    class="px-2 py-1 text-xs bg-blue-100 text-blue-600 rounded-md">
-                Auto-selected
-              </span>
-              <span v-if="hasDependencyColumn && parameters.enable_dependencies" 
-                    class="px-2 py-1 text-xs bg-green-100 text-green-600 rounded-md">
-                Enabled
-              </span>
-              <span
-                class="relative group cursor-pointer text-gray-400 text-xs font-bold"
-              >
-                ?
-                <div
-                  class="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded-md shadow-lg p-2 left-4 top-0 w-64 z-10"
+
+            <div>
+              <div class="flex items-center gap-1 mb-2">
+                <label class="block text-sm font-medium text-gray-700">
+                  Iterations
+                </label>
+                <span
+                  class="relative group cursor-pointer text-gray-400 text-xs font-bold"
                 >
-                  Column containing task dependencies/prerequisites. 
-                  Auto-detected from columns with names like 'dependencies', 'depends_on', 'prerequisites', or 'requires'.
-                  Dependencies are automatically enabled when this column is selected.
-                </div>
-              </span>
+                  ?
+                  <div
+                    class="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded-md shadow-lg p-2 left-4 top-0 w-64 z-10"
+                  >
+                    Total number of optimization cycles the algorithm will
+                    perform. More iterations allow better convergence but take
+                    longer to complete. Range: 1-100. Example: 50
+                  </div>
+                </span>
+              </div>
+              <input
+                v-model.number="parameters.n_iterations"
+                type="number"
+                min="1"
+                max="100"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
             </div>
-            <select
-              v-model="parameters.dependency_col"
-              @change="parameters.enable_dependencies = parameters.dependency_col !== ''"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="">None (No Dependencies)</option>
-              <option v-for="header in datasetHeaders" :key="header" :value="header">
-                {{ header }}
-              </option>
-            </select>
+
+            <div>
+              <div class="flex items-center gap-1 mb-2">
+                <label class="block text-sm font-medium text-gray-700">
+                  Task ID Column
+                </label>
+                <span v-if="parameters.task_id_col === datasetHeaders[0] && datasetHeaders.length > 0" 
+                      class="px-2 py-1 text-xs bg-blue-100 text-blue-600 rounded-md">
+                  Auto-selected
+                </span>
+                <span
+                  class="relative group cursor-pointer text-gray-400 text-xs font-bold"
+                >
+                  ?
+                  <div
+                    class="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded-md shadow-lg p-2 left-4 top-0 w-64 z-10"
+                  >
+                    Column name for task IDs in your dataset. Automatically set to the first column of your data.
+                  </div>
+                </span>
+              </div>
+              <select
+                v-model="parameters.task_id_col"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option v-if="datasetHeaders.length === 0" value="" disabled>
+                  No columns available
+                </option>
+                <option v-for="header in datasetHeaders" :key="header" :value="header">
+                  {{ header }}
+                </option>
+              </select>
+            </div>
+
+            <div>
+              <div class="flex items-center gap-1 mb-2">
+                <label class="block text-sm font-medium text-gray-700">
+                  Agent ID Column
+                </label>
+                <span
+                  class="relative group cursor-pointer text-gray-400 text-xs font-bold"
+                >
+                  ?
+                  <div
+                    class="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded-md shadow-lg p-2 left-4 top-0 w-64 z-10"
+                    >
+                    Column name for agent IDs in your dataset.
+                    Default: 'id'
+                  </div>
+                </span>
+              </div>
+              <select
+                v-model="parameters.agent_id_col"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">None</option>
+                <option v-for="header in datasetHeaders" :key="header" :value="header">
+                  {{ header }}
+                </option>
+              </select>
+            </div>
+            
+            <!-- Dependency Column Selection -->
+            <div>
+              <div class="flex items-center gap-1 mb-2">
+                <label class="block text-sm font-medium text-gray-700">
+                  Dependencies Column
+                </label>
+                <span v-if="hasDependencyColumn && parameters.dependency_col === dependencyColumn" 
+                      class="px-2 py-1 text-xs bg-blue-100 text-blue-600 rounded-md">
+                  Auto-selected
+                </span>
+                <span v-if="hasDependencyColumn && parameters.enable_dependencies" 
+                      class="px-2 py-1 text-xs bg-green-100 text-green-600 rounded-md">
+                  Enabled
+                </span>
+                <span
+                  class="relative group cursor-pointer text-gray-400 text-xs font-bold"
+                >
+                  ?
+                  <div
+                    class="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded-md shadow-lg p-2 left-4 top-0 w-64 z-10"
+                  >
+                    Column containing task dependencies/prerequisites. 
+                    Auto-detected from columns with names like 'dependencies', 'depends_on', 'prerequisites', or 'requires'.
+                    Dependencies are automatically enabled when this column is selected.
+                  </div>
+                </span>
+              </div>
+              <select
+                v-model="parameters.dependency_col"
+                @change="parameters.enable_dependencies = parameters.dependency_col !== ''"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">None (No Dependencies)</option>
+                <option v-for="header in datasetHeaders" :key="header" :value="header">
+                  {{ header }}
+                </option>
+              </select>
+            </div>
           </div>
-          
+        </div>
+
+        <!-- Algorithm-Specific Parameters -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <!-- ACO Specific Parameters -->
           <template v-if="selectedAlgorithms.includes('ACO')">
-            <div class="col-span-1">
-              <h3 class="text-md font-semibold text-gray-900 mb-3">
+            <div>
+              <h3 class="text-lg font-medium text-gray-800 mb-4">
                 ACO Parameters
               </h3>
-              <div class="space-y-4">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <div class="flex items-center gap-1 mb-2">
                     <label class="block text-sm font-medium text-gray-700"
@@ -427,6 +435,33 @@
                 <div>
                   <div class="flex items-center gap-1 mb-2">
                     <label class="block text-sm font-medium text-gray-700">
+                      Q (Pheromone Intensity)
+                    </label>
+                    <span
+                      class="relative group cursor-pointer text-gray-400 text-xs font-bold"
+                    >
+                      ?
+                      <div
+                        class="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded-md shadow-lg p-2 left-4 top-0 w-64 z-10"
+                      >
+                        Constant that affects pheromone deposition amount.
+                        Higher values increase pheromone intensity on successful
+                        paths. Range: 1-1000. Example: 100
+                      </div>
+                    </span>
+                  </div>
+                  <input
+                    v-model.number="parameters.Q"
+                    type="number"
+                    min="1"
+                    max="1000"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <div class="flex items-center gap-1 mb-2">
+                    <label class="block text-sm font-medium text-gray-700">
                       Pheromone Deposit
                     </label>
                     <span
@@ -484,11 +519,11 @@
 
           <!-- PSO Specific Parameters -->
           <template v-if="selectedAlgorithms.includes('PSO')">
-            <div class="col-span-1">
-              <h3 class="text-md font-semibold text-gray-900 mb-3">
+            <div>
+              <h3 class="text-lg font-medium text-gray-800 mb-4">
                 PSO Parameters
               </h3>
-              <div class="space-y-4">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <div class="flex items-center gap-1 mb-2">
                     <label class="block text-sm font-medium text-gray-700">
@@ -1304,7 +1339,7 @@
           v-if="!isChatOpen"
           @click="openChat"
           class="fixed bottom-6 right-6 w-14 h-14 bg-blue-500 text-white rounded-full shadow-lg hover:bg-blue-600 cursor-pointer flex items-center justify-center z-50 transition-all duration-200 hover:scale-110"
-          title="Ask Swarm Lab AI"
+          title="Ask Swarm Wave AI"
         >
           <svg
             class="w-6 h-6"
@@ -1353,7 +1388,7 @@
             @mousedown="startDrag"
             @touchstart="startDrag"
           >
-            <h3 class="text-lg font-semibold text-gray-900">Swarm Lab AI</h3>
+            <h3 class="text-lg font-semibold text-gray-900">Swarm Wave AI</h3>
             <div class="flex items-center space-x-2">
               <!-- Language Selector -->
               <select
@@ -1808,7 +1843,7 @@ const filteredTasks = computed(() => {
   if (showAllData.value) {
     return props.tasks;
   }
-  const actualLimit = Math.max(1, Math.min(dataLimit.value, props.tasks.length));
+  const actualLimit = Math.min(Math.max(1, dataLimit.value), props.tasks.length);
   return props.tasks.slice(0, actualLimit);
 });
 
@@ -1835,6 +1870,18 @@ const dependencyColumn = computed(() => {
 // Check if dependency column exists
 const hasDependencyColumn = computed(() => {
   return dependencyColumn.value !== '';
+});
+
+// Preview count for data limit display
+const previewCount = computed(() => {
+  if (!props.tasks || !Array.isArray(props.tasks) || props.tasks.length === 0) {
+    return 0;
+  }
+  if (showAllData.value) {
+    return props.tasks.length;
+  }
+  // Ensure minimum 1 and maximum available tasks
+  return Math.max(1, Math.min(dataLimit.value, props.tasks.length));
 });
 
 // Auto-set task_id_col to the first column header when data changes
@@ -2183,6 +2230,13 @@ const initCharts = () => {
             console.warn(`Canvas ref for ${label} not available yet`);
             return null;
         }
+        
+        // Destroy existing chart on this canvas first
+        const existingChart = Chart.getChart(canvasRef.value);
+        if (existingChart) {
+            existingChart.destroy();
+        }
+        
         const ctx = canvasRef.value.getContext("2d");
         return new Chart(ctx, {
             type: "line",
@@ -2224,6 +2278,15 @@ const initCharts = () => {
             chartPSO = createChart(chartCanvasPSO, 'PSO', 'rgb(239, 68, 68)');
         }
     });
+};
+
+const validateDataLimitInput = () => {
+  // Ensure dataLimit is never 0 or negative
+  if (dataLimit.value <= 0) {
+    dataLimit.value = 1;
+  } else if (dataLimit.value > props.tasks.length) {
+    dataLimit.value = props.tasks.length;
+  }
 };
 
 const validateData = () => {
@@ -2351,6 +2414,15 @@ watch(props.tasks, () => {
     validateData();
     dataLimit.value = props.tasks.length;
 }, { deep: true, immediate: true });
+
+// Watch dataLimit to prevent 0 or negative values
+watch(dataLimit, (newValue) => {
+  if (newValue <= 0) {
+    dataLimit.value = 1;
+  } else if (newValue > props.tasks.length) {
+    dataLimit.value = props.tasks.length;
+  }
+}, { immediate: true });
 
 // Watch for changes in selected algorithms to reinitialize charts
 watch(selectedAlgorithms, () => {

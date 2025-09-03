@@ -1,7 +1,7 @@
 # MATLAB Experiments - Swarm Intelligence
 
 ## 🎯 Overview
-Production-ready experiment suite for ACO vs PSO comparison in cloud task scheduling with structured dependencies and real-time visualization.
+Production-ready experiment suite for ACO vs PSO comparison in multi-agent task scheduling with structured dependencies and real-time visualization.
 
 ## 🚀 Quick Start
 

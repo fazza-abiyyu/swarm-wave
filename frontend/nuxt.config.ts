@@ -28,14 +28,14 @@ export default defineNuxtConfig({
   },
   app: {
     head: {
-      title: "Swarm Lab - Swarm Intelligence Simulation",
+      title: "Swarm Wave - Swarm Intelligence Simulation",
       meta: [
         { charset: "utf-8" },
         { name: "viewport", content: "width=device-width, initial-scale=1" },
         {
           name: "description",
           content:
-            "Swarm Lab is a Vue 3 + Tailwind CSS web app for simulating and visualizing Ant Colony Optimization (ACO) and Particle Swarm Optimization (PSO) algorithms in task scheduling and resource management.",
+            "Swarm Wave is a Vue 3 + Tailwind CSS web app for simulating and visualizing Ant Colony Optimization (ACO) and Particle Swarm Optimization (PSO) algorithms in multi-agent task scheduling and resource management.",
         },
       ],
       link: [{ rel: "icon", type: "image/x-icon", href: "/favicon.ico" }],

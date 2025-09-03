@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Health Check Test Script for Swarm Lab Backend
+Health Check Test Script for Swarm Wave Backend
 Usage: python3 test_health.py [URL]
 """
 

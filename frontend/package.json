@@ -1,7 +1,7 @@
 {
-  "name": "swarm-lab",
+  "name": "swarm-wave",
   "version": "1.0.0",
-  "description": "Swarm Lab: A Vue 3 + Tailwind CSS web app for simulating and visualizing Ant Colony Optimization (ACO) and Particle Swarm Optimization (PSO) algorithms in task scheduling and resource management.",
+  "description": "Swarm Wave: A Vue 3 + Tailwind CSS web app for simulating and visualizing Ant Colony Optimization (ACO) and Particle Swarm Optimization (PSO) algorithms in multi-agent task scheduling and resource management.",
   "type": "module",
   "private": true,
   "scripts": {
