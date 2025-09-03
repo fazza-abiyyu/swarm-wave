@@ -1,6 +1,6 @@
 # MATLAB/Octave Implementation
 
-Implementasi swarm intelligence algorithms (ACO & PSO) untuk multi-agent cloud task scheduling dengan structured dependencies.
+Implementasi swarm intelligence algorithms (ACO & PSO) untuk multi-agent task scheduling dengan structured dependencies.
 
 ## ✨ Features
 

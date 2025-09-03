@@ -5,12 +5,12 @@
 </template>
 
 <script setup>
-// App.vue - Root component for Swarm Lab
+// App.vue - Root component for Swarm Wave
 // This is the main entry point for the Nuxt 3 application
 </script>
 
 <style>
-/* Global styles for Swarm Lab */
+/* Global styles for Swarm Wave */
 html {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   line-height: 1.6;

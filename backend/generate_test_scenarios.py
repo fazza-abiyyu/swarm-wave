@@ -152,7 +152,7 @@ def generate_csv_format(tasks, filename):
             })
 
 if __name__ == '__main__':
-    print("🚀 Generating Test Scenarios for Swarm Lab...")
+    print("🚀 Generating Test Scenarios for Swarm Wave...")
     
     # Generate all scenarios
     scenarios = generate_scenario_data()

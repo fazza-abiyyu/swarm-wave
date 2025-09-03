@@ -22,7 +22,7 @@
                 <line x1="13.5" y1="10" x2="10" y2="17" stroke="currentColor" stroke-width="0.5"/>
               </svg>
             </div>
-            <span @click="showSimulation = false"  class="text-xl font-bold text-gray-900">Swarm Lab</span>
+            <span @click="showSimulation = false"  class="text-xl font-bold text-gray-900">Swarm Wave</span>
           </div>
 
           <!-- Navigation Links -->
@@ -89,7 +89,7 @@
               </svg>
             <!-- </div> -->
         </div>
-        <h1 class="text-4xl font-bold text-gray-900 mb-4">About Swarm Lab</h1>
+        <h1 class="text-4xl font-bold text-gray-900 mb-4">About Swarm Wave</h1>
         <p class="text-xl text-gray-600 max-w-2xl mx-auto">
           An educational web application for swarm intelligence algorithm research and simulation
         </p>
@@ -100,7 +100,7 @@
         <h2 class="text-2xl font-bold text-gray-900 mb-6">Project Overview</h2>
         <div class="space-y-4 text-gray-700">
           <p>
-            Swarm Lab is a comprehensive educational platform designed to facilitate the study and experimentation 
+            Swarm Wave is a comprehensive educational platform designed to facilitate the study and experimentation 
             of swarm intelligence algorithms. Built with modern web technologies, it provides an intuitive interface 
             for researchers and students to simulate, analyze, and understand the behavior of various swarm algorithms.
           </p>
@@ -258,7 +258,7 @@
           Feel free to contribute, use, or modify according to your needs.
         </p>
         <a 
-          href="https://github.com/fazza-abiyyu/swarm-lab" 
+          href="https://github.com/fazza-abiyyu/swarm-wave" 
           target="_blank" 
           rel="noopener noreferrer"
           class="inline-flex items-center px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors duration-200"
@@ -294,7 +294,7 @@
             </div>
           </div>
           <p class="text-gray-500 text-sm">
-            © 2025 Swarm Lab. Experimental data platform for swarm intelligence research.
+            © 2025 Swarm Wave. Experimental data platform for swarm intelligence research.
           </p>
         </div>
       </div>
@@ -306,11 +306,11 @@
 const isMobileMenuOpen = ref(false)
 const showSimulation = ref(false)
 useHead({
-  title: 'About - Swarm Lab',
+  title: 'About - Swarm Wave',
   meta: [
     {
       name: 'description',
-      content: 'Learn about Swarm Lab - an educational web application for swarm intelligence algorithm research and simulation by Muhammad Faza Abiyyu'
+      content: 'Learn about Swarm Wave - an educational web application for swarm intelligence algorithm research and simulation by Muhammad Faza Abiyyu'
     }
   ]
 })

@@ -1,6 +1,6 @@
-# 🐜 Swarm Lab Frontend - Cloud Task Scheduling Interface
+# 🐜 Swarm Wave Frontend - Multi-Agent Task Scheduling Interface
 
-A modern web application built with **Nuxt 4**, **Vue 3**, and **Tailwind CSS** for visualizing and interacting with swarm intelligence algorithms (ACO & PSO) in cloud task scheduling scenarios.
+A modern web application built with **Nuxt 4**, **Vue 3**, and **Tailwind CSS** for visualizing and interacting with swarm intelligence algorithms (ACO & PSO) in multi-agent task scheduling scenarios.
 
 ## 🚀 Overview
 
@@ -24,7 +24,7 @@ The frontend provides an intuitive interface for:
 - **CSV Import/Export**: Handle large datasets for task scheduling
 - **Dynamic Table Editor**: Excel-like editing experience
 - **JSON Data Processing**: Flexible data format support
-- **Sample Datasets**: Pre-loaded cloud task scheduling examples
+- **Sample Datasets**: Pre-loaded multi-agent task scheduling examples
 - **Data Validation**: Input validation with user-friendly error messages
 
 ### 🎨 **User Experience**
@@ -101,7 +101,7 @@ cd frontend
 # Set up environment variables
 cp example.env .env
 # Edit .env and add your API keys:
-# GEMINI_API_KEY=your_gemini_api_key
+# GEMINI_API_KEY=your_gemini_api_key_here
 # API_URL=http://localhost:5001
 
 # Install dependencies
@@ -239,24 +239,24 @@ cp example.env .env
 
 **Frontend .env file structure:**
 ```bash
-# Google Generative AI Key (for enhanced features)
+# Google Gemini API Key (required for AI chat functionality)
 GEMINI_API_KEY=your_gemini_api_key_here
 
-# Backend API URL
+# API Base URL for development
+NODE_ENV=development
 API_URL=http://localhost:5001
+
+# Optional: Production API URL override
+# API_URL=https://your-production-api.com
 ```
 
-### **Additional Environment Variables (.env)**
+### **Docker Environment Variables**
 ```bash
-# Backend API Configuration
-NUXT_PUBLIC_API_BASE=http://localhost:5001
-
-# Development Settings
+# These are automatically set by Docker Compose
 NUXT_HOST=0.0.0.0
 NUXT_PORT=3000
-
-# Optional: AI Integration
-GOOGLE_API_KEY=your_google_api_key
+NODE_ENV=development
+GEMINI_API_KEY=${GEMINI_API_KEY}
 ```
 
 ### **Nuxt Configuration (nuxt.config.ts)**
@@ -395,8 +395,8 @@ npm run build
 ### **Docker Deployment**
 ```bash
 # Use provided Dockerfile
-docker build -t swarm-lab-frontend .
-docker run -p 3000:3000 swarm-lab-frontend
+docker build -t swarm-wave-frontend .
+docker run -p 3000:3000 swarm-wave-frontend
 
 # Or use docker-compose
 docker compose up frontend
