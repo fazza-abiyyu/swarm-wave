@@ -24,7 +24,8 @@ CORS(app, origins=[
     'http://127.0.0.1:5000',
     'http://localhost:5001', 
     'http://127.0.0.1:5001',
-    'https://swarm-wave.vercel.app'
+    'https://swarmwave.vercel.app',
+    'https://swarmwave.vanila.app'
 ], supports_credentials=True, allow_headers=['Content-Type', 'Authorization'], methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
 
 @app.route('/')
