@@ -37,34 +37,8 @@ export default defineNuxtConfig({
           content:
             "Swarm Wave is a Vue 3 + Tailwind CSS web app for simulating and visualizing Ant Colony Optimization (ACO) and Particle Swarm Optimization (PSO) algorithms in multi-agent task scheduling and resource management.",
         },
-        // Security meta tags
-        { 'http-equiv': 'X-Content-Type-Options', content: 'nosniff' },
-        { 'http-equiv': 'X-Frame-Options', content: 'SAMEORIGIN' },
-        { 'http-equiv': 'X-XSS-Protection', content: '1; mode=block' },
-        { 'http-equiv': 'Referrer-Policy', content: 'strict-origin-when-cross-origin' },
-        // Hide Nuxt generator info
-        { name: 'generator', content: '' }
       ],
       link: [{ rel: "icon", type: "image/x-icon", href: "/favicon.ico" }],
     },
   },
-  // Server-side configuration for security headers
-  nitro: {
-    routeRules: {
-      '/**': {
-        headers: {
-          'X-Frame-Options': 'SAMEORIGIN',
-          'X-Content-Type-Options': 'nosniff',
-          'X-XSS-Protection': '1; mode=block',
-          'Referrer-Policy': 'strict-origin-when-cross-origin',
-          'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
-          'Content-Security-Policy': "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com https://*.vercel.app https://*.vanila.app; style-src 'self' 'unsafe-inline' https: https://*.vercel.app https://*.vanila.app; img-src 'self' data: blob: https: http:; connect-src 'self' http://localhost:* http://127.0.0.1:* https: wss: ws:; font-src 'self' data: https:; object-src 'self' data:; base-uri 'self'; form-action 'self' https:; frame-ancestors 'self'"
-        }
-      }
-    },
-    // Remove X-Powered-By header
-    experimental: {
-      payloadExtraction: false
-    }
-  }
 });
