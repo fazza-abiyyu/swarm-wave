@@ -13,24 +13,67 @@ from models.pso import PSO_MultiAgent_Scheduler as PSOScheduler
 app = Flask(__name__)
 app.start_time = time.time()
 
-# CORS configuration
-CORS(app, origins=[
-    'http://localhost:3000', 
-    'http://127.0.0.1:3000', 
-    'http://0.0.0.0:3000',
-    'http://frontend:3000',
-    'http://127.0.0.1:3001', 
-    'http://localhost:5000', 
-    'http://127.0.0.1:5000',
-    'http://localhost:5001', 
-    'http://127.0.0.1:5001',
-    'https://swarmwave.vercel.app',
-    'https://swarmwave.vanila.app'
-], supports_credentials=True, allow_headers=['Content-Type', 'Authorization'], methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
+# CORS configuration - Enhanced for production deployment
+CORS(app, 
+     origins=[
+         # Local development
+         'http://localhost:3000', 
+         'http://127.0.0.1:3000', 
+         'http://0.0.0.0:3000',
+         'http://frontend:3000',
+         'http://127.0.0.1:3001', 
+         'http://localhost:5000', 
+         'http://127.0.0.1:5000',
+         'http://localhost:5001', 
+         'http://127.0.0.1:5001',
+         # Production deployments
+         'https://swarmwave.vercel.app',
+         'https://swarmwave.vanila.app',
+         # Wildcard for subdomains (use carefully in production)
+         'https://*.vanila.app',
+         'https://*.vercel.app'
+     ], 
+     supports_credentials=True, 
+     allow_headers=[
+         'Content-Type', 
+         'Authorization', 
+         'Accept',
+         'Origin',
+         'X-Requested-With',
+         'Access-Control-Request-Method',
+         'Access-Control-Request-Headers'
+     ], 
+     methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+     expose_headers=['Content-Range', 'X-Content-Range'],
+     max_age=86400  # Cache preflight for 24 hours
+)
+
+# Additional CORS handling for preflight requests
+@app.before_request
+def handle_preflight():
+    if request.method == "OPTIONS":
+        response = Response()
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        response.headers.add('Access-Control-Allow-Headers', "*")
+        response.headers.add('Access-Control-Allow-Methods', "*")
+        return response
+
+# Error handler for CORS issues
+@app.errorhandler(Exception)
+def handle_cors_error(e):
+    response = jsonify({
+        "error": str(e),
+        "message": "CORS or server error occurred",
+        "status": "error"
+    })
+    response.headers.add("Access-Control-Allow-Origin", "*")
+    return response, 500
 
 @app.route('/')
 def home():
-    return jsonify({"message": "Cloud Task Scheduling API is running"})
+    response = jsonify({"message": "Multi-Agent Task Scheduling API is running"})
+    response.headers.add("Access-Control-Allow-Origin", "*")
+    return response
 
 @app.route('/health')
 def health_check():
@@ -52,7 +95,7 @@ def health_check():
         
         # Application information
         app_info = {
-            "name": "Swarm Lab Backend API",
+            "name": "Swarm Wave Backend API",
             "version": "1.0.0",
             "status": "healthy",
             "timestamp": current_time,
@@ -108,7 +151,7 @@ def health_check():
         
         overall_status = "healthy" if health_score >= 80 else "degraded" if health_score >= 50 else "unhealthy"
         
-        return jsonify({
+        response_data = {
             "status": overall_status,
             "health_score": health_score,
             "timestamp": current_time,
@@ -123,16 +166,22 @@ def health_check():
                 "algorithms": "/algorithms", 
                 "stream_scheduling": "/stream_scheduling"
             }
-        })
+        }
+        
+        response = jsonify(response_data)
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        return response
         
     except Exception as e:
-        return jsonify({
+        error_response = jsonify({
             "status": "error",
             "health_score": 0,
             "timestamp": time.time(),
             "error": str(e),
             "traceback": traceback.format_exc()
-        }), 500
+        })
+        error_response.headers.add("Access-Control-Allow-Origin", "*")
+        return error_response, 500
 
 @app.route('/stream_scheduling', methods=['POST'])
 def stream_scheduling():
@@ -317,10 +366,12 @@ def simple_health_check():
     Simple health check for Docker and load balancers
     Returns minimal response for quick health verification
     """
-    return jsonify({
+    response = jsonify({
         "status": "ok",
         "timestamp": time.time()
     })
+    response.headers.add("Access-Control-Allow-Origin", "*")
+    return response
 @app.route('/algorithms', methods=['GET'])
 def get_algorithms():
     return jsonify({
