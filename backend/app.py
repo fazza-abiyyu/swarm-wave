@@ -24,7 +24,7 @@ CORS(app, origins=[
     'http://127.0.0.1:5000',
     'http://localhost:5001', 
     'http://127.0.0.1:5001',
-    'https://swarm-lab.vercel.app'
+    'https://swarm-wave.vercel.app'
 ], supports_credentials=True, allow_headers=['Content-Type', 'Authorization'], methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
 
 @app.route('/')
@@ -290,23 +290,8 @@ def stream_scheduling():
             
             total_execution_time = time.time() - start_time
             
-            # Calculate load balancing from final result with improved calculation
-            best_schedule = final_result.get('schedule', [])
-            agent_times = {}
-            for assignment in best_schedule:
-                agent_id = assignment['agent_id']
-                finish_time = assignment['finish_time']
-                agent_times[agent_id] = max(agent_times.get(agent_id, 0), finish_time)
-            
-            load_balance_index = 0
-            if agent_times and len(agent_times) > 1:
-                times = list(agent_times.values())
-                mean_time = sum(times) / len(times)
-                if mean_time > 0:
-                    # Use standard deviation normalized by mean (same as algorithms)
-                    variance = sum((t - mean_time) ** 2 for t in times) / len(times)
-                    std_dev = variance ** 0.5
-                    load_balance_index = std_dev / mean_time
+            # Load balance index now comes directly from the final result
+            load_balance_index = final_result.get('load_balance_index', 0)
 
             # Kirim data metrik final
             final_metrics = {
