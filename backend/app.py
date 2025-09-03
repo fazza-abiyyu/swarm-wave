@@ -13,6 +13,45 @@ from models.pso import PSO_MultiAgent_Scheduler as PSOScheduler
 app = Flask(__name__)
 app.start_time = time.time()
 
+# Security headers middleware
+@app.after_request
+def add_security_headers(response):
+    # Content Security Policy (CSP) Header
+    response.headers['Content-Security-Policy'] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com; "
+        "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; "
+        "font-src 'self' https://fonts.gstatic.com; "
+        "img-src 'self' data: https:; "
+        "connect-src 'self' http://localhost:* http://127.0.0.1:* https:; "
+        "object-src 'none'; "
+        "base-uri 'self'; "
+        "form-action 'self'; "
+        "frame-ancestors 'none'"
+    )
+    
+    # Anti-clickjacking Header (X-Frame-Options)
+    response.headers['X-Frame-Options'] = 'DENY'
+    
+    # Remove X-Powered-By header to prevent information leakage
+    response.headers.pop('Server', None)
+    
+    # X-Content-Type-Options Header to prevent MIME sniffing
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    
+    # Additional security headers
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    response.headers['Permissions-Policy'] = 'geolocation=(), microphone=(), camera=()'
+    
+    # Cache control for sensitive endpoints
+    if request.endpoint and 'health' not in request.endpoint:
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, private'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+    
+    return response
+
 # CORS configuration - Enhanced for production deployment
 CORS(app, 
      origins=[
@@ -53,26 +92,37 @@ CORS(app,
 def handle_preflight():
     if request.method == "OPTIONS":
         response = Response()
-        response.headers.add("Access-Control-Allow-Origin", "*")
-        response.headers.add('Access-Control-Allow-Headers', "*")
-        response.headers.add('Access-Control-Allow-Methods', "*")
+        response.headers.add("Access-Control-Allow-Origin", request.headers.get('Origin', '*'))
+        response.headers.add('Access-Control-Allow-Headers', "Content-Type, Authorization, Accept, Origin, X-Requested-With")
+        response.headers.add('Access-Control-Allow-Methods', "GET, POST, PUT, DELETE, OPTIONS, PATCH")
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
         return response
 
-# Error handler for CORS issues
+# Error handler for CORS issues - Updated to be more secure
 @app.errorhandler(Exception)
 def handle_cors_error(e):
     response = jsonify({
-        "error": str(e),
-        "message": "CORS or server error occurred",
+        "error": "Internal server error",  # Don't expose internal error details
+        "message": "An error occurred while processing your request",
         "status": "error"
     })
-    response.headers.add("Access-Control-Allow-Origin", "*")
+    # Only add CORS headers for legitimate origins
+    origin = request.headers.get('Origin')
+    allowed_origins = [
+        'http://localhost:3000', 
+        'http://127.0.0.1:3000',
+        'http://0.0.0.0:3000',
+        'http://frontend:3000',
+        'https://swarmwave.vercel.app',
+        'https://swarmwave.vanila.app'
+    ]
+    if origin in allowed_origins:
+        response.headers.add("Access-Control-Allow-Origin", origin)
     return response, 500
 
 @app.route('/')
 def home():
     response = jsonify({"message": "Multi-Agent Task Scheduling API is running"})
-    response.headers.add("Access-Control-Allow-Origin", "*")
     return response
 
 @app.route('/health')
@@ -82,15 +132,11 @@ def health_check():
         current_time = time.time()
         uptime = current_time - app.start_time if hasattr(app, 'start_time') else 0
         
-        # System information
+        # System information - Limited for security
         system_info = {
             "platform": platform.system(),
-            "platform_release": platform.release(),
-            "platform_version": platform.version(),
             "architecture": platform.machine(),
-            "hostname": platform.node(),
-            "python_version": platform.python_version(),
-            "python_implementation": platform.python_implementation(),
+            "python_version": platform.python_version()[:3],  # Only major.minor version
         }
         
         # Application information
@@ -101,9 +147,7 @@ def health_check():
             "timestamp": current_time,
             "datetime": datetime.fromtimestamp(current_time).isoformat(),
             "uptime_seconds": round(uptime, 2),
-            "environment": os.getenv('FLASK_ENV', 'development'),
-            "port": os.getenv('PORT', '5001'),
-            "debug_mode": app.debug
+            "environment": os.getenv('FLASK_ENV', 'production'),  # Default to production
         }
         
         # Algorithm availability check
@@ -133,13 +177,10 @@ def health_check():
         except Exception as e:
             algorithms_status["PSO"] = {"available": False, "error": str(e)}
         
-        # Resource information
+        # Resource information - Limited for security
         resource_info = {
             "process_id": os.getpid(),
-            "parent_process_id": os.getppid(),
-            "current_working_directory": os.getcwd(),
-            "python_path": sys.executable,
-            "python_paths": sys.path[:3]
+            "python_path": "hidden_for_security"  # Don't expose system paths
         }
         
         # Health score calculation
@@ -370,7 +411,6 @@ def simple_health_check():
         "status": "ok",
         "timestamp": time.time()
     })
-    response.headers.add("Access-Control-Allow-Origin", "*")
     return response
 @app.route('/algorithms', methods=['GET'])
 def get_algorithms():
