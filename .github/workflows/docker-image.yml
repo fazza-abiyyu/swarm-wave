@@ -8,12 +8,11 @@ on:
     branches: [ "main" ]
 
 env:
-  REGISTRY: ${{ secrets.REGISTRY || 'ghcr.io' }}
+  REGISTRY: ghcr.io
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
-
     concurrency:
       group: docker-${{ github.ref }}-${{ matrix.service }}
       cancel-in-progress: true
@@ -37,16 +36,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Compute IMAGE_NAMESPACE (fallback ke ghcr.io/<owner>/<repo>)
+      - name: Compute IMAGE_NAMESPACE from this repo (owner/repo, lowercase)
         shell: bash
         run: |
-          NS="${{ secrets.IMAGE_NAMESPACE }}"
-          if [ -z "$NS" ]; then
-            # lowercase pakai parameter expansion bash
-            NS="ghcr.io/${GITHUB_REPOSITORY,,}"
-          fi
-          echo "IMAGE_NAMESPACE=$NS" >> "$GITHUB_ENV"
-          echo "Using IMAGE_NAMESPACE=$NS"
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          repo="${GITHUB_REPOSITORY##*/}"
+          repo="${repo,,}"
+          echo "IMAGE_NAMESPACE=ghcr.io/${owner}/${repo}" >> "$GITHUB_ENV"
+          echo "Using IMAGE_NAMESPACE=ghcr.io/${owner}/${repo}"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -59,10 +56,6 @@ jobs:
         run: |
           rewrite() {
             [ -f "$1" ] || return 0
-            echo "[rewrite] $1"
-            # FROM <anything>python:<tag>  → FROM public.ecr.aws/docker/library/python:<tag>
-            # FROM <anything>node:<tag>    → FROM public.ecr.aws/docker/library/node:<tag>
-            # dan beberapa official image umum lain
             sed -i \
               -e 's#^FROM\s\+\(\S*\)\?python:\([[:alnum:]._-]\+\)#FROM public.ecr.aws/docker/library/python:\2#g' \
               -e 's#^FROM\s\+\(\S*\)\?node:\([[:alnum:]._-]\+\)#FROM public.ecr.aws/docker/library/node:\2#g' \
@@ -81,7 +74,7 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
+          username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Docker meta
