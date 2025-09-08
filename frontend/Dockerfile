@@ -13,14 +13,6 @@ RUN yarn install --frozen-lockfile
 # Copy source code
 COPY . .
 
-# Build arguments for environment variables
-ARG GEMINI_API_KEY=""
-
-# Set environment variables
-ENV GEMINI_API_KEY=${GEMINI_API_KEY}
-ENV NUXT_HOST=0.0.0.0
-ENV NUXT_PORT=3000
-
 # Expose port
 EXPOSE 3000
 
