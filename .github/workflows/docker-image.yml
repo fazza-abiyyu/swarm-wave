@@ -54,20 +54,24 @@ jobs:
       - name: Set up Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Rewrite base images to GHCR mirrors
+      - name: Rewrite base images to AWS Public ECR mirrors
         shell: bash
         run: |
           rewrite() {
             [ -f "$1" ] || return 0
+            echo "[rewrite] $1"
+            # FROM <anything>python:<tag>  → FROM public.ecr.aws/docker/library/python:<tag>
+            # FROM <anything>node:<tag>    → FROM public.ecr.aws/docker/library/node:<tag>
+            # dan beberapa official image umum lain
             sed -i \
-              -e 's#^FROM \([[:alnum:]/.-]*\)\(node:\)#FROM ghcr.io/library/\2#g' \
-              -e 's#^FROM \([[:alnum:]/.-]*\)\(python:\)#FROM ghcr.io/library/\2#g' \
-              -e 's#^FROM \([[:alnum:]/.-]*\)\(nginx:\)#FROM ghcr.io/library/\2#g' \
-              -e 's#^FROM \([[:alnum:]/.-]*\)\(alpine:\)#FROM ghcr.io/library/\2#g' \
-              -e 's#^FROM \([[:alnum:]/.-]*\)\(debian:\)#FROM ghcr.io/library/\2#g' \
-              -e 's#^FROM \([[:alnum:]/.-]*\)\(ubuntu:\)#FROM ghcr.io/library/\2#g' \
-              -e 's#^FROM \([[:alnum:]/.-]*\)\(golang:\)#FROM ghcr.io/library/\2#g' \
-              -e 's#^FROM \([[:alnum:]/.-]*\)\(busybox:\)#FROM ghcr.io/library/\2#g' \
+              -e 's#^FROM\s\+\(\S*\)\?python:\([[:alnum:]._-]\+\)#FROM public.ecr.aws/docker/library/python:\2#g' \
+              -e 's#^FROM\s\+\(\S*\)\?node:\([[:alnum:]._-]\+\)#FROM public.ecr.aws/docker/library/node:\2#g' \
+              -e 's#^FROM\s\+\(\S*\)\?alpine:\([[:alnum:]._-]\+\)#FROM public.ecr.aws/docker/library/alpine:\2#g' \
+              -e 's#^FROM\s\+\(\S*\)\?debian:\([[:alnum:]._-]\+\)#FROM public.ecr.aws/docker/library/debian:\2#g' \
+              -e 's#^FROM\s\+\(\S*\)\?ubuntu:\([[:alnum:]._-]\+\)#FROM public.ecr.aws/docker/library/ubuntu:\2#g' \
+              -e 's#^FROM\s\+\(\S*\)\?nginx:\([[:alnum:]._-]\+\)#FROM public.ecr.aws/docker/library/nginx:\2#g' \
+              -e 's#^FROM\s\+\(\S*\)\?golang:\([[:alnum:]._-]\+\)#FROM public.ecr.aws/docker/library/golang:\2#g' \
+              -e 's#^FROM\s\+\(\S*\)\?busybox:\([[:alnum:]._-]\+\)#FROM public.ecr.aws/docker/library/busybox:\2#g' \
               "$1"
           }
           rewrite "./backend/Dockerfile"
