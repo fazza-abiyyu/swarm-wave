@@ -40,6 +40,29 @@ jobs:
       - name: Set up Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Rewrite base images to GHCR mirrors
+        shell: bash
+        run: |
+          rewrite() {
+            local file="$1"
+            # Hanya kalau file ada
+            [ -f "$file" ] || return 0
+            echo "[rewrite] $file"
+            # Ubah official images yang umum dipakai
+            sed -i \
+              -e 's#^FROM \([[:alnum:]/.-]*\)\(node:\)#FROM ghcr.io/library/\2#g' \
+              -e 's#^FROM \([[:alnum:]/.-]*\)\(python:\)#FROM ghcr.io/library/\2#g' \
+              -e 's#^FROM \([[:alnum:]/.-]*\)\(nginx:\)#FROM ghcr.io/library/\2#g' \
+              -e 's#^FROM \([[:alnum:]/.-]*\)\(alpine:\)#FROM ghcr.io/library/\2#g' \
+              -e 's#^FROM \([[:alnum:]/.-]*\)\(debian:\)#FROM ghcr.io/library/\2#g' \
+              -e 's#^FROM \([[:alnum:]/.-]*\)\(ubuntu:\)#FROM ghcr.io/library/\2#g' \
+              -e 's#^FROM \([[:alnum:]/.-]*\)\(golang:\)#FROM ghcr.io/library/\2#g' \
+              -e 's#^FROM \([[:alnum:]/.-]*\)\(busybox:\)#FROM ghcr.io/library/\2#g' \
+              "$file"
+          }
+          rewrite "./backend/Dockerfile"
+          rewrite "./frontend/Dockerfile"
+
       - name: Docker Login (GHCR)
         uses: docker/login-action@v3
         with:
@@ -71,5 +94,5 @@ jobs:
           platforms: linux/amd64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=${{ matrix.service.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service.name }}
