@@ -8,12 +8,16 @@ on:
     branches: [ "main" ]
 
 env:
-  REGISTRY: ${{ secrets.REGISTRY }}
-  IMAGE_NAMESPACE: ${{ secrets.IMAGE_NAMESPACE }}
+  REGISTRY: ${{ secrets.REGISTRY || 'ghcr.io' }}
+  IMAGE_NAMESPACE: ${{ secrets.IMAGE_NAMESPACE || format('ghcr.io/{0}', toLower(github.repository)) }}
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+
+    concurrency:
+      group: docker-${{ github.ref }}-${{ matrix.service }}
+      cancel-in-progress: true
 
     permissions:
       contents: read
@@ -22,11 +26,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        service:
-          - name: backend
+        include:
+          - service: backend
             context: ./backend
             dockerfile: ./backend/Dockerfile
-          - name: frontend
+          - service: frontend
             context: ./frontend
             dockerfile: ./frontend/Dockerfile
 
@@ -44,11 +48,7 @@ jobs:
         shell: bash
         run: |
           rewrite() {
-            local file="$1"
-            # Hanya kalau file ada
-            [ -f "$file" ] || return 0
-            echo "[rewrite] $file"
-            # Ubah official images yang umum dipakai
+            [ -f "$1" ] || return 0
             sed -i \
               -e 's#^FROM \([[:alnum:]/.-]*\)\(node:\)#FROM ghcr.io/library/\2#g' \
               -e 's#^FROM \([[:alnum:]/.-]*\)\(python:\)#FROM ghcr.io/library/\2#g' \
@@ -58,7 +58,7 @@ jobs:
               -e 's#^FROM \([[:alnum:]/.-]*\)\(ubuntu:\)#FROM ghcr.io/library/\2#g' \
               -e 's#^FROM \([[:alnum:]/.-]*\)\(golang:\)#FROM ghcr.io/library/\2#g' \
               -e 's#^FROM \([[:alnum:]/.-]*\)\(busybox:\)#FROM ghcr.io/library/\2#g' \
-              "$file"
+              "$1"
           }
           rewrite "./backend/Dockerfile"
           rewrite "./frontend/Dockerfile"
@@ -75,7 +75,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            ${{ env.IMAGE_NAMESPACE }}-${{ matrix.service.name }}
+            ${{ env.IMAGE_NAMESPACE }}-${{ matrix.service }}
           tags: |
             type=sha,format=short
             type=ref,event=branch
@@ -83,16 +83,16 @@ jobs:
           labels: |
             org.opencontainers.image.source=${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
-            org.opencontainers.image.title=${{ matrix.service.name }}
- 
+            org.opencontainers.image.title=${{ matrix.service }}
+
       - name: Build & Push
         uses: docker/build-push-action@v6
         with:
-          context: ${{ matrix.service.context }}
-          file: ${{ matrix.service.dockerfile }}
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
           push: ${{ github.event_name != 'pull_request' }}
           platforms: linux/amd64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha,scope=${{ matrix.service.name }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.service.name }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
