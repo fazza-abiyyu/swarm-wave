@@ -9,7 +9,6 @@ on:
 
 env:
   REGISTRY: ${{ secrets.REGISTRY || 'ghcr.io' }}
-  IMAGE_NAMESPACE: ${{ secrets.IMAGE_NAMESPACE || format('ghcr.io/{0}', toLower(github.repository)) }}
 
 jobs:
   build-and-push:
@@ -37,6 +36,17 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Compute IMAGE_NAMESPACE (fallback ke ghcr.io/<owner>/<repo>)
+        shell: bash
+        run: |
+          NS="${{ secrets.IMAGE_NAMESPACE }}"
+          if [ -z "$NS" ]; then
+            # lowercase pakai parameter expansion bash
+            NS="ghcr.io/${GITHUB_REPOSITORY,,}"
+          fi
+          echo "IMAGE_NAMESPACE=$NS" >> "$GITHUB_ENV"
+          echo "Using IMAGE_NAMESPACE=$NS"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
