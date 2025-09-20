@@ -1820,7 +1820,7 @@ const isWinner = computed(() => ({
 
 const parameters = reactive({
   num_default_agents: 3, n_iterations: 100, task_id_col: '', agent_id_col: '', dependency_col: '',
-  n_ants: 10, alpha: 1.0, beta: 2.0, evaporation_rate: 0.5, pheromone_deposit: 100.0,
+  n_ants: 10, alpha: 1.0, beta: 2.0, evaporation_rate: 0.5, Q:100, pheromone_deposit: 100.0,
   n_particles: 30, w: 0.5, c1: 1.5, c2: 1.5,
   enable_dependencies: false
 });

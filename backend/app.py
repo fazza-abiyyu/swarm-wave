@@ -88,7 +88,9 @@ CORS(app,
          'https://swarmwave.vanila.app',
          # Wildcard for subdomains (use carefully in production)
          'https://*.vanila.app',
-         'https://*.vercel.app'
+         'https://*.vercel.app',
+         'https://swarmwave.app',
+         'https://www.swarmwave.app'
      ], 
      supports_credentials=True, 
      allow_headers=[
