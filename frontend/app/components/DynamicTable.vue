@@ -404,10 +404,11 @@ const validationErrors = computed(() => {
     }
   })
   
-  // Check for empty cells
+  // Check for empty cells (only for first column now, others auto-fill with 0)
   headers.value.forEach((header, colIndex) => {
     columnData.value[colIndex]?.forEach((value, rowIndex) => {
-      if (!value || value.trim() === '') {
+      // Only check for empty values in first column
+      if (colIndex === 0 && (!value || value.trim() === '')) {
         errors.push(`Row ${rowIndex + 1}, Column "${header}" is empty`)
       }
     })
@@ -452,13 +453,20 @@ const isTableValid = computed(() => {
 const validateCell = (value, header = '', colIndex = -1) => {
   if (value === null || value === undefined) return false
   if (typeof value !== 'string') return false
-  if (value.trim() === '') return false
   
-  // Skip numeric validation for first column (index 0)
-  if (colIndex === 0) return true
+  // For first column, only check if it's not empty
+  if (colIndex === 0) {
+    return value.trim() !== ''
+  }
+  
+  // For other columns, auto-fill empty with "0" and validate as numeric
+  const trimmedValue = value.trim()
+  if (trimmedValue === '') {
+    return true // Will be auto-filled with "0"
+  }
   
   // All other columns must be numeric
-  if (!/^-?(?:\d+(?:\.\d*)?|\.\d+)$/.test(value.trim())) return false
+  if (!/^-?(?:\d+(?:\.\d*)?|\.\d+)$/.test(trimmedValue)) return false
   
   return true
 }
@@ -475,13 +483,20 @@ const hasCellError = (rowIndex, colIndex) => {
 
 const getCellErrorMessage = (rowIndex, colIndex) => {
   const value = columnData.value[colIndex]?.[rowIndex] || ''
-  if (value === null || value === undefined || value.trim() === '') return 'Required'
   
-  // Skip numeric validation for first column (index 0)
-  if (colIndex === 0) return ''
+  // For first column, only check if empty
+  if (colIndex === 0) {
+    if (value === null || value === undefined || value.trim() === '') {
+      return 'Required'
+    }
+    return ''
+  }
   
-  // All other columns must be numeric
-  if (!/^-?(?:\d+(?:\.\d*)?|\.\d+)$/.test(value.trim())) return 'Must be a number'
+  // For other columns, check if it's a valid number (empty will be auto-filled)
+  const trimmedValue = value.trim()
+  if (trimmedValue !== '' && !/^-?(?:\d+(?:\.\d*)?|\.\d+)$/.test(trimmedValue)) {
+    return 'Must be a number'
+  }
   
   return ''
 }
@@ -491,7 +506,12 @@ const validateAndUpdateCell = (rowIndex, colIndex, value) => {
   const key = `${rowIndex}-${header}`
   
   // Ensure string type and validate
-  const stringValue = String(value)
+  let stringValue = String(value)
+  
+  // Auto-fill empty cells with "0" for numeric columns (skip first column)
+  if (colIndex > 0 && (!stringValue || stringValue.trim() === '')) {
+    stringValue = '0'
+  }
   
   // Validate - reject non-string inputs, empty strings, and invalid content
   if (typeof value !== 'string' || !validateCell(stringValue, header, colIndex)) {
@@ -517,8 +537,13 @@ const handleCellInput = (rowIndex, colIndex, value) => {
     return
   }
   
-  const stringValue = String(value)
+  let stringValue = String(value)
   const key = `${rowIndex}-${header}`
+  
+  // Auto-fill empty cells with "0" for numeric columns (skip first column) on input
+  if (colIndex > 0 && (!stringValue || stringValue.trim() === '')) {
+    stringValue = '0'
+  }
   
   // Validate content based on column type
   if (!validateCell(stringValue, header, colIndex)) {
@@ -537,6 +562,12 @@ const validateAllCells = () => {
   cellErrors.value = {}
   headers.value.forEach((header, colIndex) => {
     columnData.value[colIndex]?.forEach((value, rowIndex) => {
+      // Auto-fill empty numeric columns with "0" (skip first column)
+      if (colIndex > 0 && (!value || value.trim() === '')) {
+        columnData.value[colIndex][rowIndex] = '0'
+        value = '0'
+      }
+      
       if (!validateCell(value, header, colIndex)) {
         const key = `${rowIndex}-${header}`
         cellErrors.value[key] = true
@@ -580,7 +611,9 @@ const addRow = () => {
     if (!columnData.value[colIndex]) {
       columnData.value[colIndex] = []
     }
-    columnData.value[colIndex].push('')
+    // Auto-fill numeric columns with "0", first column with empty string
+    const defaultValue = colIndex === 0 ? '' : '0'
+    columnData.value[colIndex].push(defaultValue)
   })
   validateAllCells()
   emit('data-updated', getTableData())
@@ -590,7 +623,10 @@ const addRow = () => {
 const addColumn = () => {
   const newHeader = `Column${headers.value.length + 1}`
   headers.value.push(newHeader)
-  columnData.value.push(Array(columnData.value[0]?.length || 0).fill(''))
+  // For new columns (except first), fill with "0", first column gets empty string
+  const isFirstColumn = headers.value.length === 1
+  const defaultValue = isFirstColumn ? '' : '0'
+  columnData.value.push(Array(columnData.value[0]?.length || 0).fill(defaultValue))
   validateAllCells()
   emit('data-updated', getTableData())
   showToastMessage('Column added successfully')
