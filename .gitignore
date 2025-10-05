@@ -8,6 +8,7 @@ __pycache__/
 *.pyo
 *.pyd
 *.pyc
+.venv/
 
 # Environment Variables
 .env
