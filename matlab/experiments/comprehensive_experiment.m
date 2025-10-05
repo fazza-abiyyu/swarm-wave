@@ -1,9 +1,6 @@
 %% =================================================================
 %% COMPREHENSIVE SWARM INTELLIGENCE EXPERIMENT
 %% =================================================================
-% Real-time ACO vs PSO comparison with structured dependencies
-% Features: Live plotting, dependency handling, manual inspection
-% Version: 4.0 - Clean & Optimized
 
 clear all; close all; clc;
 
@@ -19,7 +16,7 @@ PLOTS_DIR = './plots/';
 
 % Dataset Configuration
 USE_REAL_DATA = true;
-NUM_TASKS = 1000;
+NUM_TASKS = 30;
 NUM_AGENTS = 10;
 NUM_RUNS = 1;
 NUM_ITER = 100;
@@ -119,7 +116,7 @@ end
 %% DATA LOADING & PREPARATION
 %% =================================================================
 
-fprintf('📊 Loading dataset...\n');
+fprintf('Loading dataset...\n');
 
 if USE_REAL_DATA
     data_path = fullfile(pwd, 'data', 'cloud_task_scheduling_with_dependencies.csv');
@@ -180,7 +177,7 @@ if USE_REAL_DATA
                 dependencies = dependencies(indices);
             end
             
-            fprintf('   ✅ Loaded %d tasks from dataset\n', length(tasks));
+            fprintf('  Loaded %d tasks from dataset\n', length(tasks));
         else
             error('Could not open dataset file');
         end
@@ -214,7 +211,7 @@ else
         end
     end
     
-    fprintf('   ✅ Generated %d synthetic tasks with structured dependencies\n', NUM_TASKS);
+    fprintf('  Generated %d synthetic tasks with structured dependencies\n', NUM_TASKS);
 end
 
 % Create agents
@@ -224,7 +221,7 @@ for i = 1:NUM_AGENTS
     agents(i).capacity = 0.8 + rand() * 0.4;
 end
 
-fprintf('✅ Dataset ready: %d tasks, %d agents\n\n', length(tasks), length(agents));
+fprintf('Dataset ready: %d tasks, %d agents\n\n', length(tasks), length(agents));
 
 % Print dependency statistics
 dep_count = 0;
@@ -235,7 +232,7 @@ for i = 1:length(dependencies)
         total_dep_links = total_dep_links + dependencies(i).num_dependencies;
     end
 end
-fprintf('📋 Dependencies: %d tasks have dependencies (%d total dependency links)\n', dep_count, total_dep_links);
+fprintf('Dependencies: %d tasks have dependencies (%d total dependency links)\n', dep_count, total_dep_links);
 
 % Show sample dependencies
 if dep_count > 0
@@ -314,7 +311,7 @@ end
 %% MAIN EXPERIMENT LOOP
 %% =================================================================
 
-fprintf('🚀 Starting experiments...\n');
+fprintf('Starting experiments...\n');
 fprintf('Progress: ');
 
 % Initialize result storage
@@ -579,13 +576,13 @@ end
     end
 end
 
-fprintf('\n✅ Experiments completed!\n\n');
+fprintf('\nExperiments completed!\n\n');
 
 %% =================================================================
 %% RESULTS ANALYSIS
 %% =================================================================
 
-fprintf('📊 Statistical Analysis\n');
+fprintf('Statistical Analysis\n');
 fprintf('─────────────────────\n');
 
 aco_stats = struct();
@@ -615,18 +612,18 @@ fprintf('\n🎉 EXPERIMENT COMPLETED!\n');
 fprintf('═════════════════════════\n');
 
 if KEEP_PLOTS_OPEN && ENABLE_REALTIME_PLOTS
-    fprintf('\n📊 PLOTS KEPT OPEN FOR MANUAL INSPECTION\n');
+    fprintf('\nPLOTS KEPT OPEN FOR MANUAL INSPECTION\n');
     fprintf('────────────────────────────────────────────\n');
-    fprintf('🖼️  Real-time monitoring window: OPEN\n');
+    fprintf('Real-time monitoring window: OPEN\n');
     
-    fprintf('\n💡 Manual Inspection Guide:\n');
-    fprintf('   🔍 Zoom in/out on charts for detailed analysis\n');
-    fprintf('   📈 Check convergence patterns and stability\n');
-    fprintf('   ⚖️  Compare ACO vs PSO performance trends\n');
-    fprintf('   📊 Analyze task distribution balance per run\n');
-    fprintf('   � All plots are interactive and resizable\n');
-    
-    fprintf('\n🎯 Plot Windows Summary:\n');
+    fprintf('\nManual Inspection Guide:\n');
+    fprintf('  Zoom in/out on charts for detailed analysis\n');
+    fprintf('  Check convergence patterns and stability\n');
+    fprintf('  Compare ACO vs PSO performance trends\n');
+    fprintf('  Analyze task distribution balance per run\n');
+    fprintf('  All plots are interactive and resizable\n');
+
+    fprintf('\nPlot Windows Summary:\n');
     fprintf('   • Main real-time monitoring: 4 subplots\n');
     
     % Set final plot title (without bringing to front)
@@ -634,22 +631,22 @@ if KEEP_PLOTS_OPEN && ENABLE_REALTIME_PLOTS
         set(fig_realtime, 'Name', '🎯 Main Real-time Monitoring - Close When Done');
     end
     
-    fprintf('\n⏳ PLOTS WILL STAY OPEN UNTIL YOU CLOSE THEM MANUALLY\n');
-    fprintf('   ❌ Close individual windows when finished inspecting\n');
-    fprintf('   🔄 Or press Ctrl+C to exit script and close all\n');
+    fprintf('\nPLOTS WILL STAY OPEN UNTIL YOU CLOSE THEM MANUALLY\n');
+    fprintf('   Close individual windows when finished inspecting\n');
+    fprintf('   Or press Ctrl+C to exit script and close all\n');
     
-    fprintf('\n🔍 Ready for detailed manual inspection...\n');
+    fprintf('\nReady for detailed manual inspection...\n');
     fprintf('══════════════════════════════════════════════════════════════\n\n');
     
     % Force plots to stay open by waiting for user input
-    fprintf('📌 PLOTS ARE NOW OPEN FOR INSPECTION\n');
-    fprintf('   Press Enter to close plots and exit, or close windows manually: ');
+    fprintf('PLOTS ARE NOW OPEN FOR INSPECTION\n');
+    fprintf('  Press Enter to close plots and exit, or close windows manually: ');
     
     % Keep script running until user decides to exit
     input('');
     
-    fprintf('\n👋 Closing experiment...\n');
+    fprintf('\nClosing experiment...\n');
 else
-    fprintf('\n🎉 EXPERIMENT COMPLETED!\n');
+    fprintf('\nEXPERIMENT COMPLETED!\n');
     fprintf('═════════════════════════\n\n');
 end
