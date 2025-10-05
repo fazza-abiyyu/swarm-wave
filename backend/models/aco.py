@@ -8,7 +8,7 @@ class ACO_MultiAgent_Scheduler:
                  task_id_col='id', agent_id_col='id',
                  n_ants=10, n_iterations=100, alpha=1.0, beta=2.0,
                  evaporation_rate=0.5, pheromone_deposit=100.0,
-                 enable_dependencies=False):
+                 enable_dependencies=False, random_seed=None):
         
         # Core configuration
         self.tasks = tasks
@@ -46,6 +46,11 @@ class ACO_MultiAgent_Scheduler:
         # Check for circular dependencies
         if self.enable_dependencies and self._detect_circular_dependencies():
             print("Warning: Circular dependencies detected. Algorithm will use fallback mechanisms.")
+
+        # Set random seed for reproducibility
+        if random_seed is not None:
+            np.random.seed(random_seed)
+            random.seed(random_seed)
 
         # Algorithm state
         self.pheromones = np.ones((self.n_tasks, self.n_tasks))
@@ -309,6 +314,8 @@ class ACO_MultiAgent_Scheduler:
         self.pheromones *= (1 - self.evaporation_rate)
         for tour, cost in zip(all_tours, all_costs):
             if cost == 0: continue
+            if cost <= 0: # Handle zero or negative cost
+                continue
             pheromone_to_add = self.pheromone_deposit / cost
             for i in range(self.n_tasks - 1):
                 self.pheromones[tour[i], tour[i+1]] += pheromone_to_add

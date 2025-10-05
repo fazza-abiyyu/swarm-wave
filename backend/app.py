@@ -267,18 +267,21 @@ def stream_scheduling():
         task_id_col_for_scheduler = parameters.get('task_id_col', 'id')
         agent_id_col_for_scheduler = parameters.get('agent_id_col', 'id')
         
-        # ACO parameters
-        n_ants = parameters.get('n_ants', 10)
+        # Random seed for reproducibility (optional)
+        random_seed = parameters.get('random_seed', None)
+        
+        # ACO parameters with improved defaults
+        n_ants = parameters.get('n_ants', 40)  # Increased from 10 to 40
         alpha = parameters.get('alpha', 1.0)
         beta = parameters.get('beta', 2.0)
-        evaporation_rate = parameters.get('evaporation_rate', 0.1)
-        pheromone_deposit = parameters.get('pheromone_deposit', 1.0)
+        evaporation_rate = parameters.get('evaporation_rate', 0.3)
+        pheromone_deposit = parameters.get('pheromone_deposit', 100.0)
         
-        # PSO parameters
-        n_particles = parameters.get('n_particles', 10)
-        w = parameters.get('w', 0.7)
-        c1 = parameters.get('c1', 1.4)
-        c2 = parameters.get('c2', 1.4)
+        # PSO parameters with improved defaults
+        n_particles = parameters.get('n_particles', 8)  # Increased from 10 to 40
+        w = parameters.get('w', 0.5)
+        c1 = parameters.get('c1', 1.5)
+        c2 = parameters.get('c2', 1.5)
         
         # Dependency settings
         enable_dependencies = parameters.get('enable_dependencies', False)
@@ -368,14 +371,14 @@ def stream_scheduling():
                 task_id_col=task_id_col_for_scheduler, agent_id_col=agent_id_col_for_scheduler,
                 n_ants=n_ants, n_iterations=n_iterations, alpha=alpha, beta=beta,
                 evaporation_rate=evaporation_rate, pheromone_deposit=pheromone_deposit,
-                enable_dependencies=enable_dependencies
+                enable_dependencies=enable_dependencies, random_seed=random_seed
             )
         elif algorithm == 'PSO':
             scheduler = PSOScheduler(
                 tasks=formatted_tasks, agents=agents, cost_function=cost_function,
                 task_id_col=task_id_col_for_scheduler, agent_id_col=agent_id_col_for_scheduler,
                 n_particles=n_particles, n_iterations=n_iterations, w=w, c1=c1, c2=c2,
-                enable_dependencies=enable_dependencies
+                enable_dependencies=enable_dependencies, random_seed=random_seed
             )
         else:
             return jsonify({"error": f"Unsupported algorithm: {algorithm}"}), 400

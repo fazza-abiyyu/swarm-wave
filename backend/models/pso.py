@@ -4,7 +4,7 @@ import json
 
 class PSO_MultiAgent_Scheduler:
     def __init__(self, tasks, agents, cost_function, task_id_col='id', agent_id_col='id',
-                 n_particles=30, n_iterations=100, w=0.5, c1=1.5, c2=1.5, enable_dependencies=False):
+                 n_particles=30, n_iterations=100, w=0.5, c1=1.5, c2=1.5, enable_dependencies=False, random_seed=None):
         
         # Core configuration
         self.tasks = tasks
@@ -30,6 +30,11 @@ class PSO_MultiAgent_Scheduler:
         # Check for circular dependencies
         if self.enable_dependencies and self._detect_circular_dependencies():
             print("Warning: Circular dependencies detected. Algorithm will use fallback mechanisms.")
+        
+        # Set random seed for reproducibility
+        if random_seed is not None:
+            np.random.seed(random_seed)
+            random.seed(random_seed)
         
         # Swarm initialization
         self.positions = np.random.rand(self.n_particles, self.n_tasks)
@@ -140,67 +145,92 @@ class PSO_MultiAgent_Scheduler:
         return True
 
     def _position_to_sequence(self, position):
-        """Enhanced position to sequence with dependency consideration"""
+        """Convert position to sequence with penalty-based approach for more freedom"""
         if not self.enable_dependencies:
             # Original sorting for independent tasks
             return np.argsort(position)
         
-        # Dependency-aware sequence generation
-        task_priorities = sorted(enumerate(position), key=lambda x: x[1], reverse=True)
+        # Penalty-based approach: allows more exploration like MATLAB
+        # Instead of strict dependency ordering, use position values with penalty corrections
         
-        sequence = []
-        scheduled_task_indices = set()
-        completed_task_ids = set()
+        # Create initial sequence based on position values
+        initial_sequence = np.argsort(position)
         
-        # Safety net to prevent infinite loops in case of bad dependencies
-        max_attempts = self.n_tasks * self.n_tasks 
-        attempts = 0
-
-        while len(scheduled_task_indices) < self.n_tasks and attempts < max_attempts:
-            made_progress = False
-            for task_idx, _ in task_priorities:
-                if task_idx not in scheduled_task_indices:
-                    task_id = str(self.tasks[task_idx][self.task_id_col])
-                    
-                    if self._is_dependency_satisfied(task_id, completed_task_ids):
-                        sequence.append(task_idx)
-                        scheduled_task_indices.add(task_idx)
-                        completed_task_ids.add(task_id)
-                        made_progress = True
+        # Apply penalty-based corrections for dependencies
+        corrected_sequence = self._apply_dependency_penalties(initial_sequence, position)
+        
+        return corrected_sequence
+    
+    def _apply_dependency_penalties(self, sequence, position):
+        """Apply penalty-based dependency corrections (MATLAB-inspired approach)"""
+        n_tasks = len(sequence)
+        corrected_sequence = []
+        available_tasks = set(sequence)
+        completed_tasks = set()
+        
+        # Build a penalty-adjusted priority list
+        task_penalties = {}
+        for i, task_idx in enumerate(sequence):
+            task_id = str(self.tasks[task_idx][self.task_id_col])
             
-            attempts += 1
-            # If a full pass makes no progress, there might be a circular dependency or issue
-            if not made_progress and len(scheduled_task_indices) < self.n_tasks:
-                # Fallback: add any remaining unscheduled task to avoid infinite loop
-                remaining = set(range(self.n_tasks)) - scheduled_task_indices
-                if remaining:
-                    # Add one task that has the fewest remaining dependencies to break the cycle
-                    min_deps_task = -1
-                    min_deps_count = float('inf')
-                    for rem_idx in remaining:
-                        rem_id = str(self.tasks[rem_idx][self.task_id_col])
-                        deps = self.dependencies.get(rem_id, [])
-                        unsatisfied_count = len([d for d in deps if d not in completed_task_ids])
-                        if unsatisfied_count < min_deps_count:
-                            min_deps_count = unsatisfied_count
-                            min_deps_task = rem_idx
-                    
-                    if min_deps_task != -1:
-                        sequence.append(min_deps_task)
-                        scheduled_task_indices.add(min_deps_task)
-                        completed_task_ids.add(str(self.tasks[min_deps_task][self.task_id_col]))
-
-        # Ensure all tasks are in the sequence, even if dependencies were problematic
-        if len(sequence) < self.n_tasks:
-            remaining_tasks = set(range(self.n_tasks)) - scheduled_task_indices
-            sequence.extend(sorted(list(remaining_tasks)))
+            # Base priority from position
+            base_priority = position[task_idx]
             
-        return np.array(sequence)
+            # Calculate dependency penalty
+            dependency_penalty = 0
+            if task_id in self.dependencies:
+                unsatisfied_deps = 0
+                for dep_id in self.dependencies[task_id]:
+                    if dep_id not in completed_tasks:
+                        unsatisfied_deps += 1
+                
+                # Penalty increases with unsatisfied dependencies
+                dependency_penalty = unsatisfied_deps * 0.5
+            
+            # Adjusted priority (higher is better, penalty reduces priority)
+            adjusted_priority = base_priority - dependency_penalty
+            task_penalties[task_idx] = adjusted_priority
+        
+        # Build sequence using penalty-adjusted priorities
+        max_iterations = n_tasks * 2  # Safety limit
+        iteration = 0
+        
+        while available_tasks and iteration < max_iterations:
+            iteration += 1
+            
+            # Find tasks with satisfied dependencies
+            ready_tasks = []
+            for task_idx in available_tasks:
+                task_id = str(self.tasks[task_idx][self.task_id_col])
+                if self._is_dependency_satisfied(task_id, completed_tasks):
+                    ready_tasks.append(task_idx)
+            
+            if ready_tasks:
+                # Choose task with highest penalty-adjusted priority among ready tasks
+                best_task = max(ready_tasks, key=lambda t: task_penalties[t])
+                corrected_sequence.append(best_task)
+                available_tasks.remove(best_task)
+                task_id = str(self.tasks[best_task][self.task_id_col])
+                completed_tasks.add(task_id)
+            else:
+                # Fallback: if no ready tasks, pick one with minimum penalty
+                if available_tasks:
+                    fallback_task = min(available_tasks, key=lambda t: len(self.dependencies.get(str(self.tasks[t][self.task_id_col]), [])))
+                    corrected_sequence.append(fallback_task)
+                    available_tasks.remove(fallback_task)
+                    task_id = str(self.tasks[fallback_task][self.task_id_col])
+                    completed_tasks.add(task_id)
+        
+        # Add any remaining tasks (safety measure)
+        if available_tasks:
+            corrected_sequence.extend(sorted(available_tasks))
+        
+        return np.array(corrected_sequence)
 
     def _evaluate_sequence(self, task_sequence):
-        """Enhanced evaluation with dependency and load balancing consideration"""
+        """Enhanced evaluation with penalty-based approach (like MATLAB implementation)"""
         agent_finish_times = {agent[self.agent_id_col]: 0 for agent in self.agents}
-        task_finish_times = {}  # Optimization: O(1) lookup for dependency finish times
+        task_finish_times = {}  # For dependency tracking
         schedule = []
         
         for task_idx in task_sequence:
@@ -208,34 +238,99 @@ class PSO_MultiAgent_Scheduler:
             task_id = str(task[self.task_id_col])
             duration = task.get('length', 1)
             
-            # Find best agent with load balancing
-            best_agent_id = self._find_best_agent(agent_finish_times, duration)
+            # Find best agent using penalty-based approach
+            best_agent_id = self._find_best_agent_with_penalty(agent_finish_times, duration, task_id, task_finish_times)
             
             # Calculate start time based on dependencies
             dependency_finish_time = 0
             if self.enable_dependencies and task_id in self.dependencies:
-                for dep_id in self.dependencies[task_id]:
-                    # Optimization: Use dict for faster lookup
-                    dependency_finish_time = max(dependency_finish_time, task_finish_times.get(dep_id, 0))
+                deps = self.dependencies[task_id]
+                for dep_id in deps:
+                    if dep_id in task_finish_times:
+                        dependency_finish_time = max(dependency_finish_time, task_finish_times[dep_id])
             
-            # Start time is max of agent availability and dependency completion
             start_time = max(agent_finish_times[best_agent_id], dependency_finish_time)
             finish_time = start_time + duration
-            agent_finish_times[best_agent_id] = finish_time
-            task_finish_times[task_id] = finish_time # Optimization: Store finish time
             
+            # Update tracking
+            agent_finish_times[best_agent_id] = finish_time
+            task_finish_times[task_id] = finish_time
             schedule.append({
-                'task_id': task_id, 
+                'task_id': task_id,
                 'agent_id': best_agent_id,
-                'start_time': start_time, 
+                'start_time': start_time,
                 'finish_time': finish_time
             })
         
-        makespan = max(agent_finish_times.values()) if agent_finish_times else 0
+        times = list(agent_finish_times.values())
+        makespan = max(times) if times else 0
         load_balance_index = self._calculate_load_balance_index(agent_finish_times)
         
-        return self.cost_function(schedule, makespan), schedule, load_balance_index
+        # Use penalty-based cost calculation (inspired by MATLAB)
+        cost = self._calculate_penalty_based_cost(makespan, load_balance_index, agent_finish_times)
+        
+        return cost, schedule, load_balance_index
     
+    def _find_best_agent_with_penalty(self, agent_finish_times, task_duration, task_id, task_finish_times):
+        """Find best agent using penalty-based approach (MATLAB-inspired)"""
+        best_agent_id = None
+        best_score = float('inf')
+        current_max_time = max(agent_finish_times.values()) if agent_finish_times.values() else 0
+        
+        for agent in self.agents:
+            agent_id = agent[self.agent_id_col]
+            
+            # Simulate assignment to this agent
+            temp_finish_times = agent_finish_times.copy()
+            
+            # Calculate dependency start time
+            dependency_finish_time = 0
+            if self.enable_dependencies and task_id in self.dependencies:
+                deps = self.dependencies[task_id]
+                for dep_id in deps:
+                    if dep_id in task_finish_times:
+                        dependency_finish_time = max(dependency_finish_time, task_finish_times[dep_id])
+            
+            start_time = max(temp_finish_times[agent_id], dependency_finish_time)
+            temp_finish_times[agent_id] = start_time + task_duration
+            
+            # Calculate penalties (MATLAB approach)
+            new_makespan = max(temp_finish_times.values())
+            makespan_penalty = new_makespan
+            
+            # Aggressive load balancing penalty
+            balance_penalty = self._calculate_load_balance_index(temp_finish_times) * current_max_time * 2
+            
+            # Combined score with emphasis on balance
+            combined_score = makespan_penalty + balance_penalty
+            
+            if combined_score < best_score:
+                best_score = combined_score
+                best_agent_id = agent_id
+        
+        # Fallback: choose agent with minimum finish time
+        if best_agent_id is None:
+            min_time = float('inf')
+            for agent_id, time in agent_finish_times.items():
+                if time < min_time:
+                    min_time = time
+                    best_agent_id = agent_id
+        
+        return best_agent_id
+    
+    def _calculate_penalty_based_cost(self, makespan, load_balance_index, agent_finish_times):
+        """Calculate cost using penalty-based approach"""
+        # Base cost is makespan
+        base_cost = makespan
+        
+        # Add load balance penalty (weighted by makespan)
+        balance_penalty = load_balance_index * makespan * 0.5
+        
+        # Total penalty-based cost
+        total_cost = base_cost + balance_penalty
+        
+        return total_cost
+
     def _find_best_agent(self, agent_finish_times, task_duration):
         """Find agent with balance between makespan and load balancing - AGGRESSIVE VERSION"""
         best_score = float('inf')
