@@ -106,7 +106,7 @@ export default defineEventHandler(async (event) => {
     // Use OpenAI API Key from runtime config
     const apiKey = config.EXNEST_API_KEY || process.env.EXNEST_API_KEY;
     if (!apiKey) {
-      throw new Error("OpenAI API key not configured");
+      throw new Error("Exnest API key not configured");
     }
 
     // 1. Build the system message with simulation data (same logic)
