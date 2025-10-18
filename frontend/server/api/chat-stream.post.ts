@@ -79,9 +79,9 @@ interface RequestBody {
   simulationResults: SimulationResults;
   swarmType: string; // "ACO", "PSO", or "both"
   chatHistory?: ChatMessage[];
+  about?: string;
   language?: string;
 }
-
 // --- SSE HELPER (No changes needed) ---
 async function writeSSE(event: any, type: string, data: any) {
   const sseData = `data: ${JSON.stringify({ type, data })}\n\n`;
@@ -104,6 +104,10 @@ export default defineEventHandler(async (event) => {
       simulationResults,
       swarmType,
       chatHistory = [],
+      about = `
+Swarm Wave is an optimization platform using Ant Colony Optimization (ACO) and Particle Swarm Optimization (PSO) to solve complex scheduling and resource allocation problems. It simulates swarm behavior to find optimal configurations efficiently. Built with Nuxt 4 (frontend) and Flask (backend), it supports real-time visualization, parameter tuning, and data management.
+Created by Muhammad Faza Abiyyu for Telkom University Purwokerto as a Bachelor’s Final Project under the MIT License, Swarm Wave provides an educational, intuitive, and integrative environment for studying swarm intelligence.
+`,
       language = "English",
     } = body;
 
