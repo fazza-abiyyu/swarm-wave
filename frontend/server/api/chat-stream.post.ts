@@ -1,5 +1,9 @@
 import { ChatOpenAI } from "@langchain/openai";
-import { AIMessage, HumanMessage, SystemMessage } from "@langchain/core/messages";
+import {
+  AIMessage,
+  HumanMessage,
+  SystemMessage,
+} from "@langchain/core/messages";
 
 const config = useRuntimeConfig();
 
@@ -110,30 +114,39 @@ export default defineEventHandler(async (event) => {
     }
 
     // 1. Build the system message with simulation data (same logic)
-    const systemPrompt = buildSystemMessage(simulationResults, swarmType, language);
+    const systemPrompt = buildSystemMessage(
+      simulationResults,
+      swarmType,
+      language
+    );
 
     // 2. Initialize the LangChain OpenAI model for streaming
     const model = new ChatOpenAI({
       apiKey: apiKey,
       modelName: config.MODELS || "gpt-4.1-mini", // Default to gpt-4.1-mini if not specified
-      configuration: { baseURL: config.EXNEST_BASE_URL || "https://api.exnest.app/v1" },
+      configuration: {
+        baseURL: config.EXNEST_BASE_URL || "https://api.exnest.app/v1",
+        defaultHeaders: {
+          "User-Agent":
+            "Mozilla/5.0 (compatible; ExnestBot/1.0; +https://exnest.app)",
+        },
+      },
       temperature: 0.5,
       streaming: true,
     });
-    
+
     // 3. Construct the message history for LangChain
     const messages = [
-        new SystemMessage(systemPrompt),
-        // Map previous chat history to LangChain message format
-        ...chatHistory.slice(-6).map(msg => {
-            return msg.role === 'assistant' 
-                ? new AIMessage(msg.content) 
-                : new HumanMessage(msg.content);
-        }),
-        // Add the new user message
-        new HumanMessage(userMessage),
+      new SystemMessage(systemPrompt),
+      // Map previous chat history to LangChain message format
+      ...chatHistory.slice(-6).map((msg) => {
+        return msg.role === "assistant"
+          ? new AIMessage(msg.content)
+          : new HumanMessage(msg.content);
+      }),
+      // Add the new user message
+      new HumanMessage(userMessage),
     ];
-
 
     await writeSSE(event, "start", "Starting AI response...");
 
@@ -143,13 +156,12 @@ export default defineEventHandler(async (event) => {
     // 5. Write each chunk from the stream to the SSE response
     for await (const chunk of stream) {
       const chunkText = chunk.content;
-      if (typeof chunkText === 'string' && chunkText.length > 0) {
+      if (typeof chunkText === "string" && chunkText.length > 0) {
         await writeSSE(event, "chunk", chunkText);
       }
     }
 
     await writeSSE(event, "done", "Response complete");
-
   } catch (err: any) {
     console.error("Chat Stream API Error:", err);
     await writeSSE(
@@ -165,9 +177,12 @@ export default defineEventHandler(async (event) => {
   }
 });
 
-
 // --- SYSTEM PROMPT BUILDER (No changes needed) ---
-function buildSystemMessage(sim: SimulationResults, swarmType: string, language: string): string {
+function buildSystemMessage(
+  sim: SimulationResults,
+  swarmType: string,
+  language: string
+): string {
   const prompts: any = {
     English: {
       system:
@@ -216,21 +231,28 @@ function buildSystemMessage(sim: SimulationResults, swarmType: string, language:
     const ds = sim.dataSpecification;
     const filteredRows = ds.dataLimitations?.filteredRows || ds.totalRows || 0;
     const originalRows = ds.dataLimitations?.originalRows || ds.totalRows || 0;
-    
+
     context += `| Property | Value |\n|----------|-------|`;
-    context += `\n| **Dataset Rows** | ${filteredRows}${originalRows !== filteredRows ? ` (filtered from ${originalRows})` : ''} |`;
+    context += `\n| **Dataset Rows** | ${filteredRows}${
+      originalRows !== filteredRows ? ` (filtered from ${originalRows})` : ""
+    } |`;
     context += `\n| **Dataset Columns** | ${ds.totalColumns || 0} |`;
-    context += `\n| **Column Headers** | ${ds.columns?.join(', ') || 'N/A'} |`;
-    
+    context += `\n| **Column Headers** | ${ds.columns?.join(", ") || "N/A"} |`;
+
     if (ds.dataTypes) {
-      context += `\n| **Data Types** | ${Object.entries(ds.dataTypes).map(([col, type]) => `${col}: ${type}`).join(', ')} |`;
+      context += `\n| **Data Types** | ${Object.entries(ds.dataTypes)
+        .map(([col, type]) => `${col}: ${type}`)
+        .join(", ")} |`;
     }
-    
+
     if (ds.sampleData && ds.sampleData.length > 0) {
       context += `\n\n**Sample Data (first 3 rows):**\n`;
-      context += `| ${ds.columns?.join(' | ') || ''} |\n|${ds.columns?.map(() => '---').join('|') || ''}|`;
-      ds.sampleData.slice(0, 3).forEach(row => {
-        const values = ds.columns?.map(col => row[col] || 'N/A').join(' | ') || '';
+      context += `| ${ds.columns?.join(" | ") || ""} |\n|${
+        ds.columns?.map(() => "---").join("|") || ""
+      }|`;
+      ds.sampleData.slice(0, 3).forEach((row) => {
+        const values =
+          ds.columns?.map((col) => row[col] || "N/A").join(" | ") || "";
         context += `\n| ${values} |`;
       });
     }
@@ -240,72 +262,112 @@ function buildSystemMessage(sim: SimulationResults, swarmType: string, language:
   if (sim.algorithmParameters) {
     context += `\n\n## ${p.parameters}\n`;
     const ap = sim.algorithmParameters;
-    
+
     if (ap.common) {
       context += `\n### Common Parameters\n`;
       context += `| Parameter | Value |\n|-----------|-------|`;
-      context += `\n| **Agents** | ${ap.common.num_default_agents || 'N/A'} |`;
-      context += `\n| **Iterations** | ${ap.common.n_iterations || 'N/A'} |`;
-      context += `\n| **Task ID Column** | ${ap.common.task_id_col || 'N/A'} |`;
-      context += `\n| **Agent ID Column** | ${ap.common.agent_id_col || 'N/A'} |`;
+      context += `\n| **Agents** | ${ap.common.num_default_agents || "N/A"} |`;
+      context += `\n| **Iterations** | ${ap.common.n_iterations || "N/A"} |`;
+      context += `\n| **Task ID Column** | ${ap.common.task_id_col || "N/A"} |`;
+      context += `\n| **Agent ID Column** | ${
+        ap.common.agent_id_col || "N/A"
+      } |`;
     }
-    
-    if (ap.aco && swarmType.includes('ACO')) {
+
+    if (ap.aco && swarmType.includes("ACO")) {
       context += `\n\n### ACO Parameters\n`;
       context += `| Parameter | Value |\n|-----------|-------|`;
-      context += `\n| **Alpha (Pheromone)** | ${ap.aco.alpha || 'N/A'} |`;
-      context += `\n| **Beta (Heuristic)** | ${ap.aco.beta || 'N/A'} |`;
-      context += `\n| **Evaporation Rate** | ${ap.aco.evaporation_rate || 'N/A'} |`;
-      context += `\n| **Pheromone Deposit** | ${ap.aco.pheromone_deposit || 'N/A'} |`;
-      context += `\n| **Number of Ants** | ${ap.aco.n_ants || 'N/A'} |`;
+      context += `\n| **Alpha (Pheromone)** | ${ap.aco.alpha || "N/A"} |`;
+      context += `\n| **Beta (Heuristic)** | ${ap.aco.beta || "N/A"} |`;
+      context += `\n| **Evaporation Rate** | ${
+        ap.aco.evaporation_rate || "N/A"
+      } |`;
+      context += `\n| **Pheromone Deposit** | ${
+        ap.aco.pheromone_deposit || "N/A"
+      } |`;
+      context += `\n| **Number of Ants** | ${ap.aco.n_ants || "N/A"} |`;
     }
-    
-    if (ap.pso && swarmType.includes('PSO')) {
+
+    if (ap.pso && swarmType.includes("PSO")) {
       context += `\n\n### PSO Parameters\n`;
       context += `| Parameter | Value |\n|-----------|-------|`;
-      context += `\n| **Particles** | ${ap.pso.n_particles || 'N/A'} |`;
-      context += `\n| **Inertia Weight (w)** | ${ap.pso.w || 'N/A'} |`;
-      context += `\n| **Cognitive Factor (c1)** | ${ap.pso.c1 || 'N/A'} |`;
-      context += `\n| **Social Factor (c2)** | ${ap.pso.c2 || 'N/A'} |`;
+      context += `\n| **Particles** | ${ap.pso.n_particles || "N/A"} |`;
+      context += `\n| **Inertia Weight (w)** | ${ap.pso.w || "N/A"} |`;
+      context += `\n| **Cognitive Factor (c1)** | ${ap.pso.c1 || "N/A"} |`;
+      context += `\n| **Social Factor (c2)** | ${ap.pso.c2 || "N/A"} |`;
     }
   }
 
   // Build analysis based on swarmType parameter
   context += `\n\n## ${p.results}\n`;
-  
-  const hasAco = swarmType.includes('ACO') && sim.aco;
-  const hasPso = swarmType.includes('PSO') && sim.pso;
+
+  const hasAco = swarmType.includes("ACO") && sim.aco;
+  const hasPso = swarmType.includes("PSO") && sim.pso;
 
   if (hasAco) {
     context += `\n### ${p.aco}\n`;
     context += `| Metric | Value |\n|--------|--------|`;
-    context += `\n| **Best Makespan** | ${Number(sim.aco?.bestMakespan || 0).toFixed(2)} |`;
-    context += `\n| **Execution Time** | ${Number(sim.aco?.executionTime || 0).toFixed(2)} |`;
-    context += `\n| **Load Balance Index** | ${Number(sim.aco?.loadBalanceIndex || 0).toFixed(4)} |`;
-    context += `\n| **Agents** | ${sim.aco?.totalAgents ?? sim.algorithmParameters?.common?.num_default_agents ?? 0} |`;
-    context += `\n| **Tasks Processed** | ${sim.aco?.totalTasks ?? sim.dataSpecification?.dataLimitations?.filteredRows ?? sim.dataSpecification?.totalRows ?? 0} |`;
-    context += `\n| **Final Assignments** | ${sim.aco?.finalAssignment?.length ?? 0} agent groups |`;
+    context += `\n| **Best Makespan** | ${Number(
+      sim.aco?.bestMakespan || 0
+    ).toFixed(2)} |`;
+    context += `\n| **Execution Time** | ${Number(
+      sim.aco?.executionTime || 0
+    ).toFixed(2)} |`;
+    context += `\n| **Load Balance Index** | ${Number(
+      sim.aco?.loadBalanceIndex || 0
+    ).toFixed(4)} |`;
+    context += `\n| **Agents** | ${
+      sim.aco?.totalAgents ??
+      sim.algorithmParameters?.common?.num_default_agents ??
+      0
+    } |`;
+    context += `\n| **Tasks Processed** | ${
+      sim.aco?.totalTasks ??
+      sim.dataSpecification?.dataLimitations?.filteredRows ??
+      sim.dataSpecification?.totalRows ??
+      0
+    } |`;
+    context += `\n| **Final Assignments** | ${
+      sim.aco?.finalAssignment?.length ?? 0
+    } agent groups |`;
   }
-  
+
   if (hasPso) {
     context += `\n\n### ${p.pso}\n`;
     context += `| Metric | Value |\n|--------|--------|`;
-    context += `\n| **Best Makespan** | ${Number(sim.pso?.bestMakespan || 0).toFixed(2)} |`;
-    context += `\n| **Execution Time** | ${Number(sim.pso?.executionTime || 0).toFixed(2)} |`;
-    context += `\n| **Load Balance Index** | ${Number(sim.pso?.loadBalanceIndex || 0).toFixed(4)} |`;
-    context += `\n| **Agents** | ${sim.pso?.totalAgents ?? sim.algorithmParameters?.common?.num_default_agents ?? 0} |`;
-    context += `\n| **Tasks Processed** | ${sim.pso?.totalTasks ?? sim.dataSpecification?.dataLimitations?.filteredRows ?? sim.dataSpecification?.totalRows ?? 0} |`;
-    context += `\n| **Final Assignments** | ${sim.pso?.finalAssignment?.length ?? 0} agent groups |`;
+    context += `\n| **Best Makespan** | ${Number(
+      sim.pso?.bestMakespan || 0
+    ).toFixed(2)} |`;
+    context += `\n| **Execution Time** | ${Number(
+      sim.pso?.executionTime || 0
+    ).toFixed(2)} |`;
+    context += `\n| **Load Balance Index** | ${Number(
+      sim.pso?.loadBalanceIndex || 0
+    ).toFixed(4)} |`;
+    context += `\n| **Agents** | ${
+      sim.pso?.totalAgents ??
+      sim.algorithmParameters?.common?.num_default_agents ??
+      0
+    } |`;
+    context += `\n| **Tasks Processed** | ${
+      sim.pso?.totalTasks ??
+      sim.dataSpecification?.dataLimitations?.filteredRows ??
+      sim.dataSpecification?.totalRows ??
+      0
+    } |`;
+    context += `\n| **Final Assignments** | ${
+      sim.pso?.finalAssignment?.length ?? 0
+    } agent groups |`;
   }
-  
+
   if (hasAco && hasPso) {
     context += `\n\n### ${p.comparison}\n`;
     const winner = getBetterAlgorithm(sim);
     context += `- **Winner**: ${winner}\n`;
-    
+
     const acoParams = sim.algorithmParameters?.aco;
     const psoParams = sim.algorithmParameters?.pso;
-    
+
     if (acoParams) {
       context += `- **ACO Configuration**: α=${acoParams.alpha}, β=${acoParams.beta}, ρ=${acoParams.evaporation_rate}, ${acoParams.n_ants} ants\n`;
     }
@@ -321,7 +383,7 @@ function buildSystemMessage(sim: SimulationResults, swarmType: string, language:
 function getBetterAlgorithm(sim: SimulationResults): string {
   const acoMakespan = parseFloat(String(sim.aco?.bestMakespan ?? Infinity));
   const psoMakespan = parseFloat(String(sim.pso?.bestMakespan ?? Infinity));
-  
+
   if (acoMakespan < psoMakespan) return "ACO (better makespan)";
   if (psoMakespan < acoMakespan) return "PSO (better makespan)";
   return "Tie (equal performance)";
