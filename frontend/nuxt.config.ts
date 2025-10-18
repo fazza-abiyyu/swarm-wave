@@ -19,7 +19,9 @@ export default defineNuxtConfig({
   },
   runtimeConfig: {
     // Private keys (only available on server-side)
-    GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+    EXNEST_API_KEY: process.env.EXNEST_API_KEY,
+    MODELS: process.env.MODELS,
+    EXNEST_BASE_URL: process.env.EXNEST_BASE_URL,
     
     // Public keys (exposed to client-side)
     public: {

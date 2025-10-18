@@ -29,14 +29,16 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        - GEMINI_API_KEY=${GEMINI_API_KEY}
+        - EXNEST_API_KEY=${EXNEST_API_KEY}
     ports:
       - "3000:3000"
     environment:
       - NUXT_HOST=0.0.0.0
       - NUXT_PORT=3000
       - NODE_ENV=development
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - EXNEST_API_KEY=${EXNEST_API_KEY}
+      - MODELS=${MODELS}
+      - EXNEST_BASE_URL=${EXNEST_BASE_URL}
     volumes:
       - ./frontend:/app
       - /app/node_modules

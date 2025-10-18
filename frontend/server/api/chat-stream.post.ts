@@ -1,10 +1,12 @@
-// File: server/api/chat-stream.post.ts
-import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/generative-ai";
+import { ChatOpenAI } from "@langchain/openai";
+import { AIMessage, HumanMessage, SystemMessage } from "@langchain/core/messages";
 
+const config = useRuntimeConfig();
+
+// --- INTERFACES (No changes needed) ---
 interface ChatMessage {
   role: "user" | "assistant";
-        system:
-        "Anda adalah Asisten AI Swarm Wave, khusus dalam menganalisis dan menjelaskan hasil simulasi. Front-end SELALU mengirim data simulasi lengkap secara otomatis termasuk parameter dan spesifikasi data. TIDAK PERNAH meminta pengguna untuk memberikan data mentah, metrik, parameter, atau mengunggah file - Anda sudah memiliki semua yang dibutuhkan. Ketika pengguna mengatakan hal-hal umum seperti 'jelaskan hasilnya', 'bandingkan', atau 'yang terbaik', Anda harus langsung menganalisis simulationResults terbaru. Keluaran harus terstruktur dalam Markdown dengan bagian yang jelas, tabel, dan poin-poin. Singkat, analitis, dan terstruktur. Berikan wawasan dan perbandingan, bukan hanya deskripsi. Anggap simulationResults sebagai satu-satunya sumber kebenaran. Jangan pernah mengatakan 'saya tidak menerima data' - jika objek ada, anggap valid.",ntent: string;
+  content: string;
 }
 
 interface SimulationResults {
@@ -76,7 +78,7 @@ interface RequestBody {
   language?: string;
 }
 
-// SSE helper to write events to the stream
+// --- SSE HELPER (No changes needed) ---
 async function writeSSE(event: any, type: string, data: any) {
   const sseData = `data: ${JSON.stringify({ type, data })}\n\n`;
   if (event.node?.res?.write) {
@@ -84,6 +86,7 @@ async function writeSSE(event: any, type: string, data: any) {
   }
 }
 
+// --- EVENT HANDLER (Modified for LangChain OpenAI) ---
 export default defineEventHandler(async (event) => {
   // Set SSE headers
   setHeader(event, "Content-Type", "text/event-stream");
@@ -100,58 +103,47 @@ export default defineEventHandler(async (event) => {
       language = "English",
     } = body;
 
-    const apiKey = process.env.GEMINI_API_KEY;
+    // Use OpenAI API Key from runtime config
+    const apiKey = config.EXNEST_API_KEY || process.env.EXNEST_API_KEY;
     if (!apiKey) {
-      throw new Error("Gemini API key not configured");
+      throw new Error("OpenAI API key not configured");
     }
 
-    const genAI = new GoogleGenerativeAI(apiKey);
+    // 1. Build the system message with simulation data (same logic)
+    const systemPrompt = buildSystemMessage(simulationResults, swarmType, language);
 
-    // 1. Build the system message with simulation data
-    const systemMessage = buildSystemMessage(simulationResults, swarmType, language);
-
-    // 2. Initialize the model with the system message
-    const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
-      systemInstruction: systemMessage,
-       safetySettings: [ // Add safety settings to avoid blocking
-        {
-          category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-          threshold: HarmBlockThreshold.BLOCK_NONE,
-        },
-        {
-          category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-          threshold: HarmBlockThreshold.BLOCK_NONE,
-        },
-        {
-          category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-          threshold: HarmBlockThreshold.BLOCK_NONE,
-        },
-        {
-          category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-          threshold: HarmBlockThreshold.BLOCK_NONE,
-        },
-      ],
+    // 2. Initialize the LangChain OpenAI model for streaming
+    const model = new ChatOpenAI({
+      apiKey: apiKey,
+      modelName: config.MODELS || "gpt-4.1-mini", // Default to gpt-4.1-mini if not specified
+      configuration: { baseURL: config.EXNEST_BASE_URL || "https://api.exnest.app/v1" },
+      temperature: 0.5,
+      streaming: true,
     });
+    
+    // 3. Construct the message history for LangChain
+    const messages = [
+        new SystemMessage(systemPrompt),
+        // Map previous chat history to LangChain message format
+        ...chatHistory.slice(-6).map(msg => {
+            return msg.role === 'assistant' 
+                ? new AIMessage(msg.content) 
+                : new HumanMessage(msg.content);
+        }),
+        // Add the new user message
+        new HumanMessage(userMessage),
+    ];
 
-    // 3. Start a chat session with previous history
-    const chat = model.startChat({
-      history: chatHistory
-        .slice(-6) // Use last 6 messages for context
-        .map(msg => ({
-          role: msg.role === 'assistant' ? 'model' : 'user',
-          parts: [{ text: msg.content }]
-        })),
-    });
 
     await writeSSE(event, "start", "Starting AI response...");
 
-    // 4. Send only the new user message to the chat stream
-    const result = await chat.sendMessageStream(userMessage);
+    // 4. Get the streaming response from the model
+    const stream = await model.stream(messages);
 
-    for await (const chunk of result.stream) {
-      const chunkText = chunk.text();
-      if (chunkText) {
+    // 5. Write each chunk from the stream to the SSE response
+    for await (const chunk of stream) {
+      const chunkText = chunk.content;
+      if (typeof chunkText === 'string' && chunkText.length > 0) {
         await writeSSE(event, "chunk", chunkText);
       }
     }
@@ -174,7 +166,7 @@ export default defineEventHandler(async (event) => {
 });
 
 
-// system prompt builder
+// --- SYSTEM PROMPT BUILDER (No changes needed) ---
 function buildSystemMessage(sim: SimulationResults, swarmType: string, language: string): string {
   const prompts: any = {
     English: {
@@ -311,7 +303,6 @@ function buildSystemMessage(sim: SimulationResults, swarmType: string, language:
     const winner = getBetterAlgorithm(sim);
     context += `- **Winner**: ${winner}\n`;
     
-    // Add parameter influence analysis
     const acoParams = sim.algorithmParameters?.aco;
     const psoParams = sim.algorithmParameters?.pso;
     
@@ -326,7 +317,7 @@ function buildSystemMessage(sim: SimulationResults, swarmType: string, language:
   return context;
 }
 
-// Helper function to determine better algorithm
+// --- HELPER FUNCTION (No changes needed) ---
 function getBetterAlgorithm(sim: SimulationResults): string {
   const acoMakespan = parseFloat(String(sim.aco?.bestMakespan ?? Infinity));
   const psoMakespan = parseFloat(String(sim.pso?.bestMakespan ?? Infinity));
