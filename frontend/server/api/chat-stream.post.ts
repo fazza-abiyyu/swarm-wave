@@ -126,26 +126,24 @@ export default defineEventHandler(async (event) => {
       modelName: config.MODELS || "gpt-4.1-mini", // Default to gpt-4.1-mini if not specified
       configuration: {
         baseURL: config.EXNEST_BASE_URL || "https://api.exnest.app/v1",
-        defaultHeaders: {
-          "User-Agent":
-            "Mozilla/5.0 (compatible; ExnestBot/1.0; +https://exnest.app)",
-        },
       },
-      temperature: 0.5,
       streaming: true,
     });
 
     // 3. Construct the message history for LangChain
     const messages = [
       new SystemMessage(systemPrompt),
-      // Map previous chat history to LangChain message format
-      ...chatHistory.slice(-6).map((msg) => {
-        return msg.role === "assistant"
-          ? new AIMessage(msg.content)
-          : new HumanMessage(msg.content);
-      }),
-      // Add the new user message
-      new HumanMessage(userMessage),
+      ...chatHistory
+        .filter((msg) => msg.content && msg.content.trim().length > 0)
+        .slice(-6)
+        .map((msg) =>
+          msg.role === "assistant"
+            ? new AIMessage(msg.content)
+            : new HumanMessage(msg.content)
+        ),
+      ...(userMessage && userMessage.trim().length > 0
+        ? [new HumanMessage(userMessage)]
+        : []),
     ];
 
     await writeSSE(event, "start", "Starting AI response...");
