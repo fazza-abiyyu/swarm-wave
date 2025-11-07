@@ -7,9 +7,9 @@
 <script setup>
 // Global style configuration
 useHead({
-  title: 'Swarm Wave - Swarm Intelligence Lab',
+  title: 'Swarm Wave',
   meta: [
-    { name: 'description', content: 'An educational-themed data table management app built with Vue 3 and Tailwind CSS' },
+    { name: 'description', content: 'An educational-themed data table management app built with Nuxt 4 and Flask' },
     { name: 'viewport', content: 'width=device-width, initial-scale=1' }
   ],
   link: [
