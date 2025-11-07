@@ -435,33 +435,6 @@
                 <div>
                   <div class="flex items-center gap-1 mb-2">
                     <label class="block text-sm font-medium text-gray-700">
-                      Q (Pheromone Intensity)
-                    </label>
-                    <span
-                      class="relative group cursor-pointer text-gray-400 text-xs font-bold"
-                    >
-                      ?
-                      <div
-                        class="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded-md shadow-lg p-2 left-4 top-0 w-64 z-10"
-                      >
-                        Constant that affects pheromone deposition amount.
-                        Higher values increase pheromone intensity on successful
-                        paths. Range: 1-1000. Example: 100
-                      </div>
-                    </span>
-                  </div>
-                  <input
-                    v-model.number="parameters.Q"
-                    type="number"
-                    min="1"
-                    max="1000"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-
-                <div>
-                  <div class="flex items-center gap-1 mb-2">
-                    <label class="block text-sm font-medium text-gray-700">
                       Pheromone Deposit
                     </label>
                     <span
@@ -1758,6 +1731,9 @@ const computationTime = ref({ ACO: null, PSO: null });
 const status = ref({ ACO: "Idle", PSO: "Idle" });
 const acoFinalAssignment = ref([]);
 const psoFinalAssignment = ref([]);
+const fullScheduleTable = ref({ aco: null, pso: null }); // Full schedule table untuk export
+const fullResultData = ref({ aco: null, pso: null }); // Full result data untuk export lengkap
+const agentInfoTable = ref({ aco: null, pso: null }); // Agent info table dengan heterogenitas
 const chartCanvasACO = ref(null);
 const chartCanvasPSO = ref(null);
 const acoLogsContainer = ref(null);
@@ -1819,9 +1795,10 @@ const isWinner = computed(() => ({
 }));
 
 const parameters = reactive({
-  num_default_agents: 3, n_iterations: 100, task_id_col: '', agent_id_col: '', dependency_col: '',
-  n_ants: 10, alpha: 1.0, beta: 2.0, evaporation_rate: 0.5, Q:100, pheromone_deposit: 100.0,
-  n_particles: 30, w: 0.5, c1: 1.5, c2: 1.5,
+  num_default_agents: 10, n_iterations: 100, task_id_col: '', agent_id_col: '', dependency_col: '',
+  random_seed: 42,
+  n_ants: 50, alpha: 0.9, beta: 2.0, evaporation_rate: 0.5, pheromone_deposit: 100,
+  n_particles: 50, w: 0.3, c1: 0.3, c2: 0.4,
   enable_dependencies: false
 });
 const expandedTasks = ref({ ACO: {}, PSO: {} });
@@ -2158,6 +2135,37 @@ const handleStreamEvent = (algorithm, data) => {
         if (typeof data.load_balance_index === 'number') {
           loadBalanceIndex.value[algorithm] = data.load_balance_index;
         }
+        
+        // Simpan full_schedule_table untuk export
+        if (data.full_schedule_table) {
+          if (algorithm === 'ACO') {
+            fullScheduleTable.value.aco = data.full_schedule_table;
+          } else if (algorithm === 'PSO') {
+            fullScheduleTable.value.pso = data.full_schedule_table;
+          }
+          processLog(`Full schedule table received: ${data.full_schedule_table.total_rows} rows`);
+        }
+        
+        // Simpan full_result untuk export lengkap
+        if (data.full_result) {
+          if (algorithm === 'ACO') {
+            fullResultData.value.aco = data.full_result;
+          } else if (algorithm === 'PSO') {
+            fullResultData.value.pso = data.full_result;
+          }
+          processLog(`Full result data saved for export`);
+        }
+        
+        // Simpan agent_info_table untuk export agent heterogenitas
+        if (data.agent_info_table) {
+          if (algorithm === 'ACO') {
+            agentInfoTable.value.aco = data.agent_info_table;
+          } else if (algorithm === 'PSO') {
+            agentInfoTable.value.pso = data.agent_info_table;
+          }
+          processLog(`Agent info table received: ${data.agent_info_table.total_rows} agents`);
+        }
+        
         status.value[algorithm] = "Completed";
         break;
 
@@ -2351,8 +2359,14 @@ const editData = () => {
 };
 
 const exportData = (algorithm, format) => {
+    const algoKey = algorithm.toLowerCase();
+    const fullResult = fullResultData.value[algoKey];
+    const scheduleTable = fullScheduleTable.value[algoKey];
+    
+    // Fallback ke assignment lama jika full data tidak tersedia
     const assignment = algorithm === 'ACO' ? acoFinalAssignment.value : psoFinalAssignment.value;
-    if (!assignment || assignment.length === 0) {
+    
+    if (!fullResult && (!assignment || assignment.length === 0)) {
         showToast(`No data to export for ${algorithm}`, 'info');
         return;
     }
@@ -2360,19 +2374,110 @@ const exportData = (algorithm, format) => {
     let content = '';
     let mimeType = '';
     let fileExtension = '';
+    const timestamp = new Date().toISOString().replace(/:/g, '-').split('.')[0];
 
     if (format === 'json') {
-        content = JSON.stringify(assignment, null, 2);
+        // Export full result data (lebih lengkap)
+        if (fullResult) {
+            content = JSON.stringify(fullResult, null, 2);
+        } else {
+            // Fallback ke format lama
+            content = JSON.stringify(assignment, null, 2);
+        }
         mimeType = 'application/json';
         fileExtension = 'json';
     } else { // csv
-        const headers = ["Agent", "Tasks", "Total Time"];
-        const rows = assignment.map(row => [
-            `"${row.agent}"`,
-            `"${Array.isArray(row.tasks) ? row.tasks.join(";") : row.tasks}"`,
-            `"${row.total_time}"`
-        ]);
-        content = [headers.join(","), ...rows.map(row => row.join(","))].join("\n");
+        if (scheduleTable && scheduleTable.data) {
+            // Export dengan format rapi untuk Numbers/Excel
+            const csvLines = [];
+            const agentInfo = agentInfoTable.value[algoKey];
+            
+            // Metadata header
+            if (fullResult) {
+                csvLines.push(`${fullResult.algorithm} Schedule Export`);
+                csvLines.push(`Generated,${fullResult.timestamp || timestamp}`);
+                csvLines.push(`Makespan,${fullResult.makespan || 'N/A'}`);
+                csvLines.push(`Load Balance Index,${fullResult.load_balance_index || 'N/A'}`);
+                csvLines.push(`Computation Time (ms),${fullResult.computation_time || 'N/A'}`);
+                csvLines.push(`Total Tasks,${fullResult.total_tasks || scheduleTable.total_rows}`);
+                csvLines.push(`Total Agents,${fullResult.total_agents || 'N/A'}`);
+                csvLines.push(''); // Empty line separator
+            }
+            
+            // Agent Info Table (Heterogenitas)
+            if (agentInfo && agentInfo.data) {
+                csvLines.push('AGENT HETEROGENITAS');
+                csvLines.push(agentInfo.columns.join(','));
+                agentInfo.data.forEach(row => {
+                    csvLines.push(row.join(','));
+                });
+                csvLines.push(''); // Empty line separator
+            }
+            
+            // Group data by agent
+            const agentGroups = {};
+            const agentIdIndex = scheduleTable.columns.indexOf('agent_id');
+            
+            scheduleTable.data.forEach(row => {
+                const agentId = row[agentIdIndex];
+                if (!agentGroups[agentId]) {
+                    agentGroups[agentId] = [];
+                }
+                agentGroups[agentId].push(row);
+            });
+            
+            // Sort agents naturally
+            const sortedAgents = Object.keys(agentGroups).sort((a, b) => {
+                const numA = parseInt(a.match(/\d+/) || 0);
+                const numB = parseInt(b.match(/\d+/) || 0);
+                return numA - numB;
+            });
+            
+            // Export per agent dengan format clean
+            sortedAgents.forEach((agentId, index) => {
+                // Get agent info untuk header yang lebih informatif
+                let agentHeader = agentId;
+                if (agentInfo && agentInfo.data) {
+                    const agentData = agentInfo.data.find(a => a[0] === agentId);
+                    if (agentData) {
+                        const [id, type, capacity, efficiency] = agentData;
+                        agentHeader = `${id} (${type} - Capacity: ${capacity} - Efficiency: ${efficiency})`;
+                    }
+                }
+                
+                csvLines.push(agentHeader);
+                csvLines.push(scheduleTable.columns.join(','));
+                
+                // Agent data
+                agentGroups[agentId].forEach(row => {
+                    const formattedRow = row.map(cell => {
+                        if (typeof cell === 'string' && isNaN(cell)) {
+                            return cell; // No quotes for cleaner look
+                        }
+                        return cell;
+                    }).join(',');
+                    csvLines.push(formattedRow);
+                });
+                
+                // Agent summary
+                const totalTasks = agentGroups[agentId].length;
+                const finishTimeIndex = scheduleTable.columns.indexOf('finish_time');
+                const maxFinishTime = Math.max(...agentGroups[agentId].map(r => r[finishTimeIndex]));
+                csvLines.push(`${agentId} Total,${totalTasks} tasks,Total Time,${maxFinishTime.toFixed(2)}`);
+                csvLines.push(''); // Empty line between agents
+            });
+            
+            content = csvLines.join('\n');
+        } else {
+            // Fallback ke format lama
+            const headers = ["Agent", "Tasks", "Total Time"];
+            const rows = assignment.map(row => [
+                `"${row.agent}"`,
+                `"${Array.isArray(row.tasks) ? row.tasks.join(";") : row.tasks}"`,
+                `"${row.total_time}"`
+            ]);
+            content = [headers.join(","), ...rows.map(row => row.join(","))].join("\n");
+        }
         mimeType = 'text/csv;charset=utf-8;';
         fileExtension = 'csv';
     }
@@ -2380,9 +2485,11 @@ const exportData = (algorithm, format) => {
     const blob = new Blob([content], { type: mimeType });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = `${algorithm}_final_assignment.${fileExtension}`;
+    link.download = `${algorithm.toLowerCase()}_schedule_${timestamp}.${fileExtension}`;
     link.click();
     URL.revokeObjectURL(link.href);
+    
+    showToast(`${algorithm} data exported successfully`, 'success');
 };
 
 const exportJSON = (algorithm) => exportData(algorithm, 'json');
