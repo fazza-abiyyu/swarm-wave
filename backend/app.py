@@ -6,6 +6,7 @@ import traceback
 import os
 import platform
 import sys
+import random
 from datetime import datetime
 from models.aco import ACO_MultiAgent_Scheduler as ACOScheduler
 from models.pso import PSO_MultiAgent_Scheduler as PSOScheduler
@@ -257,34 +258,72 @@ def stream_scheduling():
         if not tasks: 
             return jsonify({"error": "No tasks provided"}), 400
         
+        # DEBUG: Print jumlah tasks yang diterima
+        print(f"🔍 DEBUG: Received {len(tasks)} tasks from frontend")
+        
         algorithm = data.get('algorithm', '').upper()
         if not algorithm: 
             return jsonify({"error": "Algorithm not specified"}), 400
 
-        # Extract parameters with default values
+        # Extract parameters with default values (SAMA DENGAN NOTEBOOK)
         num_default_agents = parameters.get('num_default_agents', 10)
         n_iterations = parameters.get('n_iterations', 100)
         task_id_col_for_scheduler = parameters.get('task_id_col', 'id')
         agent_id_col_for_scheduler = parameters.get('agent_id_col', 'id')
         
-        # Random seed for reproducibility (optional)
-        random_seed = parameters.get('random_seed', None)
+        # Random seed for reproducibility - SET DULU SEBELUM GENERATE AGENTS!
+        random_seed = parameters.get('random_seed', 42)
+        random.seed(random_seed)
+        import numpy as np
+        np.random.seed(random_seed)
         
-        # ACO parameters with improved defaults
-        n_ants = parameters.get('n_ants', 40)  # Increased from 10 to 40
-        alpha = parameters.get('alpha', 1.0)
-        beta = parameters.get('beta', 2.0)
-        evaporation_rate = parameters.get('evaporation_rate', 0.3)
-        pheromone_deposit = parameters.get('pheromone_deposit', 100.0)
+        # ACO parameters (SESUAI NOTEBOOK)
+        n_ants = parameters.get('n_ants', 100)
+        alpha = parameters.get('alpha', 1)
+        beta = parameters.get('beta', 1)
+        evaporation_rate = parameters.get('evaporation_rate', 0.5)
+        pheromone_deposit = parameters.get('pheromone_deposit', 1)
         
-        # PSO parameters with improved defaults
-        n_particles = parameters.get('n_particles', 8)  # Increased from 10 to 40
-        w = parameters.get('w', 0.5)
-        c1 = parameters.get('c1', 1.5)
-        c2 = parameters.get('c2', 1.5)
+        # PSO parameters (SESUAI NOTEBOOK)
+        n_particles = parameters.get('n_particles', 100)
+        w = parameters.get('w', 0.3)
+        c1 = parameters.get('c1', 0.3)
+        c2 = parameters.get('c2', 0.4)
         
         # Dependency settings
         enable_dependencies = parameters.get('enable_dependencies', False)
+
+        # --- DEBUG LOGGING: Print all parameters being used ---
+        debug_params = {
+            "algorithm": algorithm,
+            "common_parameters": {
+                "iterations": n_iterations,
+                "num_agents": num_default_agents,
+                "enable_dependencies": enable_dependencies,
+                "random_seed": random_seed,
+            }
+        }
+        if algorithm == 'ACO':
+            debug_params['aco_parameters'] = {
+                "num_ants": n_ants,
+                "alpha": alpha,
+                "beta": beta,
+                "evaporation_rate": evaporation_rate,
+                "pheromone_deposit": pheromone_deposit,
+            }
+        elif algorithm == 'PSO':
+            debug_params['pso_parameters'] = {
+                "num_particles": n_particles,
+                "w": w,
+                "c1": c1,
+                "c2": c2,
+            }
+
+        print("\n" + "="*60)
+        print(f"🚀 INITIATING {algorithm} SIMULATION WITH THE FOLLOWING PARAMETERS:")
+        print(json.dumps(debug_params, indent=2))
+        print("="*60 + "\n")
+        # --- END DEBUG LOGGING ---
 
         # Task formatting with flexible ID handling
         formatted_tasks = []
@@ -347,6 +386,33 @@ def stream_scheduling():
                 'ram_usage': ram_usage
             }
             
+            # Handle dependencies - NORMALISASI TIPE DATA untuk konsistensi
+            # Ini sangat penting untuk PSO! PSO sangat sensitif terhadap string/int mismatch
+            dependencies = None
+            for field in ['dependencies', 'Dependencies', 'depends_on', 'prerequisites', 'requires']:
+                if field in task and task[field] is not None:
+                    dependencies = task[field]
+                    break
+            
+            if dependencies:
+                normalized_deps = []
+                if isinstance(dependencies, str):
+                    # Parse string dependencies: "1,2,3" atau "Task_1,Task_2"
+                    deps_list = [d.strip() for d in dependencies.replace(';', ',').split(',') if d.strip()]
+                    normalized_deps = [str(d) for d in deps_list if str(d).lower() not in ['null', 'nan', 'none', '']]
+                elif isinstance(dependencies, (list, tuple)):
+                    # Normalize list/array dependencies - KONVERSI SEMUA KE STRING
+                    normalized_deps = [str(d).strip() for d in dependencies if d is not None and str(d).strip() and str(d).lower() not in ['null', 'nan', 'none', '']]
+                else:
+                    # Single dependency value
+                    dep_str = str(dependencies).strip()
+                    if dep_str and dep_str.lower() not in ['null', 'nan', 'none', '']:
+                        normalized_deps = [dep_str]
+                
+                formatted_task['dependencies'] = normalized_deps
+            else:
+                formatted_task['dependencies'] = []
+            
             # Add all original fields, replacing null values
             for key, value in task.items():
                 if key not in formatted_task:
@@ -357,28 +423,89 @@ def stream_scheduling():
             
             formatted_tasks.append(formatted_task)
         
-        agents = parameters.get('agents')
-        if not agents: agents = [{agent_id_col_for_scheduler: f"Agent-{i+1}"} for i in range(num_default_agents)]
+        # DEBUG: Verifikasi normalisasi dependencies
+        if enable_dependencies:
+            print("\n🔍 DEBUG: Dependency Normalization Check")
+            for task in formatted_tasks[:5]:  # Hanya tampilkan 5 pertama
+                task_id = task.get(task_id_col_for_scheduler)
+                deps = task.get('dependencies', [])
+                print(f"  Task '{task_id}' (type: {type(task_id).__name__})")
+                print(f"    Dependencies: {deps}")
+                if deps:
+                    for dep in deps:
+                        print(f"      - '{dep}' (type: {type(dep).__name__})")
+            print()
         
-        def cost_function(schedule, makespan): return makespan
-        def heuristic_function(task): return 1.0 / max(task.get('length', 1), 0.1)
+        agents = parameters.get('agents')
+        # Generate agents dengan heterogenitas seperti di notebook
+        if not agents:
+            tipe_agen = ['High_Performance', 'Medium_Performance', 'Standard', 'Basic']
+            kapasitas = [1.5, 1.4, 1.3, 1.2, 1.1, 1.0, 0.9, 0.8, 0.7]
+            efisiensi = [1.2, 1.1, 1.0, 0.9, 0.8, 0.7]
+            
+            agents = [{
+                agent_id_col_for_scheduler: f'Agent-{i+1}',
+                'type': tipe_agen[i % len(tipe_agen)],
+                'capacity': random.choice(kapasitas),
+                'efficiency': random.choice(efisiensi)
+            } for i in range(num_default_agents)]
+        
+        # Bobot cost function (SESUAI NOTEBOOK)
+        bobot_waktu = parameters.get('bobot_waktu', 1.0)
+        bobot_keseimbangan_beban = parameters.get('bobot_keseimbangan_beban', 1.0)
+
+        # Cost function SAMA PERSIS dengan notebook
+        def cost_function(jadwal, durasi_total):
+            """
+            Fungsi biaya yang IDENTIK dengan notebook.
+            Formula: durasi_total * (bobot_waktu + bobot_keseimbangan_beban * keseimbangan)
+            """
+            # Hitung keseimbangan beban dari jadwal
+            waktu_selesai = {}
+            for penugasan in jadwal:
+                id_agen = penugasan['agent_id']
+                waktu_akhir = penugasan['finish_time']
+                waktu_selesai[id_agen] = max(waktu_selesai.get(id_agen, 0), waktu_akhir)
+            
+            waktu_list = list(waktu_selesai.values())
+            if len(waktu_list) <= 1:
+                keseimbangan = 0.0
+            else:
+                rata_rata = sum(waktu_list) / len(waktu_list)
+                if rata_rata <= 0:
+                    keseimbangan = 0.0
+                else:
+                    variansi = sum((t - rata_rata) ** 2 for t in waktu_list) / len(waktu_list)
+                    keseimbangan = (variansi ** 0.5) / rata_rata
+            
+            # Formula cost SAMA dengan notebook
+            biaya = durasi_total * (bobot_waktu + bobot_keseimbangan_beban * keseimbangan)
+            return biaya
+
+        def heuristic_function(task):
+            """Fungsi heuristik untuk ACO - SAMA dengan notebook"""
+            duration = max(task.get('length', 1), 0.1)
+            priority = max(task.get('priority', 1), 1.0)
+            return (1.0 / duration) * priority
         
         scheduler = None
         if algorithm == 'ACO':
             scheduler = ACOScheduler(
-                tasks=formatted_tasks, agents=agents, cost_function=cost_function,
-                heuristic_function=heuristic_function, num_default_agents=num_default_agents,
-                task_id_col=task_id_col_for_scheduler, agent_id_col=agent_id_col_for_scheduler,
+                tasks=formatted_tasks, cost_function=cost_function,
+                heuristic_function=heuristic_function, agents=agents,
                 n_ants=n_ants, n_iterations=n_iterations, alpha=alpha, beta=beta,
                 evaporation_rate=evaporation_rate, pheromone_deposit=pheromone_deposit,
-                enable_dependencies=enable_dependencies, random_seed=random_seed
+                task_id_col=task_id_col_for_scheduler, agent_id_col=agent_id_col_for_scheduler,
+                enable_dependencies=enable_dependencies, random_seed=random_seed,
+                num_default_agents=num_default_agents
             )
         elif algorithm == 'PSO':
             scheduler = PSOScheduler(
                 tasks=formatted_tasks, agents=agents, cost_function=cost_function,
-                task_id_col=task_id_col_for_scheduler, agent_id_col=agent_id_col_for_scheduler,
                 n_particles=n_particles, n_iterations=n_iterations, w=w, c1=c1, c2=c2,
-                enable_dependencies=enable_dependencies, random_seed=random_seed
+                task_id_col=task_id_col_for_scheduler, agent_id_col=agent_id_col_for_scheduler,
+                enable_dependencies=enable_dependencies, random_seed=random_seed,
+                num_default_agents=num_default_agents
             )
         else:
             return jsonify({"error": f"Unsupported algorithm: {algorithm}"}), 400
@@ -397,23 +524,99 @@ def stream_scheduling():
             for data_chunk in scheduler.run():
                 yield f"data: {data_chunk}\n\n"
                 # Simpan hasil akhir saat event 'done' diterima
-                chunk_obj = json.loads(data_chunk)
-                if chunk_obj.get("type") == "done":
-                    final_result = chunk_obj
-                    algorithm_computation_time = chunk_obj.get('computation_time', 0)
+                try:
+                    chunk_obj = json.loads(data_chunk)
+                    if chunk_obj.get("type") == "done":
+                        final_result = chunk_obj
+                        algorithm_computation_time = chunk_obj.get('computation_time', 0)
+                except json.JSONDecodeError as e:
+                    print(f"Warning: Failed to parse JSON chunk: {e}")
+                    continue
             
             total_execution_time = time.time() - start_time
             
             # Load balance index now comes directly from the final result
             load_balance_index = final_result.get('load_balance_index', 0)
 
-            # Kirim data metrik final
+            # Buat full schedule table seperti di notebook
+            schedule_data = final_result.get('schedule', [])
+            full_schedule_table = {
+                "columns": ["task_id", "agent_id", "start_time", "finish_time"],
+                "data": [[item.get('task_id'), item.get('agent_id'), 
+                         round(item.get('start_time', 0), 2), 
+                         round(item.get('finish_time', 0), 2)] 
+                        for item in schedule_data],
+                "total_rows": len(schedule_data)
+            }
+            
+            # Buat agent info table untuk export
+            agent_finish_times = final_result.get('agent_finish_times', {})
+            agent_info_table = {
+                "columns": ["agent_id", "type", "capacity", "efficiency", "total_tasks", "finish_time"],
+                "data": []
+            }
+            
+            for agent in agents:
+                agent_id = agent.get(agent_id_col_for_scheduler)
+                agent_tasks = [s for s in schedule_data if s.get('agent_id') == agent_id]
+                agent_info_table["data"].append([
+                    agent_id,
+                    agent.get('type', 'N/A'),
+                    round(agent.get('capacity', 1.0), 2),
+                    round(agent.get('efficiency', 1.0), 2),
+                    len(agent_tasks),
+                    round(agent_finish_times.get(agent_id, 0), 2)
+                ])
+            agent_info_table["total_rows"] = len(agent_info_table["data"])
+            
+            # Kirim data metrik final LENGKAP dengan semua data untuk export
             final_metrics = {
                 "type": "final_metrics",
                 "total_execution_time": round(total_execution_time * 1000, 2),  # Convert to milliseconds
                 "computation_time": algorithm_computation_time,  # Already in milliseconds from algorithm
-                "load_balance_index": load_balance_index
+                "load_balance_index": load_balance_index,
+                # Tabel jadwal lengkap seperti di notebook
+                "full_schedule_table": full_schedule_table,
+                # Tabel agent info dengan heterogenitas
+                "agent_info_table": agent_info_table,
+                # Data lengkap untuk export di frontend
+                "full_result": {
+                    "algorithm": algorithm,
+                    "schedule": schedule_data,
+                    "makespan": final_result.get('makespan', 0),
+                    "load_balance_index": load_balance_index,
+                    "computation_time": algorithm_computation_time,
+                    "agent_finish_times": final_result.get('agent_finish_times', {}),
+                    "iteration_history": final_result.get('iteration_history', []),
+                    "total_tasks": len(schedule_data),
+                    "total_agents": len(final_result.get('agent_finish_times', {})),
+                    "timestamp": datetime.now().isoformat(),
+                    "parameters": {
+                        "enable_dependencies": enable_dependencies,
+                        "random_seed": random_seed,
+                        "n_iterations": n_iterations,
+                        "num_agents": num_default_agents
+                    }
+                }
             }
+            
+            # Tambahkan parameter spesifik per algorithm
+            if algorithm == 'ACO':
+                final_metrics["full_result"]["parameters"].update({
+                    "n_ants": n_ants,
+                    "alpha": alpha,
+                    "beta": beta,
+                    "evaporation_rate": evaporation_rate,
+                    "pheromone_deposit": pheromone_deposit
+                })
+            elif algorithm == 'PSO':
+                final_metrics["full_result"]["parameters"].update({
+                    "n_particles": n_particles,
+                    "w": w,
+                    "c1": c1,
+                    "c2": c2
+                })
+            
             yield f"data: {json.dumps(final_metrics)}\n\n"
 
         return Response(generate(), mimetype='text/event-stream')
