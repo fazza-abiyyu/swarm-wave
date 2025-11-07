@@ -1,369 +1,165 @@
 import numpy as np
 import random
 import json
+import pandas as pd
+import time
+from .base import MultiAgentScheduler
 
-class ACO_MultiAgent_Scheduler:
-    def __init__(self, tasks, cost_function, heuristic_function,
-                 agents=None, num_default_agents=3,
-                 task_id_col='id', agent_id_col='id',
-                 n_ants=10, n_iterations=100, alpha=1.0, beta=2.0,
-                 evaporation_rate=0.5, pheromone_deposit=100.0,
-                 enable_dependencies=False, random_seed=None):
-        
-        # Core configuration
-        self.tasks = tasks
-        self.cost_function = cost_function
-        self.heuristic_function = heuristic_function
-        self.task_id_col = task_id_col
-        self.agent_id_col = agent_id_col
-        self.enable_dependencies = enable_dependencies
+class ACO_MultiAgent_Scheduler(MultiAgentScheduler):
+    """Implementasi ACO (Ant Colony Optimization)."""
 
-        # Agents setup
-        if not agents:
-            self.agents = [{self.agent_id_col: f'DefaultAgent-{i+1}'} for i in range(num_default_agents)]
-        else:
-            self.agents = agents
-
-        # Algorithm parameters
-        self.n_tasks = len(self.tasks)
-        self.n_agents = len(self.agents)
-        self.n_ants = n_ants
-        self.n_iterations = n_iterations
-        self.alpha = alpha
-        self.beta = beta
-        self.evaporation_rate = evaporation_rate
-        self.pheromone_deposit = pheromone_deposit
+    def __init__(self, tasks, cost_function, heuristic_function, agents=None, n_ants=10, n_iterations=100,
+                 alpha=0.9, beta=2.0, evaporation_rate=0.5, pheromone_deposit=100, **kwargs):
+        super().__init__(tasks, agents, cost_function, **kwargs)
+        self.fungsi_heuristik = heuristic_function
+        self.jumlah_semut = n_ants if self.jumlah_tugas > 0 else 0
+        self.jumlah_iterasi = n_iterations if self.jumlah_tugas > 0 else 0
+        self.alpha, self.beta = alpha, beta
+        self.tingkat_penguapan, self.deposit_feromon = evaporation_rate, pheromone_deposit
         self.prioritize_balance = True
 
-        # Task mapping for efficient lookup
-        self.task_map = {str(task[self.task_id_col]): i for i, task in enumerate(self.tasks)}
-        self.rev_task_map = {i: str(task[self.task_id_col]) for i, task in enumerate(self.tasks)}
+        if self.jumlah_tugas > 0:
+            self.feromon = np.ones((self.jumlah_tugas, self.jumlah_tugas))
+            self.heuristik = self.calculate_heuristics()
+        else:
+            self.feromon = self.heuristik = np.array([[]])
 
-        # Dependency handling
-        self.dependencies = self._parse_dependencies() if self.enable_dependencies else {}
-        self.dependency_graph = self._build_dependency_graph() if self.enable_dependencies else None
-        
-        # Check for circular dependencies
-        if self.enable_dependencies and self._detect_circular_dependencies():
-            print("Warning: Circular dependencies detected. Algorithm will use fallback mechanisms.")
-
-        # Set random seed for reproducibility
-        if random_seed is not None:
-            np.random.seed(random_seed)
-            random.seed(random_seed)
-
-        # Algorithm state
-        self.pheromones = np.ones((self.n_tasks, self.n_tasks))
-        self.heuristics = self._calculate_heuristics()
-        self.best_schedule = None
-        self.best_cost = float('inf')
-        self.best_load_balance_index = float('inf')
-        
-    def _calculate_load_balance_index(self, agent_finish_times):
-        """Hitung load balance index (lower = better balance)"""
-        times = list(agent_finish_times.values())
-        if len(times) <= 1:
-            return 0.0
-        
-        mean_time = sum(times) / len(times)
-        if mean_time == 0:
-            return 0.0
-            
-        # Standard deviation normalized by mean
-        variance = sum((t - mean_time) ** 2 for t in times) / len(times)
-        std_dev = variance ** 0.5
-        load_balance_index = std_dev / mean_time
-        return load_balance_index
-    
-    def _detect_circular_dependencies(self):
-        """Detect circular dependencies using DFS"""
-        if not self.enable_dependencies:
-            return False
-            
-        # Use DFS to detect cycles
-        visited = set()
-        rec_stack = set()
-        
-        def has_cycle(task_id):
-            if task_id in rec_stack:
-                return True
-            if task_id in visited:
-                return False
-                
-            visited.add(task_id)
-            rec_stack.add(task_id)
-            
-            for dep_id in self.dependencies.get(task_id, []):
-                if has_cycle(dep_id):
-                    return True
-                    
-            rec_stack.remove(task_id)
-            return False
-        
-        for task_id in self.dependencies:
-            if task_id not in visited:
-                if has_cycle(task_id):
-                    return True
-        return False
-        
-    def _parse_dependencies(self):
-        """Parse task dependencies with robust field handling"""
-        dependencies = {}
-        for task in self.tasks:
-            task_id = str(task[self.task_id_col])
-            
-            # Find dependency field with flexible naming
-            deps = None
-            for field in ['dependencies', 'depends_on', 'prerequisites', 'requires', 'Dependencies']:
-                if field in task and task[field] is not None:
-                    deps = task[field]
-                    break
-            
-            # Parse dependency data
-            if deps:
-                if isinstance(deps, str):
-                    if deps.strip() == '' or deps.lower() in ['null', 'nan', 'none']:
-                        deps = []
-                    else:
-                        deps = [str(d).strip() for d in deps.replace(';', ',').split(',') 
-                               if d.strip() and str(d).lower() not in ['null', 'nan', 'none', '']]
-                elif isinstance(deps, (list, tuple)):
-                    deps = [str(d).strip() for d in deps 
-                           if d is not None and str(d).strip() and str(d).lower() not in ['null', 'nan', 'none']]
-                elif deps is not None:
-                    dep_str = str(deps).strip()
-                    deps = [dep_str] if dep_str and dep_str.lower() not in ['null', 'nan', 'none'] else []
-                else:
-                    deps = []
-            else:
-                deps = []
-            
-            dependencies[task_id] = deps
-        return dependencies
-    
-    def _build_dependency_graph(self):
-        """Build dependency graph for validation"""
-        graph = {}
-        for task_id in self.dependencies:
-            graph[task_id] = self.dependencies[task_id]
-        return graph
-    
-    def _is_dependency_satisfied(self, task_id, completed_tasks):
-        """Check apakah semua dependencies sudah completed"""
-        if not self.enable_dependencies or task_id not in self.dependencies:
-            return True
-        
-        for dep_id in self.dependencies[task_id]:
-            if dep_id not in completed_tasks:
-                return False
-        return True
-    
-    def _get_ready_tasks(self, remaining_tasks, completed_tasks):
-        """Get tasks yang dependencies-nya sudah satisfied"""
-        if not self.enable_dependencies:
-            return remaining_tasks
-            
-        ready_tasks = []
-        for task_idx in remaining_tasks:
-            task_id = str(self.rev_task_map[task_idx])
-            if self._is_dependency_satisfied(task_id, completed_tasks):
-                ready_tasks.append(task_idx)
-        return ready_tasks
-        
-    def _calculate_heuristics(self):
-        heuristics = np.zeros((self.n_tasks, self.n_tasks))
-        for i in range(self.n_tasks):
-            for j in range(self.n_tasks):
+    def calculate_heuristics(self):
+        """Hitung nilai heuristik untuk semua pasangan tugas."""
+        heuristik = np.zeros((self.jumlah_tugas, self.jumlah_tugas))
+        for i in range(self.jumlah_tugas):
+            for j in range(self.jumlah_tugas):
                 if i != j:
-                    heuristics[i, j] = self.heuristic_function(self.tasks[j])
-        return heuristics
+                    heuristik[i, j] = self.fungsi_heuristik(self.tugas[j])
+        return heuristik
 
-    def _construct_solution(self):
-        """Enhanced solution construction with dependency handling"""
-        tour = []
-        remaining_tasks = set(range(self.n_tasks))
-        completed_task_ids = set()
-        current_task_idx = None
+    def construct_solution(self):
+        """Konstruksi solusi oleh satu semut."""
+        if self.jumlah_tugas == 0:
+            return []
+        rute, tersisa = [], set(range(self.jumlah_tugas))
+        selesai = set()
+        saat_ini = None
+        iterasi_maks = self.jumlah_tugas * 2
+        hitung_iterasi = 0
 
-        # Safety counter to prevent infinite loops
-        max_iterations = self.n_tasks * 2
-        iteration_count = 0
+        while tersisa and hitung_iterasi < iterasi_maks:
+            hitung_iterasi += 1
+            siap = self.get_ready_tasks(list(tersisa), selesai)
 
-        while remaining_tasks and iteration_count < max_iterations:
-            iteration_count += 1
-            
-            # Get tasks whose dependencies are satisfied
-            ready_tasks = self._get_ready_tasks(list(remaining_tasks), completed_task_ids)
-            
-            if not ready_tasks:
-                # Fallback for circular dependencies: find task with fewest remaining dependencies
-                min_deps = float('inf')
-                task_to_force = -1
-                for task_idx in remaining_tasks:
-                    task_id = self.rev_task_map[task_idx]
-                    deps = self.dependencies.get(task_id, [])
-                    unsatisfied_deps = len([d for d in deps if d not in completed_task_ids])
-                    if unsatisfied_deps < min_deps:
-                        min_deps = unsatisfied_deps
-                        task_to_force = task_idx
-                if task_to_force != -1:
-                    ready_tasks = [task_to_force]
-                else: # Should not happen if remaining_tasks is not empty
-                    break
+            if not siap:
+                min_tidak_terpenuhi = float('inf')
+                tugas_paksa = None
+                for idx in tersisa:
+                    tid = self.peta_tugas_terbalik[idx]
+                    tidak_terpenuhi = len([d for d in self.dependensi.get(tid, []) if d not in selesai])
+                    if tidak_terpenuhi < min_tidak_terpenuhi:
+                        min_tidak_terpenuhi, tugas_paksa = tidak_terpenuhi, idx
+                siap = [tugas_paksa] if tugas_paksa is not None else []
 
-            # If it's the first task or the current task is not ready, pick a random ready task
-            if current_task_idx is None or current_task_idx not in ready_tasks:
-                next_task_idx = random.choice(ready_tasks)
+            if not siap:
+                break
+
+            if saat_ini is None or saat_ini not in siap:
+                tugas_berikutnya = random.choice(siap)
             else:
-                # Use pheromone-based selection from the ready tasks
-                probabilities = self._calculate_probabilities(current_task_idx, ready_tasks)
-                if len(ready_tasks) == 1:
-                    next_task_idx = ready_tasks[0]
-                else:
-                    next_task_idx = np.random.choice(ready_tasks, p=probabilities)
-            
-            tour.append(next_task_idx)
-            remaining_tasks.remove(next_task_idx)
-            completed_task_ids.add(self.rev_task_map[next_task_idx])
-            current_task_idx = next_task_idx
-        
-        # Ensure all tasks are in the tour, even if dependencies were problematic
-        if remaining_tasks:
-            tour.extend(sorted(list(remaining_tasks)))
-            
-        return tour
+                probabilitas = self.calculate_probabilities(saat_ini, siap)
+                tugas_berikutnya = np.random.choice(siap, p=probabilitas) if len(siap) > 1 else siap[0]
 
-    def _calculate_probabilities(self, current_task_idx, unvisited_tasks):
-        pheromone_values = self.pheromones[current_task_idx, unvisited_tasks] ** self.alpha
-        heuristic_values = self.heuristics[current_task_idx, unvisited_tasks] ** self.beta
-        desirability = pheromone_values * heuristic_values
-        total_desirability = np.sum(desirability)
-        if total_desirability == 0:
-            return np.ones(len(unvisited_tasks)) / len(unvisited_tasks)
-        probabilities = desirability / total_desirability
-        return probabilities
-        
-    def _assign_to_agents(self, task_sequence_indices):
-        """Enhanced agent assignment dengan dependency dan load balancing consideration"""
-        agent_finish_times = {agent[self.agent_id_col]: 0 for agent in self.agents}
-        task_finish_times = {}  # Optimization: O(1) lookup for dependency finish times
-        schedule = []
-        
-        for task_idx in task_sequence_indices:
-            task = self.tasks[task_idx]
-            task_id = str(task[self.task_id_col])
-            duration = task.get('length', 1)
-            
-            # Cari agent terbaik dengan combined score
-            best_agent_id = self._find_best_agent(agent_finish_times, duration)
-            
-            # Calculate start time berdasarkan dependencies
-            dependency_finish_time = 0
-            if self.enable_dependencies and task_id in self.dependencies:
-                for dep_id in self.dependencies[task_id]:
-                    # Optimization: Use dict for faster lookup
-                    dependency_finish_time = max(dependency_finish_time, task_finish_times.get(dep_id, 0))
+            rute.append(tugas_berikutnya)
+            tersisa.remove(tugas_berikutnya)
+            selesai.add(self.peta_tugas_terbalik[tugas_berikutnya])
+            saat_ini = tugas_berikutnya
 
-            # Start time adalah max dari agent availability dan dependency completion
-            start_time = max(agent_finish_times[best_agent_id], dependency_finish_time)
-            finish_time = start_time + duration
-            agent_finish_times[best_agent_id] = finish_time
-            task_finish_times[task_id] = finish_time # Optimization: Store finish time
-            
-            schedule.append({
-                'task_id': task_id,
-                'agent_id': best_agent_id,
-                'start_time': start_time,
-                'finish_time': finish_time
-            })
-            
-        makespan = max(agent_finish_times.values()) if agent_finish_times else 0
-        load_balance_index = self._calculate_load_balance_index(agent_finish_times)
-        
-        return schedule, makespan, load_balance_index
-    
-    def _find_best_agent(self, agent_finish_times, task_duration):
-        """Find agent dengan balance antara makespan dan load balancing - AGGRESSIVE VERSION"""
-        best_score = float('inf')
-        best_agent = None
-        current_max_time = max(agent_finish_times.values()) if agent_finish_times else 0
-        
-        for agent_id in agent_finish_times:
-            # Simulasi assignment ke agent ini
-            temp_finish_times = agent_finish_times.copy()
-            temp_finish_times[agent_id] += task_duration
-            
-            if self.prioritize_balance:
-                # PURE load balancing approach
-                balance_score = self._calculate_load_balance_index(temp_finish_times)
-                makespan_penalty = max(temp_finish_times.values()) / 1000  # Minimal weight
-                combined_score = balance_score * 1000 + makespan_penalty
-            else:
-                # Balanced approach
-                makespan_penalty = max(temp_finish_times.values())
-                balance_penalty = self._calculate_load_balance_index(temp_finish_times) * current_max_time * 2
-                combined_score = makespan_penalty + balance_penalty
-            
-            if combined_score < best_score:
-                best_score = combined_score
-                best_agent = agent_id
-        
-        return best_agent
+        rute.extend(sorted(tersisa))
+        return rute
 
-    def _update_pheromones(self, all_tours, all_costs):
-        self.pheromones *= (1 - self.evaporation_rate)
-        for tour, cost in zip(all_tours, all_costs):
-            if cost == 0: continue
-            if cost <= 0: # Handle zero or negative cost
+    def calculate_probabilities(self, saat_ini, belum_dikunjungi):
+        """Hitung probabilitas pemilihan tugas berikutnya."""
+        if not belum_dikunjungi:
+            return np.array([])
+        phero = self.feromon[saat_ini, belum_dikunjungi] ** self.alpha
+        heur = self.heuristik[saat_ini, belum_dikunjungi] ** self.beta
+        keinginan = phero * heur
+        total = np.sum(keinginan)
+        return keinginan / total if total > 0 else np.ones(len(belum_dikunjungi)) / len(belum_dikunjungi)
+
+    def update_pheromones(self, rute_list, biaya_list):
+        """Update matriks feromon berdasarkan solusi."""
+        if not rute_list or self.jumlah_tugas == 0:
+            return
+        self.feromon *= (1 - self.tingkat_penguapan)
+        for rute, biaya in zip(rute_list, biaya_list):
+            if biaya == 0 or len(rute) < 2:
                 continue
-            pheromone_to_add = self.pheromone_deposit / cost
-            for i in range(self.n_tasks - 1):
-                self.pheromones[tour[i], tour[i+1]] += pheromone_to_add
-            self.pheromones[tour[-1], tour[0]] += pheromone_to_add
-    
-    def run(self):
-        import time
-        computation_start_time = time.time()
-        
-        log_message = "Starting ACO optimization..."
-        yield json.dumps({"type": "log", "message": log_message})
-        
-        for i in range(self.n_iterations):
-            all_tours, all_costs = [], []
-            new_best_found_in_iter = False
-            for _ in range(self.n_ants):
-                task_sequence = self._construct_solution()
-                schedule, makespan, load_balance_index = self._assign_to_agents(task_sequence)
-                cost = self.cost_function(schedule, makespan)
-                all_tours.append(task_sequence)
-                all_costs.append(cost)
-                if cost < self.best_cost or (cost == self.best_cost and load_balance_index < self.best_load_balance_index):
-                    self.best_cost = cost
-                    self.best_schedule = schedule
-                    self.best_load_balance_index = load_balance_index
-                    log_message = f"Iteration {i + 1}: New best solution! Makespan: {self.best_cost:.2f}, Load Balance: {load_balance_index:.4f}"
-                    yield json.dumps({"type": "log", "message": log_message})
-                    new_best_found_in_iter = True
-                
-            self._update_pheromones(all_tours, all_costs)
-            
-            # Kirim data update untuk grafik dan log progress
-            progress_log = f"Progress: Iteration {i + 1}/{self.n_iterations} -> Current Best: {self.best_cost:.2f}"
-            yield json.dumps({
-                "type": "iteration",
-                "iteration": i + 1,
-                "makespan": self.best_cost,
-                "log_message": progress_log
+            tambah = self.deposit_feromon / biaya
+            for i in range(len(rute) - 1):
+                self.feromon[rute[i], rute[i+1]] += tambah
+            if len(rute) >= 2:
+                self.feromon[rute[-1], rute[0]] += tambah
+
+    def optimize(self, show_progress=True):
+        """Optimasi menggunakan ACO."""
+        urutan_awal = list(range(self.jumlah_tugas))
+        jadwal_awal, waktu_agen_awal, keseimbangan_awal = self.assign_to_agents(urutan_awal)
+        durasi_total_awal = max(waktu_agen_awal.values(), default=0)
+        self.biaya_terbaik = self.fungsi_biaya(jadwal_awal, durasi_total_awal)
+        self.makespan_terbaik = durasi_total_awal
+        self.jadwal_terbaik = jadwal_awal
+        self.indeks_keseimbangan_terbaik = keseimbangan_awal
+
+        waktu_mulai = time.time()
+
+        for i in range(self.jumlah_iterasi):
+            rute_list, biaya_list = [], []
+            ada_terbaik_baru = False
+
+            for _ in range(self.jumlah_semut):
+                urutan = self.construct_solution()
+                if urutan:
+                    jadwal, waktu_agen, indeks_keseimbangan = self.assign_to_agents(urutan)
+                    durasi_total = max(waktu_agen.values(), default=0)
+                    biaya = self.fungsi_biaya(jadwal, durasi_total)
+                    rute_list.append(urutan)
+                    biaya_list.append(biaya)
+
+                    if biaya < self.biaya_terbaik or (biaya == self.biaya_terbaik and indeks_keseimbangan < self.indeks_keseimbangan_terbaik):
+                        self.biaya_terbaik, self.makespan_terbaik, self.jadwal_terbaik, self.indeks_keseimbangan_terbaik = biaya, durasi_total, jadwal, indeks_keseimbangan
+                        ada_terbaik_baru = True
+                else:
+                    rute_list.append([])
+                    biaya_list.append(float('inf'))
+
+            self.update_pheromones(rute_list, biaya_list)
+
+            self.riwayat_iterasi.append({
+                'iteration': i + 1,
+                'best_makespan': self.makespan_terbaik if hasattr(self, 'makespan_terbaik') and self.makespan_terbaik != float('inf') else 0.0,
+                'load_balance': self.indeks_keseimbangan_terbaik if self.indeks_keseimbangan_terbaik != float('inf') else 0.0
             })
 
-        computation_time = time.time() - computation_start_time
+            if show_progress and ada_terbaik_baru:
+                print(f"Iterasi {i+1}: Terbaik baru! Makespan: {self.makespan_terbaik:.2f}, Load Balance: {self.indeks_keseimbangan_terbaik:.4f}")
+            elif show_progress:
+                print(f"Iterasi {i+1}: Makespan Terbaik: {self.makespan_terbaik:.2f}, Load Balance: {self.indeks_keseimbangan_terbaik:.4f}")
 
-        # Kirim hasil final
-        yield json.dumps({
-            "type": "done",
-            "schedule": self.best_schedule,
-            "makespan": self.best_cost,
-            "load_balance_index": self.best_load_balance_index,
-            "computation_time": round(computation_time * 1000, 2),  # Convert to milliseconds
-            "log_message": "ACO Optimization Finished!"
-        })
+        waktu_akhir_agen_final = {}
+        if self.jadwal_terbaik:
+            for penugasan in self.jadwal_terbaik:
+                id_agen = penugasan['agent_id']
+                waktu_akhir = penugasan['finish_time']
+                waktu_akhir_agen_final[id_agen] = max(waktu_akhir_agen_final.get(id_agen, 0), waktu_akhir)
+
+        return {
+            'schedule': pd.DataFrame(self.jadwal_terbaik) if self.jadwal_terbaik else pd.DataFrame(),
+            'makespan': self.makespan_terbaik if hasattr(self, 'makespan_terbaik') and self.makespan_terbaik != float('inf') else 0.0,
+            'load_balance_index': self.indeks_keseimbangan_terbaik if self.indeks_keseimbangan_terbaik != float('inf') else 0.0,
+            'agent_finish_times': waktu_akhir_agen_final,
+            'computation_time': time.time() - waktu_mulai,
+            'iteration_history': pd.DataFrame(self.riwayat_iterasi),
+            'algorithm': self.__class__.__name__
+        }
+
+
+# Alias untuk kompatibilitas
+ACOScheduler = ACO_MultiAgent_Scheduler
