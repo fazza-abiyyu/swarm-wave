@@ -87,7 +87,7 @@ CORS(app,
          # Production deployments
          'https://swarmwave.vercel.app',
          'https://swarmwave.vanila.app',
-         # Wildcard for subdomains (use carefully in production)
+         # Wildcard for subdomains
          'https://*.vanila.app',
          'https://*.vercel.app',
          'https://swarmwave.app',
@@ -510,7 +510,7 @@ def stream_scheduling():
         else:
             return jsonify({"error": f"Unsupported algorithm: {algorithm}"}), 400
 
-        # Generator function for streaming
+        # Generator function for streaming with real-time updates
         def generate():
             start_time = time.time()
             final_result = None
@@ -519,10 +519,21 @@ def stream_scheduling():
             # Mengirim data awal
             initial_data = {"type": "start", "message": f"Starting {algorithm} simulation..."}
             yield f"data: {json.dumps(initial_data)}\n\n"
+            
+            # Send keep-alive comment every iteration to prevent timeout
+            iteration_count = 0
 
             # Iterasi melalui generator scheduler
             for data_chunk in scheduler.run():
+                # Kirim data langsung tanpa buffering
                 yield f"data: {data_chunk}\n\n"
+                
+                # Force flush to client immediately
+                iteration_count += 1
+                if iteration_count % 10 == 0:
+                    # Send keep-alive comment to prevent connection timeout
+                    yield f": keepalive {iteration_count}\n\n"
+                
                 # Simpan hasil akhir saat event 'done' diterima
                 try:
                     chunk_obj = json.loads(data_chunk)
@@ -619,7 +630,12 @@ def stream_scheduling():
             
             yield f"data: {json.dumps(final_metrics)}\n\n"
 
-        return Response(generate(), mimetype='text/event-stream')
+        # Create response with proper SSE headers for real-time streaming
+        response = Response(generate(), mimetype='text/event-stream')
+        response.headers['Cache-Control'] = 'no-cache, no-transform'
+        response.headers['X-Accel-Buffering'] = 'no'  # Disable nginx buffering
+        response.headers['Connection'] = 'keep-alive'
+        return response
 
     except Exception as e:
         error_details = {"type": "error", "message": str(e), "traceback": traceback.format_exc()}
@@ -650,4 +666,5 @@ def get_algorithms():
 
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5001))  # Use PORT env var, default to 5001
-    app.run(debug=True, host='0.0.0.0', port=port)
+    # Run with threaded=True to support concurrent streaming requests
+    app.run(debug=True, host='0.0.0.0', port=port, threaded=True)
