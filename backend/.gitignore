@@ -12,6 +12,7 @@ build/
 *.manifest
 *.spec
 *.vscode
+.python-version
 
 # Flask instance folder
 instance/

@@ -199,7 +199,7 @@ class MultiAgentScheduler:
         keseimbangan_beban = self.calculate_load_balance_index(waktu_selesai_agen)
         return jadwal, waktu_selesai_agen, keseimbangan_beban
 
-    def optimize(self, n_iterations=100, show_progress=True):
+    def optimize(self, n_iterations=100, show_progress=True, progress_callback=None):
         """Metode optimasi utama."""
         if self.jumlah_tugas == 0 or self.jumlah_agen == 0:
             if show_progress:
@@ -243,27 +243,84 @@ class MultiAgentScheduler:
         }
 
     def run(self):
-        """Jalankan optimasi dengan yield progress."""
+        """Jalankan optimasi dengan yield progress secara real-time menggunakan threading."""
         import json
-        hasil = self.optimize(show_progress=False)
-        for _, row in hasil['iteration_history'].iterrows():
-            iteration = float(row["iteration"])
-            makespan = float(row["best_makespan"])
-            yield json.dumps({
+        import threading
+        import queue
+        import time
+        
+        # Queue untuk komunikasi antar thread
+        progress_queue = queue.Queue()
+        result_container = {'result': None, 'error': None}
+        
+        # Callback untuk mengirim progress ke queue
+        def progress_callback(data):
+            iteration = float(data["iteration"])
+            makespan = float(data["best_makespan"])
+            progress_queue.put(json.dumps({
                 "type": "iteration", 
                 "iteration": iteration, 
                 "makespan": makespan,
                 "log_message": f"Iteration {int(iteration)}: Best Makespan = {makespan:.2f}s"
-            })
+            }))
         
-        final_makespan = float(hasil["makespan"])
-        computation_time = float(hasil.get("computation_time", 0)) * 1000  # Convert to ms
-        yield json.dumps({
-            "type": "done", 
-            "schedule": hasil["schedule"].to_dict("records"), 
-            "makespan": final_makespan, 
-            "load_balance_index": float(hasil["load_balance_index"]), 
-            "agent_finish_times": hasil["agent_finish_times"],
-            "computation_time": computation_time,
-            "log_message": f"Optimization complete! Best Makespan: {final_makespan:.2f}s (computed in {computation_time:.2f}ms)"
-        })
+        # Function untuk menjalankan optimize di thread terpisah
+        def run_optimize():
+            try:
+                result_container['result'] = self.optimize(show_progress=False, progress_callback=progress_callback)
+            except Exception as e:
+                result_container['error'] = e
+            finally:
+                # Sinyal bahwa optimasi selesai
+                progress_queue.put(None)
+        
+        # Mulai thread optimasi
+        thread = threading.Thread(target=run_optimize, daemon=True)
+        thread.start()
+        
+        # Yield progress secara real-time dari queue
+        while True:
+            try:
+                # Timeout untuk menghindari blocking forever
+                item = progress_queue.get(timeout=1.0)
+                
+                if item is None:
+                    # Sinyal selesai
+                    break
+                    
+                yield item
+                
+            except queue.Empty:
+                # Tidak ada data, cek apakah thread masih hidup
+                if not thread.is_alive():
+                    break
+                continue
+        
+        # Tunggu thread selesai
+        thread.join(timeout=5.0)
+        
+        # Check for errors
+        if result_container['error']:
+            raise result_container['error']
+        
+        # Yield hasil akhir
+        hasil = result_container['result']
+        if hasil:
+            final_makespan = float(hasil["makespan"])
+            computation_time = float(hasil.get("computation_time", 0)) * 1000  # Convert to ms
+            
+            # Convert iteration_history from DataFrame to list of records
+            iteration_history = []
+            if "iteration_history" in hasil and not hasil["iteration_history"].empty:
+                iteration_history = hasil["iteration_history"].to_dict("records")
+            
+            yield json.dumps({
+                "type": "done", 
+                "schedule": hasil["schedule"].to_dict("records"), 
+                "makespan": final_makespan, 
+                "load_balance_index": float(hasil["load_balance_index"]), 
+                "agent_finish_times": hasil["agent_finish_times"],
+                "computation_time": computation_time,
+                "iteration_history": iteration_history,
+                "log_message": f"Optimization complete! Best Makespan: {final_makespan:.2f}s (computed in {computation_time:.2f}ms)"
+            })

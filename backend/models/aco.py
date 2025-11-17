@@ -98,13 +98,13 @@ class ACO_MultiAgent_Scheduler(MultiAgentScheduler):
             if len(rute) >= 2:
                 self.feromon[rute[-1], rute[0]] += tambah
 
-    def optimize(self, show_progress=True):
+    def optimize(self, show_progress=True, progress_callback=None):
         """Optimasi menggunakan ACO."""
         urutan_awal = list(range(self.jumlah_tugas))
         jadwal_awal, waktu_agen_awal, keseimbangan_awal = self.assign_to_agents(urutan_awal)
         durasi_total_awal = max(waktu_agen_awal.values(), default=0)
         self.biaya_terbaik = self.fungsi_biaya(jadwal_awal, durasi_total_awal)
-        self.makespan_terbaik = durasi_total_awal
+        self.durasi_terbaik = durasi_total_awal  # Simpan makespan aktual
         self.jadwal_terbaik = jadwal_awal
         self.indeks_keseimbangan_terbaik = keseimbangan_awal
 
@@ -124,7 +124,10 @@ class ACO_MultiAgent_Scheduler(MultiAgentScheduler):
                     biaya_list.append(biaya)
 
                     if biaya < self.biaya_terbaik or (biaya == self.biaya_terbaik and indeks_keseimbangan < self.indeks_keseimbangan_terbaik):
-                        self.biaya_terbaik, self.makespan_terbaik, self.jadwal_terbaik, self.indeks_keseimbangan_terbaik = biaya, durasi_total, jadwal, indeks_keseimbangan
+                        self.biaya_terbaik = biaya
+                        self.durasi_terbaik = durasi_total  # Simpan makespan aktual
+                        self.jadwal_terbaik = jadwal
+                        self.indeks_keseimbangan_terbaik = indeks_keseimbangan
                         ada_terbaik_baru = True
                 else:
                     rute_list.append([])
@@ -134,14 +137,22 @@ class ACO_MultiAgent_Scheduler(MultiAgentScheduler):
 
             self.riwayat_iterasi.append({
                 'iteration': i + 1,
-                'best_makespan': self.makespan_terbaik if hasattr(self, 'makespan_terbaik') and self.makespan_terbaik != float('inf') else 0.0,
+                'best_makespan': self.durasi_terbaik if self.durasi_terbaik != float('inf') else 0.0,
                 'load_balance': self.indeks_keseimbangan_terbaik if self.indeks_keseimbangan_terbaik != float('inf') else 0.0
             })
 
+            # Real-time streaming callback
+            if progress_callback:
+                progress_callback({
+                    'iteration': i + 1,
+                    'best_makespan': self.durasi_terbaik if self.durasi_terbaik != float('inf') else 0.0,
+                    'load_balance': self.indeks_keseimbangan_terbaik if self.indeks_keseimbangan_terbaik != float('inf') else 0.0
+                })
+
             if show_progress and ada_terbaik_baru:
-                print(f"Iterasi {i+1}: Terbaik baru! Makespan: {self.makespan_terbaik:.2f}, Load Balance: {self.indeks_keseimbangan_terbaik:.4f}")
+                print(f"Iterasi {i+1}: Terbaik baru! Makespan: {self.durasi_terbaik:.2f}, Load Balance: {self.indeks_keseimbangan_terbaik:.4f}")
             elif show_progress:
-                print(f"Iterasi {i+1}: Makespan Terbaik: {self.makespan_terbaik:.2f}, Load Balance: {self.indeks_keseimbangan_terbaik:.4f}")
+                print(f"Iterasi {i+1}: Makespan Terbaik: {self.durasi_terbaik:.2f}, Load Balance: {self.indeks_keseimbangan_terbaik:.4f}")
 
         waktu_akhir_agen_final = {}
         if self.jadwal_terbaik:
@@ -152,7 +163,7 @@ class ACO_MultiAgent_Scheduler(MultiAgentScheduler):
 
         return {
             'schedule': pd.DataFrame(self.jadwal_terbaik) if self.jadwal_terbaik else pd.DataFrame(),
-            'makespan': self.makespan_terbaik if hasattr(self, 'makespan_terbaik') and self.makespan_terbaik != float('inf') else 0.0,
+            'makespan': self.durasi_terbaik if self.durasi_terbaik != float('inf') else 0.0,
             'load_balance_index': self.indeks_keseimbangan_terbaik if self.indeks_keseimbangan_terbaik != float('inf') else 0.0,
             'agent_finish_times': waktu_akhir_agen_final,
             'computation_time': time.time() - waktu_mulai,

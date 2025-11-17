@@ -8,6 +8,7 @@ import platform
 import sys
 import random
 from datetime import datetime
+import numpy as np  # Pastikan numpy diimport
 from models.aco import ACO_MultiAgent_Scheduler as ACOScheduler
 from models.pso import PSO_MultiAgent_Scheduler as PSOScheduler
 
@@ -17,7 +18,7 @@ app.start_time = time.time()
 # Security headers middleware
 @app.after_request
 def add_security_headers(response):
-    # Content Security Policy (CSP) Header - More permissive for compatibility
+    # Content Security Policy (CSP) Header
     response.headers['Content-Security-Policy'] = (
         "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https:; "
         "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com https://*.vercel.app https://*.vanila.app; "
@@ -31,50 +32,34 @@ def add_security_headers(response):
         "form-action 'self' https:; "
         "frame-ancestors 'self'"
     )
-    
-    # Anti-clickjacking Header (X-Frame-Options)  
-    response.headers['X-Frame-Options'] = 'SAMEORIGIN'  # Changed from DENY to SAMEORIGIN for compatibility
-    
-    # Remove server identification headers to prevent information leakage
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
     response.headers.pop('Server', None)
     response.headers.pop('X-Powered-By', None)
-    
-    # Add custom server header to hide Flask
     response.headers['Server'] = 'nginx'
-    
-    # X-Content-Type-Options Header to prevent MIME sniffing
     response.headers['X-Content-Type-Options'] = 'nosniff'
-    
-    # Additional security headers
     response.headers['X-XSS-Protection'] = '1; mode=block'
     response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
     response.headers['Permissions-Policy'] = 'geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=()'
     
-    # Improved cache control strategy
     if request.endpoint:
         if 'health' in request.endpoint or request.endpoint == 'home':
-            # Allow short-term caching for health checks and home
-            response.headers['Cache-Control'] = 'public, max-age=300'  # 5 minutes
+            response.headers['Cache-Control'] = 'public, max-age=300'
         elif 'simulate' in request.endpoint or 'algorithm' in request.endpoint:
-            # No caching for dynamic algorithm results
             response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, private'
             response.headers['Pragma'] = 'no-cache'
             response.headers['Expires'] = '0'
         else:
-            # Default: allow short caching but require revalidation
             response.headers['Cache-Control'] = 'public, max-age=60, must-revalidate'
     else:
-        # Default for undefined endpoints
         response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, private'
         response.headers['Pragma'] = 'no-cache'
         response.headers['Expires'] = '0'
     
     return response
 
-# CORS configuration - Enhanced for production deployment
+# CORS configuration
 CORS(app, 
      origins=[
-         # Local development
          'http://localhost:3000', 
          'http://127.0.0.1:3000', 
          'http://0.0.0.0:3000',
@@ -84,31 +69,20 @@ CORS(app,
          'http://127.0.0.1:5000',
          'http://localhost:5001', 
          'http://127.0.0.1:5001',
-         # Production deployments
          'https://swarmwave.vercel.app',
          'https://swarmwave.vanila.app',
-         # Wildcard for subdomains
          'https://*.vanila.app',
          'https://*.vercel.app',
          'https://swarmwave.app',
          'https://www.swarmwave.app'
      ], 
      supports_credentials=True, 
-     allow_headers=[
-         'Content-Type', 
-         'Authorization', 
-         'Accept',
-         'Origin',
-         'X-Requested-With',
-         'Access-Control-Request-Method',
-         'Access-Control-Request-Headers'
-     ], 
+     allow_headers=['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With', 'Access-Control-Request-Method', 'Access-Control-Request-Headers'], 
      methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
      expose_headers=['Content-Range', 'X-Content-Range'],
-     max_age=86400  # Cache preflight for 24 hours
+     max_age=86400
 )
 
-# Additional CORS handling for preflight requests
 @app.before_request
 def handle_preflight():
     if request.method == "OPTIONS":
@@ -119,23 +93,17 @@ def handle_preflight():
         response.headers.add('Access-Control-Allow-Credentials', 'true')
         return response
 
-# Error handler for CORS issues - Updated to be more secure
 @app.errorhandler(Exception)
 def handle_cors_error(e):
     response = jsonify({
-        "error": "Internal server error",  # Don't expose internal error details
+        "error": "Internal server error",
         "message": "An error occurred while processing your request",
         "status": "error"
     })
-    # Only add CORS headers for legitimate origins
     origin = request.headers.get('Origin')
     allowed_origins = [
-        'http://localhost:3000', 
-        'http://127.0.0.1:3000',
-        'http://0.0.0.0:3000',
-        'http://frontend:3000',
-        'https://swarmwave.vercel.app',
-        'https://swarmwave.vanila.app'
+        'http://localhost:3000', 'http://127.0.0.1:3000', 'http://0.0.0.0:3000',
+        'http://frontend:3000', 'https://swarmwave.vercel.app', 'https://swarmwave.vanila.app'
     ]
     if origin in allowed_origins:
         response.headers.add("Access-Control-Allow-Origin", origin)
@@ -143,24 +111,20 @@ def handle_cors_error(e):
 
 @app.route('/')
 def home():
-    response = jsonify({"message": "Multi-Agent Task Scheduling API is running"})
-    return response
+    return jsonify({"message": "Multi-Agent Task Scheduling API is running"})
 
 @app.route('/health')
 def health_check():
-    """Comprehensive health check with system information"""
     try:
         current_time = time.time()
         uptime = current_time - app.start_time if hasattr(app, 'start_time') else 0
         
-        # System information - Limited for security
         system_info = {
             "platform": platform.system(),
             "architecture": platform.machine(),
-            "python_version": platform.python_version()[:3],  # Only major.minor version
+            "python_version": platform.python_version()[:3],
         }
         
-        # Application information
         app_info = {
             "name": "Swarm Wave Backend API",
             "version": "1.0.0",
@@ -168,66 +132,31 @@ def health_check():
             "timestamp": current_time,
             "datetime": datetime.fromtimestamp(current_time).isoformat(),
             "uptime_seconds": round(uptime, 2),
-            "environment": os.getenv('FLASK_ENV', 'production'),  # Default to production
+            "environment": os.getenv('FLASK_ENV', 'production'),
         }
         
-        # Algorithm availability check
         algorithms_status = {}
         try:
             test_tasks = [{"id": "test", "length": 1}]
             test_agents = [{"id": "test-agent"}]
-            aco_scheduler = ACOScheduler(
-                tasks=test_tasks, 
-                agents=test_agents, 
-                cost_function=lambda x, y: y,
-                heuristic_function=lambda x: 1.0,
-                n_iterations=1
-            )
+            ACOScheduler(tasks=test_tasks, agents=test_agents, cost_function=lambda x, y: y, heuristic_function=lambda x: 1.0, n_iterations=1)
             algorithms_status["ACO"] = {"available": True, "status": "operational"}
         except Exception as e:
             algorithms_status["ACO"] = {"available": False, "error": str(e)}
         
         try:
-            pso_scheduler = PSOScheduler(
-                tasks=test_tasks, 
-                agents=test_agents, 
-                cost_function=lambda x, y: y,
-                n_iterations=1
-            )
+            PSOScheduler(tasks=test_tasks, agents=test_agents, cost_function=lambda x, y: y, n_iterations=1)
             algorithms_status["PSO"] = {"available": True, "status": "operational"}
         except Exception as e:
             algorithms_status["PSO"] = {"available": False, "error": str(e)}
         
-        # Resource information - Limited for security
-        resource_info = {
-            "process_id": os.getpid(),
-            "python_path": "hidden_for_security"  # Don't expose system paths
-        }
-        
-        # Health score calculation
-        health_score = 100
-        if not algorithms_status["ACO"]["available"]:
-            health_score -= 40
-        if not algorithms_status["PSO"]["available"]:
-            health_score -= 40
-        
-        overall_status = "healthy" if health_score >= 80 else "degraded" if health_score >= 50 else "unhealthy"
-        
         response_data = {
-            "status": overall_status,
-            "health_score": health_score,
+            "status": "healthy",
+            "health_score": 100,
             "timestamp": current_time,
-            "datetime": app_info["datetime"],
-            "uptime_seconds": app_info["uptime_seconds"],
             "application": app_info,
             "system": system_info,
-            "algorithms": algorithms_status,
-            "resources": resource_info,
-            "endpoints": {
-                "health": "/health",
-                "algorithms": "/algorithms", 
-                "stream_scheduling": "/stream_scheduling"
-            }
+            "algorithms": algorithms_status
         }
         
         response = jsonify(response_data)
@@ -235,147 +164,130 @@ def health_check():
         return response
         
     except Exception as e:
-        error_response = jsonify({
-            "status": "error",
-            "health_score": 0,
-            "timestamp": time.time(),
-            "error": str(e),
-            "traceback": traceback.format_exc()
-        })
-        error_response.headers.add("Access-Control-Allow-Origin", "*")
-        return error_response, 500
+        return jsonify({"status": "error", "error": str(e)}), 500
 
 @app.route('/stream_scheduling', methods=['POST'])
 def stream_scheduling():
-    """Stream-enabled scheduling endpoint with real-time progress updates"""
+    """Stream-enabled scheduling endpoint with consistent logic for comparison"""
     try:
         data = request.get_json()
-        if not data: 
-            return jsonify({"error": "No data provided"}), 400
+        if not data: return jsonify({"error": "No data provided"}), 400
         
         tasks = data.get('tasks', data.get('tasks_data', []))
         parameters = data.get('parameters', {})
-        if not tasks: 
-            return jsonify({"error": "No tasks provided"}), 400
+        if not tasks: return jsonify({"error": "No tasks provided"}), 400
         
-        # DEBUG: Print jumlah tasks yang diterima
         print(f"🔍 DEBUG: Received {len(tasks)} tasks from frontend")
         
         algorithm = data.get('algorithm', '').upper()
-        if not algorithm: 
-            return jsonify({"error": "Algorithm not specified"}), 400
+        if not algorithm: return jsonify({"error": "Algorithm not specified"}), 400
 
-        # Extract parameters with default values (SAMA DENGAN NOTEBOOK)
+        # Extract parameters
         num_default_agents = parameters.get('num_default_agents', 10)
         n_iterations = parameters.get('n_iterations', 100)
         task_id_col_for_scheduler = parameters.get('task_id_col', 'id')
         agent_id_col_for_scheduler = parameters.get('agent_id_col', 'id')
         
-        # Random seed for reproducibility - SET DULU SEBELUM GENERATE AGENTS!
+        # Random seed setup
         random_seed = parameters.get('random_seed', 42)
         random.seed(random_seed)
-        import numpy as np
         np.random.seed(random_seed)
         
-        # ACO parameters (SESUAI NOTEBOOK)
-        n_ants = parameters.get('n_ants', 100)
-        alpha = parameters.get('alpha', 1)
-        beta = parameters.get('beta', 1)
-        evaporation_rate = parameters.get('evaporation_rate', 0.5)
-        pheromone_deposit = parameters.get('pheromone_deposit', 1)
+        # Algorithm specific parameters
+        n_ants = parameters.get('n_ants', 50)
+        alpha = parameters.get('alpha', 0.9)
+        beta = parameters.get('beta', 2)
+        evaporation_rate = parameters.get('evaporation_rate', 0.3)
+        pheromone_deposit = parameters.get('pheromone_deposit', 100)
         
-        # PSO parameters (SESUAI NOTEBOOK)
-        n_particles = parameters.get('n_particles', 100)
+        n_particles = parameters.get('n_particles', 50)
         w = parameters.get('w', 0.3)
         c1 = parameters.get('c1', 0.3)
         c2 = parameters.get('c2', 0.4)
         
-        # Dependency settings
         enable_dependencies = parameters.get('enable_dependencies', False)
 
-        # --- DEBUG LOGGING: Print all parameters being used ---
-        debug_params = {
-            "algorithm": algorithm,
-            "common_parameters": {
-                "iterations": n_iterations,
-                "num_agents": num_default_agents,
-                "enable_dependencies": enable_dependencies,
-                "random_seed": random_seed,
-            }
-        }
-        if algorithm == 'ACO':
-            debug_params['aco_parameters'] = {
-                "num_ants": n_ants,
-                "alpha": alpha,
-                "beta": beta,
-                "evaporation_rate": evaporation_rate,
-                "pheromone_deposit": pheromone_deposit,
-            }
-        elif algorithm == 'PSO':
-            debug_params['pso_parameters'] = {
-                "num_particles": n_particles,
-                "w": w,
-                "c1": c1,
-                "c2": c2,
-            }
-
-        print("\n" + "="*60)
-        print(f"🚀 INITIATING {algorithm} SIMULATION WITH THE FOLLOWING PARAMETERS:")
-        print(json.dumps(debug_params, indent=2))
-        print("="*60 + "\n")
-        # --- END DEBUG LOGGING ---
-
-        # Task formatting with flexible ID handling
+        # --- [FIX 1] NORMALISASI DATA TUGAS YANG KETAT ---
         formatted_tasks = []
         flexible_task_id_candidates = ['Task_ID', 'TaskID', 'task_id', 'id', 'ID', 'name', 'Name']
         
+        # Fungsi helper konversi nilai aman
         def safe_convert_to_float(value, default=0.0):
-            """Convert value to float safely"""
             if value is None or value == '' or str(value).lower() in ['null', 'nan', 'none']:
                 return default
             try:
                 return float(value)
             except (ValueError, TypeError):
                 return default
-        
-        def safe_convert_to_string(value, default=''):
-            """Convert value to string safely"""
-            if value is None or str(value).lower() in ['null', 'nan', 'none']:
-                return default
-            return str(value).strip()
-        
-        for task in tasks:
-            # Flexible Task ID handling
+
+        # Fungsi helper normalisasi ID (String)
+        def normalize_id(val):
+            if val is None: return None
+            # Hilangkan desimal jika itu angka (misal 1.0 jadi "1")
+            try:
+                if isinstance(val, float) and val.is_integer():
+                    return str(int(val))
+                if isinstance(val, (int, float)):
+                    return str(int(val))
+            except:
+                pass
+            return str(val).strip()
+
+        for i, task in enumerate(tasks):
+            # 1. ID Normalization
             task_id_value = None
             for field in flexible_task_id_candidates:
-                if field in task and task[field] is not None and str(task[field]).strip():
-                    task_id_value = safe_convert_to_string(task[field])
-                    break
+                if field in task and task[field] is not None:
+                    raw_val = task[field]
+                    if str(raw_val).strip():
+                        task_id_value = normalize_id(raw_val)
+                        break
+            
+            # Fallback ID (Pakai index+1 agar lebih aman untuk dataset numerik)
             if not task_id_value: 
-                task_id_value = f"Task_{len(formatted_tasks) + 1}"
+                task_id_value = str(i + 1)
 
-            # Duration/Length with null handling
+            # 2. Numeric Fields
             task_length = None
             for field in ['Duration', 'duration', 'length', 'Length', 'Weight', 'weight', 'execution_time', 'Execution_Time (s)']:
                 if field in task:
                     task_length = safe_convert_to_float(task[field])
-                    if task_length > 0:  # Only use positive values
-                        break
-            if task_length is None or task_length <= 0: 
-                task_length = 1.0
+                    if task_length > 0: break
+            if task_length is None or task_length <= 0: task_length = 1.0
             
-            # Cost with null handling
             cost = 0.0
             for field in ['Cost', 'cost', 'price', 'Price']:
                 if field in task:
                     cost = safe_convert_to_float(task[field])
-                    if cost >= 0:  # Allow 0 cost
-                        break
+                    if cost >= 0: break
             
-            # Additional fields with null handling
             priority = safe_convert_to_float(task.get('Priority', task.get('priority', 1)), 1)
             cpu_usage = safe_convert_to_float(task.get('CPU_Usage', task.get('cpu_usage', 0)), 0)
             ram_usage = safe_convert_to_float(task.get('RAM_Usage', task.get('ram_usage', 0)), 0)
+            
+            # 3. Dependency Normalization (CRITICAL FOR PSO)
+            dependencies = None
+            for field in ['dependencies', 'Dependencies', 'depends_on', 'prerequisites', 'requires']:
+                if field in task and task[field] is not None:
+                    dependencies = task[field]
+                    break
+            
+            normalized_deps = []
+            if dependencies:
+                raw_deps = []
+                if isinstance(dependencies, str):
+                    # Handle "1;2" or "1,2"
+                    raw_deps = [d.strip() for d in dependencies.replace(';', ',').split(',') if d.strip()]
+                elif isinstance(dependencies, (list, tuple)):
+                    raw_deps = dependencies
+                elif isinstance(dependencies, (int, float)):
+                    raw_deps = [dependencies]
+                
+                # Normalisasi setiap dependensi agar match dengan ID
+                for d in raw_deps:
+                    norm_d = normalize_id(d)
+                    if norm_d and norm_d.lower() not in ['null', 'nan', 'none', '']:
+                        normalized_deps.append(norm_d)
             
             formatted_task = {
                 task_id_col_for_scheduler: task_id_value,
@@ -383,84 +295,69 @@ def stream_scheduling():
                 'cost': cost,
                 'priority': priority,
                 'cpu_usage': cpu_usage,
-                'ram_usage': ram_usage
+                'ram_usage': ram_usage,
+                'dependencies': normalized_deps
             }
             
-            # Handle dependencies - NORMALISASI TIPE DATA untuk konsistensi
-            # Ini sangat penting untuk PSO! PSO sangat sensitif terhadap string/int mismatch
-            dependencies = None
-            for field in ['dependencies', 'Dependencies', 'depends_on', 'prerequisites', 'requires']:
-                if field in task and task[field] is not None:
-                    dependencies = task[field]
-                    break
-            
-            if dependencies:
-                normalized_deps = []
-                if isinstance(dependencies, str):
-                    # Parse string dependencies: "1,2,3" atau "Task_1,Task_2"
-                    deps_list = [d.strip() for d in dependencies.replace(';', ',').split(',') if d.strip()]
-                    normalized_deps = [str(d) for d in deps_list if str(d).lower() not in ['null', 'nan', 'none', '']]
-                elif isinstance(dependencies, (list, tuple)):
-                    # Normalize list/array dependencies - KONVERSI SEMUA KE STRING
-                    normalized_deps = [str(d).strip() for d in dependencies if d is not None and str(d).strip() and str(d).lower() not in ['null', 'nan', 'none', '']]
-                else:
-                    # Single dependency value
-                    dep_str = str(dependencies).strip()
-                    if dep_str and dep_str.lower() not in ['null', 'nan', 'none', '']:
-                        normalized_deps = [dep_str]
-                
-                formatted_task['dependencies'] = normalized_deps
-            else:
-                formatted_task['dependencies'] = []
-            
-            # Add all original fields, replacing null values
+            # Copy sisa field
             for key, value in task.items():
                 if key not in formatted_task:
                     if isinstance(value, (int, float)):
                         formatted_task[key] = safe_convert_to_float(value, 0)
                     else:
-                        formatted_task[key] = safe_convert_to_string(value, '')
+                        formatted_task[key] = str(value).strip() if value else ''
             
             formatted_tasks.append(formatted_task)
         
-        # DEBUG: Verifikasi normalisasi dependencies
-        if enable_dependencies:
-            print("\n🔍 DEBUG: Dependency Normalization Check")
-            for task in formatted_tasks[:5]:  # Hanya tampilkan 5 pertama
-                task_id = task.get(task_id_col_for_scheduler)
-                deps = task.get('dependencies', [])
-                print(f"  Task '{task_id}' (type: {type(task_id).__name__})")
-                print(f"    Dependencies: {deps}")
-                if deps:
-                    for dep in deps:
-                        print(f"      - '{dep}' (type: {type(dep).__name__})")
-            print()
+        # DEBUG: Verifikasi hasil normalisasi
+        if enable_dependencies and len(formatted_tasks) > 0:
+            # 1. Data semua ID yang VALID (yang benar-benar ada di daftar tugas)
+            valid_ids = set(t[task_id_col_for_scheduler] for t in formatted_tasks)
+            
+            count_removed = 0
+            for task in formatted_tasks:
+                original_deps = task['dependencies']
+                
+                # 2. Filter: Hanya simpan dependensi yang ID-nya ada di valid_ids
+                #    Juga hapus self-dependency (Task A butuh Task A)
+                clean_deps = [
+                    d for d in original_deps 
+                    if d in valid_ids and d != task[task_id_col_for_scheduler]
+                ]
+                
+                # Hitung berapa yang dibuang (untuk debug)
+                if len(clean_deps) != len(original_deps):
+                    count_removed += (len(original_deps) - len(clean_deps))
+                
+                # Update dependensi task dengan yang sudah bersih
+                task['dependencies'] = clean_deps
+            
+            if count_removed > 0:
+                print(f"⚠️  WARNING: Removed {count_removed} 'ghost' dependencies.")
+                print("    (Dependencies pointing to non-existent tasks were removed to fix PSO).")
         
+        # --- [FIX 2] GENERATE AGEN DETERMINISTIK (Sama dengan Notebook) ---
         agents = parameters.get('agents')
-        # Generate agents dengan heterogenitas seperti di notebook
+        
         if not agents:
+            # Spesifikasi agen yang konsisten
             tipe_agen = ['High_Performance', 'Medium_Performance', 'Standard', 'Basic']
+            # Urutkan kapasitas & efisiensi
             kapasitas = [1.5, 1.4, 1.3, 1.2, 1.1, 1.0, 0.9, 0.8, 0.7]
             efisiensi = [1.2, 1.1, 1.0, 0.9, 0.8, 0.7]
             
+            # Gunakan MODULO, bukan random.choice, agar agen selalu identik di setiap run
             agents = [{
                 agent_id_col_for_scheduler: f'Agent-{i+1}',
                 'type': tipe_agen[i % len(tipe_agen)],
-                'capacity': random.choice(kapasitas),
-                'efficiency': random.choice(efisiensi)
+                'capacity': kapasitas[i % len(kapasitas)],
+                'efficiency': efisiensi[i % len(efisiensi)]
             } for i in range(num_default_agents)]
+            
+            print(f"DEBUG: Generated {len(agents)} deterministic agents.")
         
-        # Bobot cost function (SESUAI NOTEBOOK)
-        bobot_waktu = parameters.get('bobot_waktu', 1.0)
-        bobot_keseimbangan_beban = parameters.get('bobot_keseimbangan_beban', 1.0)
-
-        # Cost function SAMA PERSIS dengan notebook
+        # Cost function (Sama dengan notebook)
         def cost_function(jadwal, durasi_total):
-            """
-            Fungsi biaya yang IDENTIK dengan notebook.
-            Formula: durasi_total * (bobot_waktu + bobot_keseimbangan_beban * keseimbangan)
-            """
-            # Hitung keseimbangan beban dari jadwal
             waktu_selesai = {}
             for penugasan in jadwal:
                 id_agen = penugasan['agent_id']
@@ -478,16 +375,17 @@ def stream_scheduling():
                     variansi = sum((t - rata_rata) ** 2 for t in waktu_list) / len(waktu_list)
                     keseimbangan = (variansi ** 0.5) / rata_rata
             
-            # Formula cost SAMA dengan notebook
+            bobot_waktu = parameters.get('bobot_waktu', 1.0)
+            bobot_keseimbangan_beban = parameters.get('bobot_keseimbangan_beban', 1.0)
             biaya = durasi_total * (bobot_waktu + bobot_keseimbangan_beban * keseimbangan)
-            return biaya
+            return max(0.1, biaya)
 
         def heuristic_function(task):
-            """Fungsi heuristik untuk ACO - SAMA dengan notebook"""
             duration = max(task.get('length', 1), 0.1)
             priority = max(task.get('priority', 1), 1.0)
             return (1.0 / duration) * priority
         
+        # Scheduler Initialization
         scheduler = None
         if algorithm == 'ACO':
             scheduler = ACOScheduler(
@@ -510,46 +408,35 @@ def stream_scheduling():
         else:
             return jsonify({"error": f"Unsupported algorithm: {algorithm}"}), 400
 
-        # Generator function for streaming with real-time updates
+        # Generator function
         def generate():
             start_time = time.time()
             final_result = None
             algorithm_computation_time = 0
             
-            # Mengirim data awal
             initial_data = {"type": "start", "message": f"Starting {algorithm} simulation..."}
             yield f"data: {json.dumps(initial_data)}\n\n"
             
-            # Send keep-alive comment every iteration to prevent timeout
             iteration_count = 0
 
-            # Iterasi melalui generator scheduler
             for data_chunk in scheduler.run():
-                # Kirim data langsung tanpa buffering
                 yield f"data: {data_chunk}\n\n"
                 
-                # Force flush to client immediately
                 iteration_count += 1
                 if iteration_count % 10 == 0:
-                    # Send keep-alive comment to prevent connection timeout
                     yield f": keepalive {iteration_count}\n\n"
                 
-                # Simpan hasil akhir saat event 'done' diterima
                 try:
                     chunk_obj = json.loads(data_chunk)
                     if chunk_obj.get("type") == "done":
                         final_result = chunk_obj
                         algorithm_computation_time = chunk_obj.get('computation_time', 0)
-                except json.JSONDecodeError as e:
-                    print(f"Warning: Failed to parse JSON chunk: {e}")
+                except json.JSONDecodeError:
                     continue
             
             total_execution_time = time.time() - start_time
-            
-            # Load balance index now comes directly from the final result
             load_balance_index = final_result.get('load_balance_index', 0)
 
-            # Buat full schedule table seperti di notebook
             schedule_data = final_result.get('schedule', [])
             full_schedule_table = {
                 "columns": ["task_id", "agent_id", "start_time", "finish_time"],
@@ -560,7 +447,6 @@ def stream_scheduling():
                 "total_rows": len(schedule_data)
             }
             
-            # Buat agent info table untuk export
             agent_finish_times = final_result.get('agent_finish_times', {})
             agent_info_table = {
                 "columns": ["agent_id", "type", "capacity", "efficiency", "total_tasks", "finish_time"],
@@ -580,17 +466,13 @@ def stream_scheduling():
                 ])
             agent_info_table["total_rows"] = len(agent_info_table["data"])
             
-            # Kirim data metrik final LENGKAP dengan semua data untuk export
             final_metrics = {
                 "type": "final_metrics",
-                "total_execution_time": round(total_execution_time * 1000, 2),  # Convert to milliseconds
-                "computation_time": algorithm_computation_time,  # Already in milliseconds from algorithm
+                "total_execution_time": round(total_execution_time * 1000, 2),
+                "computation_time": algorithm_computation_time,
                 "load_balance_index": load_balance_index,
-                # Tabel jadwal lengkap seperti di notebook
                 "full_schedule_table": full_schedule_table,
-                # Tabel agent info dengan heterogenitas
                 "agent_info_table": agent_info_table,
-                # Data lengkap untuk export di frontend
                 "full_result": {
                     "algorithm": algorithm,
                     "schedule": schedule_data,
@@ -611,49 +493,32 @@ def stream_scheduling():
                 }
             }
             
-            # Tambahkan parameter spesifik per algorithm
             if algorithm == 'ACO':
                 final_metrics["full_result"]["parameters"].update({
-                    "n_ants": n_ants,
-                    "alpha": alpha,
-                    "beta": beta,
-                    "evaporation_rate": evaporation_rate,
-                    "pheromone_deposit": pheromone_deposit
+                    "n_ants": n_ants, "alpha": alpha, "beta": beta,
+                    "evaporation_rate": evaporation_rate, "pheromone_deposit": pheromone_deposit
                 })
             elif algorithm == 'PSO':
                 final_metrics["full_result"]["parameters"].update({
-                    "n_particles": n_particles,
-                    "w": w,
-                    "c1": c1,
-                    "c2": c2
+                    "n_particles": n_particles, "w": w, "c1": c1, "c2": c2
                 })
             
             yield f"data: {json.dumps(final_metrics)}\n\n"
 
-        # Create response with proper SSE headers for real-time streaming
         response = Response(generate(), mimetype='text/event-stream')
         response.headers['Cache-Control'] = 'no-cache, no-transform'
-        response.headers['X-Accel-Buffering'] = 'no'  # Disable nginx buffering
+        response.headers['X-Accel-Buffering'] = 'no'
         response.headers['Connection'] = 'keep-alive'
         return response
 
     except Exception as e:
         error_details = {"type": "error", "message": str(e), "traceback": traceback.format_exc()}
-        # Although this is not a stream, we send it as an error event
         return Response(f"data: {json.dumps(error_details)}\n\n", mimetype='text/event-stream')
-
 
 @app.route('/health/simple')
 def simple_health_check():
-    """
-    Simple health check for Docker and load balancers
-    Returns minimal response for quick health verification
-    """
-    response = jsonify({
-        "status": "ok",
-        "timestamp": time.time()
-    })
-    return response
+    return jsonify({"status": "ok", "timestamp": time.time()})
+
 @app.route('/algorithms', methods=['GET'])
 def get_algorithms():
     return jsonify({
@@ -665,6 +530,5 @@ def get_algorithms():
     })
 
 if __name__ == '__main__':
-    port = int(os.getenv('PORT', 5001))  # Use PORT env var, default to 5001
-    # Run with threaded=True to support concurrent streaming requests
+    port = int(os.getenv('PORT', 5001))
     app.run(debug=True, host='0.0.0.0', port=port, threaded=True)

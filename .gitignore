@@ -9,6 +9,7 @@ __pycache__/
 *.pyd
 *.pyc
 .venv/
+.python-version
 
 # Environment Variables
 .env

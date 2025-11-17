@@ -126,7 +126,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import DynamicTable from '~/components/DynamicTable.vue'
-import SimulationPage from '~/components/SimulationPage.vue'
+import SimulationPage from '~/components/SimulationPageOld.vue'
 
 // State
 const showSimulation = ref(false)

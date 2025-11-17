@@ -20,6 +20,7 @@ class PSO_MultiAgent_Scheduler(MultiAgentScheduler):
             self.kecepatan = np.random.rand(self.jumlah_partikel, self.jumlah_tugas) * 0.1
             self.posisi_pbest = self.posisi.copy()
             self.biaya_pbest = np.full(self.jumlah_partikel, float('inf'))
+            self.durasi_pbest = np.full(self.jumlah_partikel, float('inf'))
             self.posisi_gbest = None
 
             if self.jumlah_partikel > 0:
@@ -27,6 +28,7 @@ class PSO_MultiAgent_Scheduler(MultiAgentScheduler):
         else:
             self.posisi = self.kecepatan = self.posisi_pbest = np.array([[]])
             self.biaya_pbest = np.array([])
+            self.durasi_pbest = np.array([])
             self.posisi_gbest = None
 
     def position_to_sequence(self, posisi):
@@ -62,26 +64,11 @@ class PSO_MultiAgent_Scheduler(MultiAgentScheduler):
                 tersedia.remove(terbaik)
                 selesai.add(daftar_id_tugas[terbaik])
             else:
-                # Fallback lebih pintar: pilih tugas dengan dependensi TIDAK TERPENUHI paling sedikit
-                # Bukan total dependensi paling sedikit (seperti ACO)
-                min_tidak_terpenuhi = float('inf')
-                tugas_paksa = None
-                for idx in tersedia:
-                    tid = daftar_id_tugas[idx]
-                    tidak_terpenuhi = len([d for d in self.dependensi.get(tid, []) if d not in selesai])
-                    if tidak_terpenuhi < min_tidak_terpenuhi:
-                        min_tidak_terpenuhi, tugas_paksa = tidak_terpenuhi, idx
-                
-                if tugas_paksa is not None:
-                    terkoreksi.append(tugas_paksa)
-                    tersedia.remove(tugas_paksa)
-                    selesai.add(daftar_id_tugas[tugas_paksa])
-                else:
-                    # Fallback terakhir: ambil yang mana saja
-                    fallback = min(tersedia)
-                    terkoreksi.append(fallback)
-                    tersedia.remove(fallback)
-                    selesai.add(daftar_id_tugas[fallback])
+                # Fallback: min deps (SAMA DENGAN NOTEBOOK)
+                fallback = min(tersedia, key=lambda t: len(self.dependensi.get(daftar_id_tugas[t], [])))
+                terkoreksi.append(fallback)
+                tersedia.remove(fallback)
+                selesai.add(daftar_id_tugas[fallback])
 
         terkoreksi.extend(sorted(tersedia))
         return np.array(terkoreksi)
@@ -92,10 +79,10 @@ class PSO_MultiAgent_Scheduler(MultiAgentScheduler):
         jadwal, waktu_selesai_agen, keseimbangan_beban = self.assign_to_agents(urutan)
         return jadwal, waktu_selesai_agen
 
-    def optimize(self, show_progress=True):
+    def optimize(self, show_progress=True, progress_callback=None):
         """Optimasi menggunakan PSO."""
         if self.jumlah_partikel == 0 or self.jumlah_tugas == 0:
-            return super().optimize(show_progress=False)
+            return super().optimize(show_progress=False, progress_callback=progress_callback)
 
         waktu_mulai = time.time()
         if show_progress:
@@ -105,7 +92,7 @@ class PSO_MultiAgent_Scheduler(MultiAgentScheduler):
         jadwal_awal, waktu_agen_awal, keseimbangan_awal = self.assign_to_agents(urutan_awal)
         durasi_total_awal = max(waktu_agen_awal.values(), default=0)
         self.biaya_terbaik = self.fungsi_biaya(jadwal_awal, durasi_total_awal)
-        self.makespan_terbaik = durasi_total_awal
+        self.durasi_terbaik = durasi_total_awal  # Simpan makespan aktual
         self.jadwal_terbaik = jadwal_awal
         self.indeks_keseimbangan_terbaik = keseimbangan_awal
 
@@ -120,10 +107,14 @@ class PSO_MultiAgent_Scheduler(MultiAgentScheduler):
 
                 if biaya < self.biaya_pbest[p]:
                     self.biaya_pbest[p] = biaya
+                    self.durasi_pbest[p] = durasi_total
                     self.posisi_pbest[p] = self.posisi[p].copy()
 
                 if biaya < self.biaya_terbaik or (biaya == self.biaya_terbaik and indeks_keseimbangan < self.indeks_keseimbangan_terbaik):
-                    self.biaya_terbaik, self.makespan_terbaik, self.jadwal_terbaik, self.indeks_keseimbangan_terbaik = biaya, durasi_total, jadwal, indeks_keseimbangan
+                    self.biaya_terbaik = biaya
+                    self.durasi_terbaik = durasi_total  # Simpan makespan aktual
+                    self.jadwal_terbaik = jadwal
+                    self.indeks_keseimbangan_terbaik = indeks_keseimbangan
                     self.posisi_gbest = self.posisi[p].copy()
                     ada_terbaik_baru = True
 
@@ -137,14 +128,22 @@ class PSO_MultiAgent_Scheduler(MultiAgentScheduler):
 
             self.riwayat_iterasi.append({
                 'iteration': i + 1,
-                'best_makespan': self.makespan_terbaik if hasattr(self, 'makespan_terbaik') and self.makespan_terbaik != float('inf') else 0.0,
+                'best_makespan': self.durasi_terbaik if self.durasi_terbaik != float('inf') else 0.0,
                 'load_balance': self.indeks_keseimbangan_terbaik if self.indeks_keseimbangan_terbaik != float('inf') else 0.0
             })
 
+            # Real-time streaming callback
+            if progress_callback:
+                progress_callback({
+                    'iteration': i + 1,
+                    'best_makespan': self.durasi_terbaik if self.durasi_terbaik != float('inf') else 0.0,
+                    'load_balance': self.indeks_keseimbangan_terbaik if self.indeks_keseimbangan_terbaik != float('inf') else 0.0
+                })
+
             if show_progress and ada_terbaik_baru:
-                print(f"Iterasi {i+1}: Terbaik baru! Makespan: {self.makespan_terbaik:.2f}, Load Balance: {self.indeks_keseimbangan_terbaik:.4f}")
+                print(f"Iterasi {i+1}: Terbaik baru! Makespan: {self.durasi_terbaik:.2f}, Load Balance: {self.indeks_keseimbangan_terbaik:.4f}")
             elif show_progress:
-                print(f"Iterasi {i+1}: Makespan Terbaik: {self.makespan_terbaik:.2f}, Load Balance: {self.indeks_keseimbangan_terbaik:.4f}")
+                print(f"Iterasi {i+1}: Makespan Terbaik: {self.durasi_terbaik:.2f}, Load Balance: {self.indeks_keseimbangan_terbaik:.4f}")
 
         waktu_akhir_agen_final = {}
         if self.posisi_gbest is not None:
@@ -154,7 +153,7 @@ class PSO_MultiAgent_Scheduler(MultiAgentScheduler):
 
         return {
             'schedule': pd.DataFrame(self.jadwal_terbaik) if self.jadwal_terbaik else pd.DataFrame(),
-            'makespan': self.makespan_terbaik if hasattr(self, 'makespan_terbaik') and self.makespan_terbaik != float('inf') else 0.0,
+            'makespan': self.durasi_terbaik if self.durasi_terbaik != float('inf') else 0.0,
             'load_balance_index': self.indeks_keseimbangan_terbaik if self.indeks_keseimbangan_terbaik != float('inf') else 0.0,
             'agent_finish_times': waktu_akhir_agen_final,
             'computation_time': waktu_komputasi,
