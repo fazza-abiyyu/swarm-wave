@@ -1,2 +1,10 @@
-User-Agent: *
-Disallow:
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /_nuxt/
+
+# Sitemap
+Sitemap: https://swarmwave.app/sitemap.xml
+
+# Crawl-delay for polite crawling
+Crawl-delay: 1
