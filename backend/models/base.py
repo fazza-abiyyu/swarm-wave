@@ -4,6 +4,18 @@ import json
 import pandas as pd
 import time
 
+from models.utils import (
+    generate_agen_default,
+    parse_dependensi,
+    hitung_load_balance_index,
+    dapatkan_id_tugas,
+    dapatkan_durasi_tugas,
+    validasi_dependensi,
+    ada_dependensi_sirkular,
+    filter_ghost_dependencies
+)
+
+
 class MultiAgentScheduler:
     """Kelas dasar untuk penjadwalan tugas multi-agen dengan utilitas bersama."""
 
@@ -49,20 +61,8 @@ class MultiAgentScheduler:
         self.riwayat_iterasi = []
 
     def _generate_default_agents(self, jumlah_agen, agent_id_col):
-        """Generate default agents dengan kapabilitas bervariasi (sesuai notebook)."""
-        if jumlah_agen <= 0:
-            return []
-        
-        tipe_agen = ['High_Performance', 'Medium_Performance', 'Standard', 'Basic']
-        kapasitas = [1.5, 1.4, 1.3, 1.2, 1.1, 1.0, 0.9, 0.8, 0.7]
-        efisiensi = [1.2, 1.1, 1.0, 0.9, 0.8, 0.7]
-        
-        return [{
-            agent_id_col: f'Agent-{i+1}',
-            'type': tipe_agen[i % len(tipe_agen)],
-            'capacity': random.choice(kapasitas),
-            'efficiency': random.choice(efisiensi)
-        } for i in range(jumlah_agen)]
+        """Generate default agents - delegasi ke utils."""
+        return generate_agen_default(jumlah_agen, agent_id_col)
 
     def parse_dependencies(self):
         """Parse dependensi secara robust."""
@@ -89,26 +89,10 @@ class MultiAgentScheduler:
         return {id_tugas: self.dependensi[id_tugas] for id_tugas in self.dependensi}
 
     def detect_circular_dependencies(self):
-        """Deteksi siklus menggunakan DFS."""
+        """Deteksi siklus - delegasi ke utils."""
         if not self.enable_dependencies or self.jumlah_tugas == 0:
             return False
-        visited, rec_stack = set(), set()
-        def has_cycle(id_tugas):
-            if id_tugas in rec_stack:
-                return True
-            if id_tugas in visited:
-                return False
-            visited.add(id_tugas)
-            rec_stack.add(id_tugas)
-            for dep_id in self.dependensi.get(id_tugas, []):
-                if has_cycle(dep_id):
-                    return True
-            rec_stack.remove(id_tugas)
-            return False
-        for id_tugas in self.dependensi:
-            if id_tugas not in visited and has_cycle(id_tugas):
-                return True
-        return False
+        return ada_dependensi_sirkular(self.dependensi)
 
     def is_dependency_satisfied(self, id_tugas, tugas_selesai):
         """Cek apakah dependensi terpenuhi."""
@@ -121,15 +105,8 @@ class MultiAgentScheduler:
         return [idx for idx in tugas_tersisa if self.is_dependency_satisfied(self.peta_tugas_terbalik[idx], tugas_selesai)]
 
     def calculate_load_balance_index(self, waktu_selesai_agen):
-        """Hitung indeks keseimbangan beban."""
-        times = list(waktu_selesai_agen.values())
-        if len(times) <= 1:
-            return 0.0
-        waktu_rata = sum(times) / len(times)
-        if waktu_rata == 0:
-            return 0.0
-        variance = sum((t - waktu_rata) ** 2 for t in times) / len(times)
-        return (variance ** 0.5) / waktu_rata
+        """Hitung indeks keseimbangan beban - delegasi ke utils."""
+        return hitung_load_balance_index(waktu_selesai_agen)
 
     def find_best_agent(self, waktu_selesai_agen, durasi_tugas, id_tugas=None, waktu_selesai_tugas=None, prioritize_balance=True):
         """Temukan agen terbaik untuk tugas."""

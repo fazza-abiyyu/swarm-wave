@@ -8,9 +8,18 @@ import platform
 import sys
 import random
 from datetime import datetime
-import numpy as np  # Pastikan numpy diimport
+import numpy as np
 from models.aco import ACO_MultiAgent_Scheduler as ACOScheduler
 from models.pso import PSO_MultiAgent_Scheduler as PSOScheduler
+from models.utils import (
+    generate_agen_default,
+    safe_convert_to_float,
+    normalize_id,
+    parse_dependensi,
+    filter_ghost_dependencies,
+    fungsi_biaya_jadwal,
+    buat_cost_function_untuk_scheduler
+)
 
 app = Flask(__name__)
 app.start_time = time.time()
@@ -207,31 +216,9 @@ def stream_scheduling():
         
         enable_dependencies = parameters.get('enable_dependencies', False)
 
-        # --- [FIX 1] NORMALISASI DATA TUGAS YANG KETAT ---
+        # --- NORMALISASI DATA TUGAS (Menggunakan fungsi dari utils) ---
         formatted_tasks = []
         flexible_task_id_candidates = ['Task_ID', 'TaskID', 'task_id', 'id', 'ID', 'name', 'Name']
-        
-        # Fungsi helper konversi nilai aman
-        def safe_convert_to_float(value, default=0.0):
-            if value is None or value == '' or str(value).lower() in ['null', 'nan', 'none']:
-                return default
-            try:
-                return float(value)
-            except (ValueError, TypeError):
-                return default
-
-        # Fungsi helper normalisasi ID (String)
-        def normalize_id(val):
-            if val is None: return None
-            # Hilangkan desimal jika itu angka (misal 1.0 jadi "1")
-            try:
-                if isinstance(val, float) and val.is_integer():
-                    return str(int(val))
-                if isinstance(val, (int, float)):
-                    return str(int(val))
-            except:
-                pass
-            return str(val).strip()
 
         for i, task in enumerate(tasks):
             # 1. ID Normalization
@@ -265,29 +252,23 @@ def stream_scheduling():
             cpu_usage = safe_convert_to_float(task.get('CPU_Usage', task.get('cpu_usage', 0)), 0)
             ram_usage = safe_convert_to_float(task.get('RAM_Usage', task.get('ram_usage', 0)), 0)
             
-            # 3. Dependency Normalization (CRITICAL FOR PSO)
+            # 3. Dependency Normalization menggunakan parse_dependensi dari utils
             dependencies = None
             for field in ['dependencies', 'Dependencies', 'depends_on', 'prerequisites', 'requires']:
                 if field in task and task[field] is not None:
                     dependencies = task[field]
                     break
             
-            normalized_deps = []
-            if dependencies:
-                raw_deps = []
-                if isinstance(dependencies, str):
-                    # Handle "1;2" or "1,2"
-                    raw_deps = [d.strip() for d in dependencies.replace(';', ',').split(',') if d.strip()]
-                elif isinstance(dependencies, (list, tuple)):
-                    raw_deps = dependencies
-                elif isinstance(dependencies, (int, float)):
-                    raw_deps = [dependencies]
-                
-                # Normalisasi setiap dependensi agar match dengan ID
-                for d in raw_deps:
-                    norm_d = normalize_id(d)
-                    if norm_d and norm_d.lower() not in ['null', 'nan', 'none', '']:
-                        normalized_deps.append(norm_d)
+            # Gunakan parse_dependensi untuk list, atau handle langsung
+            if isinstance(dependencies, str):
+                normalized_deps = parse_dependensi(dependencies)
+            elif isinstance(dependencies, (list, tuple)):
+                normalized_deps = [normalize_id(d) for d in dependencies 
+                                   if d is not None and str(d).lower() not in ['null', 'nan', 'none', '']]
+            elif isinstance(dependencies, (int, float)):
+                normalized_deps = [normalize_id(dependencies)]
+            else:
+                normalized_deps = []
             
             formatted_task = {
                 task_id_col_for_scheduler: task_id_value,
@@ -309,76 +290,22 @@ def stream_scheduling():
             
             formatted_tasks.append(formatted_task)
         
-        # DEBUG: Verifikasi hasil normalisasi
+        # Filter ghost dependencies menggunakan fungsi dari utils
         if enable_dependencies and len(formatted_tasks) > 0:
-            # 1. Data semua ID yang VALID (yang benar-benar ada di daftar tugas)
-            valid_ids = set(t[task_id_col_for_scheduler] for t in formatted_tasks)
-            
-            count_removed = 0
-            for task in formatted_tasks:
-                original_deps = task['dependencies']
-                
-                # 2. Filter: Hanya simpan dependensi yang ID-nya ada di valid_ids
-                #    Juga hapus self-dependency (Task A butuh Task A)
-                clean_deps = [
-                    d for d in original_deps 
-                    if d in valid_ids and d != task[task_id_col_for_scheduler]
-                ]
-                
-                # Hitung berapa yang dibuang (untuk debug)
-                if len(clean_deps) != len(original_deps):
-                    count_removed += (len(original_deps) - len(clean_deps))
-                
-                # Update dependensi task dengan yang sudah bersih
-                task['dependencies'] = clean_deps
-            
-            if count_removed > 0:
-                print(f"⚠️  WARNING: Removed {count_removed} 'ghost' dependencies.")
-                print("    (Dependencies pointing to non-existent tasks were removed to fix PSO).")
+            count_removed = filter_ghost_dependencies(formatted_tasks, task_id_col_for_scheduler)
+            # Log sudah ditampilkan di dalam fungsi filter_ghost_dependencies
         
-        # --- [FIX 2] GENERATE AGEN DETERMINISTIK (Sama dengan Notebook) ---
+        # --- GENERATE AGEN DETERMINISTIK (Menggunakan fungsi dari utils) ---
         agents = parameters.get('agents')
         
         if not agents:
-            # Spesifikasi agen yang konsisten
-            tipe_agen = ['High_Performance', 'Medium_Performance', 'Standard', 'Basic']
-            # Urutkan kapasitas & efisiensi
-            kapasitas = [1.5, 1.4, 1.3, 1.2, 1.1, 1.0, 0.9, 0.8, 0.7]
-            efisiensi = [1.2, 1.1, 1.0, 0.9, 0.8, 0.7]
-            
-            # Gunakan MODULO, bukan random.choice, agar agen selalu identik di setiap run
-            agents = [{
-                agent_id_col_for_scheduler: f'Agent-{i+1}',
-                'type': tipe_agen[i % len(tipe_agen)],
-                'capacity': kapasitas[i % len(kapasitas)],
-                'efficiency': efisiensi[i % len(efisiensi)]
-            } for i in range(num_default_agents)]
-            
+            agents = generate_agen_default(num_default_agents, agent_id_col_for_scheduler)
             print(f"DEBUG: Generated {len(agents)} deterministic agents.")
         
-        # Cost function (Sama dengan notebook)
-        def cost_function(jadwal, durasi_total):
-            waktu_selesai = {}
-            for penugasan in jadwal:
-                id_agen = penugasan['agent_id']
-                waktu_akhir = penugasan['finish_time']
-                waktu_selesai[id_agen] = max(waktu_selesai.get(id_agen, 0), waktu_akhir)
-            
-            waktu_list = list(waktu_selesai.values())
-            if len(waktu_list) <= 1:
-                keseimbangan = 0.0
-            else:
-                rata_rata = sum(waktu_list) / len(waktu_list)
-                if rata_rata <= 0:
-                    keseimbangan = 0.0
-                else:
-                    variansi = sum((t - rata_rata) ** 2 for t in waktu_list) / len(waktu_list)
-                    keseimbangan = (variansi ** 0.5) / rata_rata
-            
-            bobot_waktu = parameters.get('bobot_waktu', 1.0)
-            bobot_keseimbangan_beban = parameters.get('bobot_keseimbangan_beban', 1.0)
-            biaya = durasi_total * (bobot_waktu + bobot_keseimbangan_beban * keseimbangan)
-            return max(0.1, biaya)
+        # Cost function menggunakan fungsi dari utils
+        bobot_waktu = parameters.get('bobot_waktu', 1.0)
+        bobot_keseimbangan_beban = parameters.get('bobot_keseimbangan_beban', 1.0)
+        cost_function = buat_cost_function_untuk_scheduler(bobot_waktu, bobot_keseimbangan_beban)
 
         def heuristic_function(task):
             duration = max(task.get('length', 1), 0.1)
@@ -408,102 +335,116 @@ def stream_scheduling():
         else:
             return jsonify({"error": f"Unsupported algorithm: {algorithm}"}), 400
 
-        # Generator function
+        # Generator function with client disconnect handling
         def generate():
             start_time = time.time()
             final_result = None
             algorithm_computation_time = 0
+            cancelled = False
             
-            initial_data = {"type": "start", "message": f"Starting {algorithm} simulation..."}
-            yield f"data: {json.dumps(initial_data)}\n\n"
-            
-            iteration_count = 0
-
-            for data_chunk in scheduler.run():
-                yield f"data: {data_chunk}\n\n"
+            try:
+                initial_data = {"type": "start", "message": f"Starting {algorithm} simulation..."}
+                yield f"data: {json.dumps(initial_data)}\n\n"
                 
-                iteration_count += 1
-                if iteration_count % 10 == 0:
-                    yield f": keepalive {iteration_count}\n\n"
-                
-                try:
-                    chunk_obj = json.loads(data_chunk)
-                    if chunk_obj.get("type") == "done":
-                        final_result = chunk_obj
-                        algorithm_computation_time = chunk_obj.get('computation_time', 0)
-                except json.JSONDecodeError:
-                    continue
-            
-            total_execution_time = time.time() - start_time
-            load_balance_index = final_result.get('load_balance_index', 0)
+                iteration_count = 0
 
-            schedule_data = final_result.get('schedule', [])
-            full_schedule_table = {
-                "columns": ["task_id", "agent_id", "start_time", "finish_time"],
-                "data": [[item.get('task_id'), item.get('agent_id'), 
-                         round(item.get('start_time', 0), 2), 
-                         round(item.get('finish_time', 0), 2)] 
-                        for item in schedule_data],
-                "total_rows": len(schedule_data)
-            }
+                for data_chunk in scheduler.run():
+                    yield f"data: {data_chunk}\n\n"
+                    
+                    iteration_count += 1
+                    if iteration_count % 10 == 0:
+                        yield f": keepalive {iteration_count}\n\n"
+                    
+                    try:
+                        chunk_obj = json.loads(data_chunk)
+                        if chunk_obj.get("type") == "done":
+                            final_result = chunk_obj
+                            algorithm_computation_time = chunk_obj.get('computation_time', 0)
+                    except json.JSONDecodeError:
+                        continue
+            except GeneratorExit:
+                # Client disconnected - stop processing
+                cancelled = True
+                print(f"[INFO] Client disconnected, stopping {algorithm} simulation")
+                return
             
-            agent_finish_times = final_result.get('agent_finish_times', {})
-            agent_info_table = {
-                "columns": ["agent_id", "type", "capacity", "efficiency", "total_tasks", "finish_time"],
-                "data": []
-            }
+            if cancelled:
+                return
             
-            for agent in agents:
-                agent_id = agent.get(agent_id_col_for_scheduler)
-                agent_tasks = [s for s in schedule_data if s.get('agent_id') == agent_id]
-                agent_info_table["data"].append([
-                    agent_id,
-                    agent.get('type', 'N/A'),
-                    round(agent.get('capacity', 1.0), 2),
-                    round(agent.get('efficiency', 1.0), 2),
-                    len(agent_tasks),
-                    round(agent_finish_times.get(agent_id, 0), 2)
-                ])
-            agent_info_table["total_rows"] = len(agent_info_table["data"])
-            
-            final_metrics = {
-                "type": "final_metrics",
-                "total_execution_time": round(total_execution_time * 1000, 2),
-                "computation_time": algorithm_computation_time,
-                "load_balance_index": load_balance_index,
-                "full_schedule_table": full_schedule_table,
-                "agent_info_table": agent_info_table,
-                "full_result": {
-                    "algorithm": algorithm,
-                    "schedule": schedule_data,
-                    "makespan": final_result.get('makespan', 0),
-                    "load_balance_index": load_balance_index,
+            try:
+                total_execution_time = time.time() - start_time
+                load_balance_index = final_result.get('load_balance_index', 0)
+
+                schedule_data = final_result.get('schedule', [])
+                full_schedule_table = {
+                    "columns": ["task_id", "agent_id", "start_time", "finish_time"],
+                    "data": [[item.get('task_id'), item.get('agent_id'), 
+                             round(item.get('start_time', 0), 2), 
+                             round(item.get('finish_time', 0), 2)] 
+                            for item in schedule_data],
+                    "total_rows": len(schedule_data)
+                }
+                
+                agent_finish_times = final_result.get('agent_finish_times', {})
+                agent_info_table = {
+                    "columns": ["agent_id", "type", "capacity", "efficiency", "total_tasks", "finish_time"],
+                    "data": []
+                }
+                
+                for agent in agents:
+                    agent_id = agent.get(agent_id_col_for_scheduler)
+                    agent_tasks = [s for s in schedule_data if s.get('agent_id') == agent_id]
+                    agent_info_table["data"].append([
+                        agent_id,
+                        agent.get('type', 'N/A'),
+                        round(agent.get('capacity', 1.0), 2),
+                        round(agent.get('efficiency', 1.0), 2),
+                        len(agent_tasks),
+                        round(agent_finish_times.get(agent_id, 0), 2)
+                    ])
+                agent_info_table["total_rows"] = len(agent_info_table["data"])
+                
+                final_metrics = {
+                    "type": "final_metrics",
+                    "total_execution_time": round(total_execution_time * 1000, 2),
                     "computation_time": algorithm_computation_time,
-                    "agent_finish_times": final_result.get('agent_finish_times', {}),
-                    "iteration_history": final_result.get('iteration_history', []),
-                    "total_tasks": len(schedule_data),
-                    "total_agents": len(final_result.get('agent_finish_times', {})),
-                    "timestamp": datetime.now().isoformat(),
-                    "parameters": {
-                        "enable_dependencies": enable_dependencies,
-                        "random_seed": random_seed,
-                        "n_iterations": n_iterations,
-                        "num_agents": num_default_agents
+                    "load_balance_index": load_balance_index,
+                    "full_schedule_table": full_schedule_table,
+                    "agent_info_table": agent_info_table,
+                    "full_result": {
+                        "algorithm": algorithm,
+                        "schedule": schedule_data,
+                        "makespan": final_result.get('makespan', 0),
+                        "load_balance_index": load_balance_index,
+                        "computation_time": algorithm_computation_time,
+                        "agent_finish_times": final_result.get('agent_finish_times', {}),
+                        "iteration_history": final_result.get('iteration_history', []),
+                        "total_tasks": len(schedule_data),
+                        "total_agents": len(final_result.get('agent_finish_times', {})),
+                        "timestamp": datetime.now().isoformat(),
+                        "parameters": {
+                            "enable_dependencies": enable_dependencies,
+                            "random_seed": random_seed,
+                            "n_iterations": n_iterations,
+                            "num_agents": num_default_agents
+                        }
                     }
                 }
-            }
-            
-            if algorithm == 'ACO':
-                final_metrics["full_result"]["parameters"].update({
-                    "n_ants": n_ants, "alpha": alpha, "beta": beta,
-                    "evaporation_rate": evaporation_rate, "pheromone_deposit": pheromone_deposit
-                })
-            elif algorithm == 'PSO':
-                final_metrics["full_result"]["parameters"].update({
-                    "n_particles": n_particles, "w": w, "c1": c1, "c2": c2
-                })
-            
-            yield f"data: {json.dumps(final_metrics)}\n\n"
+                
+                if algorithm == 'ACO':
+                    final_metrics["full_result"]["parameters"].update({
+                        "n_ants": n_ants, "alpha": alpha, "beta": beta,
+                        "evaporation_rate": evaporation_rate, "pheromone_deposit": pheromone_deposit
+                    })
+                elif algorithm == 'PSO':
+                    final_metrics["full_result"]["parameters"].update({
+                        "n_particles": n_particles, "w": w, "c1": c1, "c2": c2
+                    })
+                
+                yield f"data: {json.dumps(final_metrics)}\n\n"
+            except GeneratorExit:
+                print(f"[INFO] Client disconnected during final metrics")
+                return
 
         response = Response(generate(), mimetype='text/event-stream')
         response.headers['Cache-Control'] = 'no-cache, no-transform'
