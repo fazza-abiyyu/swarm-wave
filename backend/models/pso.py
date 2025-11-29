@@ -17,6 +17,17 @@ class PSO_MultiAgent_Scheduler(MultiAgentScheduler):
 
         if self.jumlah_tugas > 0 and self.jumlah_partikel > 0:
             self.posisi = np.random.rand(self.jumlah_partikel, self.jumlah_tugas)
+            
+            # Soft priority bias (probabilistic, not deterministic)
+            for i, task in enumerate(self.tugas):
+                priority = task.get('priority', 1)
+                # Small additive bias: priority 5 → +0.1, priority 1 → +0.0
+                priority_bias = (priority - 1) * 0.025  # Subtle influence
+                self.posisi[:, i] += priority_bias
+            
+            # Clip to avoid extreme values
+            self.posisi = np.clip(self.posisi, 0, 2)
+            
             self.kecepatan = np.random.rand(self.jumlah_partikel, self.jumlah_tugas) * 0.1
             self.posisi_pbest = self.posisi.copy()
             self.biaya_pbest = np.full(self.jumlah_partikel, float('inf'))
