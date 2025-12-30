@@ -23,6 +23,7 @@ matlab/experiments/results/*
 !matlab/experiments/results/.gitkeep
 matlab/experiments/plots/*
 !matlab/experiments/plots/.gitkeep
+backend/docs
 
 # MATLAB temporary and cache files
 *.asv                # MATLAB autosave files
