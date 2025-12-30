@@ -18,15 +18,33 @@ from models.utils import (
     parse_dependensi,
     filter_ghost_dependencies,
     fungsi_biaya_jadwal,
-    buat_cost_function_untuk_scheduler
+    buat_cost_function_untuk_scheduler,
+    validasi_dependensi,
+    ada_dependensi_sirkular
 )
 
 app = Flask(__name__)
 app.start_time = time.time()
 
-# Security headers middleware
+# Middleware Header Keamanan
 @app.after_request
 def add_security_headers(response):
+    """
+    Menambahkan header keamanan ke setiap respons HTTP.
+    
+    Header yang ditambahkan meliputi:
+    - Content-Security-Policy (CSP): Mengontrol sumber daya yang diizinkan dimuat.
+    - X-Frame-Options: Mencegah clickjacking (SAMEORIGIN).
+    - X-Content-Type-Options: Mencegah MIME sniffing.
+    - Strict-Transport-Security (HSTS): Memaksa HTTPS (jika di production).
+    - Cache-Control: Mengatur caching berdasarkan endpoint (no-cache untuk simulasi).
+    
+    Args:
+        response (Response): Objek respons Flask.
+        
+    Returns:
+        Response: Objek respons yang telah dimodifikasi dengan header keamanan.
+    """
     # Content Security Policy (CSP) Header
     response.headers['Content-Security-Policy'] = (
         "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https:; "
@@ -66,7 +84,7 @@ def add_security_headers(response):
     
     return response
 
-# CORS configuration
+# Konfigurasi CORS
 CORS(app, 
      origins=[
          'http://localhost:3000', 
@@ -94,6 +112,15 @@ CORS(app,
 
 @app.before_request
 def handle_preflight():
+    """
+    Menangani request OPTIONS untuk keperluan CORS Preflight.
+    
+    Browser modern mengirim request OPTIONS sebelum request actual (POST/PUT/DELETE)
+    untuk memverifikasi izin CORS.
+    
+    Returns:
+        Response: Respons kosong dengan header Access-Control-Allow-* yang sesuai.
+    """
     if request.method == "OPTIONS":
         response = Response()
         response.headers.add("Access-Control-Allow-Origin", request.headers.get('Origin', '*'))
@@ -104,6 +131,18 @@ def handle_preflight():
 
 @app.errorhandler(Exception)
 def handle_cors_error(e):
+    """
+    Global Error Handler yang tetap menyertakan header CORS.
+    
+    Memastikan bahwa jika terjadi error 500/400, browser tetap menerima header CORS
+    sehingga pesan error bisa dibaca oleh frontend (tidak terblokir CORS policy).
+    
+    Args:
+        e (Exception): Exception yang terjadi.
+        
+    Returns:
+        tuple: (JSON Response, HTTP Status Code)
+    """
     response = jsonify({
         "error": "Internal server error",
         "message": "An error occurred while processing your request",
@@ -120,10 +159,27 @@ def handle_cors_error(e):
 
 @app.route('/')
 def home():
+    """
+    Endpoint root untuk pengecekan sederhana apakah server berjalan.
+    
+    Returns:
+        JSON: Pesan status server.
+    """
     return jsonify({"message": "Multi-Agent Task Scheduling API is running"})
 
 @app.route('/health')
 def health_check():
+    """
+    Endpoint Health Check untuk monitoring status sistem.
+    
+    Memberikan informasi mendalam tentang:
+    - Status server & Uptime.
+    - Info Sistem (OS, Python version).
+    - Status ketersediaan algoritma (ACO, PSO) dengan melakukan test run dummy.
+    
+    Returns:
+        JSON: Laporan kesehatan sistem lengkap.
+    """
     try:
         current_time = time.time()
         uptime = current_time - app.start_time if hasattr(app, 'start_time') else 0
@@ -177,7 +233,27 @@ def health_check():
 
 @app.route('/stream_scheduling', methods=['POST'])
 def stream_scheduling():
-    """Stream-enabled scheduling endpoint with consistent logic for comparison"""
+    """
+    Endpoint utama untuk menjalankan simulasi penjadwalan dengan Streaming Response (SSE).
+    
+    Menerima data tugas dan parameter, melakukan normalisasi, validasi dependensi,
+    dan menjalankan algoritma optimasi (ACO/PSO) secara real-time.
+    
+    Proses:
+    1. Parsing Input: Normalisasi nama kolom dan tipe data.
+    2. Auto-Detect Dependencies: Mengaktifkan mode dependensi jika data ditemukan.
+    3. Validasi Dependensi: Cek circular dependency (return 400 jika ada).
+    4. Inisialisasi Scheduler: Setup ACO atau PSO dengan parameter yang sesuai.
+    5. Streaming: Mengirim update progress per iterasi ke klien menggunakan generator.
+    
+    Args (JSON Body):
+        tasks (list): Daftar tugas (task_id, duration, priority, dependencies, dll).
+        parameters (dict): Konfigurasi simulasi (num_agents, n_iterations, algorithm-specific params).
+        algorithm (str): 'ACO' atau 'PSO'.
+        
+    Returns:
+        Response: Stream text/event-stream berisi update JSON per baris.
+    """
     try:
         data = request.get_json()
         if not data: return jsonify({"error": "No data provided"}), 400
@@ -191,18 +267,20 @@ def stream_scheduling():
         algorithm = data.get('algorithm', '').upper()
         if not algorithm: return jsonify({"error": "Algorithm not specified"}), 400
 
-        # Extract parameters
+        # Ekstraksi Parameter
         num_default_agents = parameters.get('num_default_agents', 10)
         n_iterations = parameters.get('n_iterations', 100)
         task_id_col_for_scheduler = parameters.get('task_id_col', 'id')
+        task_id_col_for_scheduler = parameters.get('task_id_col', 'id')
         agent_id_col_for_scheduler = parameters.get('agent_id_col', 'id')
+        dependency_col_for_scheduler = parameters.get('dependency_col', '')
         
-        # Random seed setup
+        # Pengaturan Random Seed
         random_seed = parameters.get('random_seed', 42)
         random.seed(random_seed)
         np.random.seed(random_seed)
         
-        # Algorithm specific parameters
+        # Parameter Spesifik Algoritma
         n_ants = parameters.get('n_ants', 50)
         alpha = parameters.get('alpha', 0.9)
         beta = parameters.get('beta', 2)
@@ -214,14 +292,14 @@ def stream_scheduling():
         c1 = parameters.get('c1', 0.3)
         c2 = parameters.get('c2', 0.4)
         
-        enable_dependencies = parameters.get('enable_dependencies', False)
+        enable_dependencies = parameters.get('enable_dependencies', None)
 
-        # --- NORMALISASI DATA TUGAS (Menggunakan fungsi dari utils) ---
+        # --- NORMALISASI DATA TUGAS ---
         formatted_tasks = []
         flexible_task_id_candidates = ['Task_ID', 'TaskID', 'task_id', 'id', 'ID', 'name', 'Name']
 
         for i, task in enumerate(tasks):
-            # 1. ID Normalization
+            # Normalisasi ID
             task_id_value = None
             for field in flexible_task_id_candidates:
                 if field in task and task[field] is not None:
@@ -234,7 +312,7 @@ def stream_scheduling():
             if not task_id_value: 
                 task_id_value = str(i + 1)
 
-            # 2. Numeric Fields
+            # Field Numerik
             task_length = None
             for field in ['Duration', 'duration', 'length', 'Length', 'Weight', 'weight', 'execution_time', 'Execution_Time (s)']:
                 if field in task:
@@ -252,12 +330,20 @@ def stream_scheduling():
             cpu_usage = safe_convert_to_float(task.get('CPU_Usage', task.get('cpu_usage', 0)), 0)
             ram_usage = safe_convert_to_float(task.get('RAM_Usage', task.get('ram_usage', 0)), 0)
             
-            # 3. Dependency Normalization menggunakan parse_dependensi dari utils
+            # Normalisasi Dependensi (menggunakan utils)
             dependencies = None
-            for field in ['dependencies', 'Dependencies', 'depends_on', 'prerequisites', 'requires']:
-                if field in task and task[field] is not None:
-                    dependencies = task[field]
-                    break
+            
+            # Prioritas Utama: Gunakan kolom yang dipilih user
+            if dependency_col_for_scheduler and dependency_col_for_scheduler in task:
+                 dependencies = task[dependency_col_for_scheduler]
+            
+            # Alternatif: Cari otomatis jika belum ketemu
+            # Alternatif: Cari otomatis jika belum ketemu, TAPI hanya jika user tidak mematikan dependensi
+            if dependencies is None and enable_dependencies is not False:
+                for field in ['dependencies', 'Dependencies', 'depends_on', 'prerequisites', 'requires', 'dependensi', 'Dependensi']:
+                    if field in task and task[field] is not None:
+                        dependencies = task[field]
+                        break
             
             # Gunakan parse_dependensi untuk list, atau handle langsung
             if isinstance(dependencies, str):
@@ -280,7 +366,7 @@ def stream_scheduling():
                 'dependencies': normalized_deps
             }
             
-            # Copy sisa field
+            # Salin field yang tersisa
             for key, value in task.items():
                 if key not in formatted_task:
                     if isinstance(value, (int, float)):
@@ -290,19 +376,37 @@ def stream_scheduling():
             
             formatted_tasks.append(formatted_task)
         
+        # --- DETEKSI OTOMATIS DEPENDENSI ---
+        # Jika ada data dependensi, kita PAKSA nyalakan, karena user sudah memilih kolomnya.
+        has_dependencies = any(len(t['dependencies']) > 0 for t in formatted_tasks)
+        
+        if has_dependencies:
+            if not enable_dependencies:
+                print("Auto-enabling dependencies (Force) because dependency data was found.")
+            enable_dependencies = True
+        
+        # Pastikan boolean
+        enable_dependencies = bool(enable_dependencies)
+        
         # Filter ghost dependencies menggunakan fungsi dari utils
         if enable_dependencies and len(formatted_tasks) > 0:
             count_removed = filter_ghost_dependencies(formatted_tasks, task_id_col_for_scheduler)
-            # Log sudah ditampilkan di dalam fungsi filter_ghost_dependencies
+
+            # --- VALIDASI DEPENDENSI SIRKULAR ---
+            is_valid, masalah_dependensi = validasi_dependensi(formatted_tasks, task_id_col_for_scheduler)
+            if not is_valid:
+                error_msg = "Dependency Error: " + "; ".join(masalah_dependensi)
+                print(f"{error_msg}")
+                return jsonify({"error": error_msg}), 400
         
-        # --- GENERATE AGEN DETERMINISTIK (Menggunakan fungsi dari utils) ---
+        # --- GENERASI AGEN DETERMINISTIK ---
         agents = parameters.get('agents')
         
         if not agents:
             agents = generate_agen_default(num_default_agents, agent_id_col_for_scheduler)
             print(f"DEBUG: Generated {len(agents)} deterministic agents.")
         
-        # Cost function menggunakan fungsi dari utils
+        # Fungsi Biaya (menggunakan utils)
         bobot_waktu = parameters.get('bobot_waktu', 1.0)
         bobot_keseimbangan_beban = parameters.get('bobot_keseimbangan_beban', 1.0)
         cost_function = buat_cost_function_untuk_scheduler(bobot_waktu, bobot_keseimbangan_beban)
@@ -312,7 +416,7 @@ def stream_scheduling():
             priority = max(task.get('priority', 1), 1.0)
             return (1.0 / duration) * priority
         
-        # Scheduler Initialization
+        # Inisialisasi Scheduler
         scheduler = None
         if algorithm == 'ACO':
             scheduler = ACOScheduler(
@@ -335,7 +439,7 @@ def stream_scheduling():
         else:
             return jsonify({"error": f"Unsupported algorithm: {algorithm}"}), 400
 
-        # Generator function with client disconnect handling
+        # Fungsi Generator dengan penanganan diskoneksi klien
         def generate():
             start_time = time.time()
             final_result = None
@@ -363,7 +467,7 @@ def stream_scheduling():
                     except json.JSONDecodeError:
                         continue
             except GeneratorExit:
-                # Client disconnected - stop processing
+                # Klien terputus - hentikan proses
                 cancelled = True
                 print(f"[INFO] Client disconnected, stopping {algorithm} simulation")
                 return
