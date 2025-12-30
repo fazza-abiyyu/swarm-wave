@@ -72,7 +72,6 @@
       <!-- Hero Section -->
       <div class="text-center mb-12">
         <div class="bg-blue-500 text-white w-24 h-24 rounded-full mx-auto mb-6 flex items-center bg-gradient-to-br from-blue-500 to-yellow-500 justify-center">
-          <!-- <div class="w-100 h-100 bg-gradient-to-br from-blue-500 to-yellow-500 rounded-lg flex items-center justify-center"> -->
               <svg class="w-16 h-16 text-white" viewBox="0 0 20 20" fill="currentColor">
                 <circle cx="3" cy="3" r="1"/>
                 <circle cx="10" cy="3" r="1"/>
@@ -87,7 +86,6 @@
                 <line x1="6.5" y1="10" x2="10" y2="17" stroke="currentColor" stroke-width="0.5"/>
                 <line x1="13.5" y1="10" x2="10" y2="17" stroke="currentColor" stroke-width="0.5"/>
               </svg>
-            <!-- </div> -->
         </div>
         <h1 class="text-4xl font-bold text-gray-900 mb-4">About Swarm Wave</h1>
         <p class="text-xl text-gray-600 max-w-2xl mx-auto">
@@ -96,7 +94,7 @@
       </div>
 
       <!-- Project Information -->
-      <div class="bg-white rounded-xl shadow-lg p-8 mb-8">
+      <div class="bg-white rounded-xl border border-gray-200 shadow-none p-8 mb-8">
         <h2 class="text-2xl font-bold text-gray-900 mb-6">Project Overview</h2>
         <div class="space-y-4 text-gray-700">
           <p>
@@ -112,8 +110,25 @@
         </div>
       </div>
 
+      <!-- Disclaimer -->
+      <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-8 rounded-r-xl border border-gray-200 shadow-none">
+        <div class="flex">
+          <div class="flex-shrink-0">
+            <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <div class="ml-3">
+            <p class="text-sm text-yellow-700">
+              <strong class="font-medium text-yellow-800">DISCLAIMER:</strong> 
+              The current system only supports research-specific datasets and is not yet universal.
+            </p>
+          </div>
+        </div>
+      </div>
+
       <!-- Creator Information -->
-      <div class="bg-white rounded-xl shadow-lg p-8 mb-8">
+      <div class="bg-white rounded-xl border border-gray-200 shadow-none p-8 mb-8">
         <h2 class="text-2xl font-bold text-gray-900 mb-6">Project Details</h2>
         <div class="grid md:grid-cols-2 gap-8">
           <div>
@@ -197,7 +212,7 @@
       </div>
 
       <!-- Features -->
-      <div class="bg-white rounded-xl shadow-lg p-8 mb-8">
+      <div class="bg-white rounded-xl border border-gray-200 shadow-none p-8 mb-8">
         <h2 class="text-2xl font-bold text-gray-900 mb-6">Key Features</h2>
         <div class="grid md:grid-cols-2 gap-6">
           <div class="flex items-start space-x-4">
@@ -250,25 +265,7 @@
         </div>
       </div>
 
-      <!-- GitHub Repository -->
-      <div class="bg-white rounded-xl shadow-lg p-8 text-center">
-        <h2 class="text-2xl font-bold text-gray-900 mb-4">Open Source Project</h2>
-        <p class="text-gray-600 mb-6">
-          This project is open source and available under the MIT License. 
-          Feel free to contribute, use, or modify according to your needs.
-        </p>
-        <a 
-          href="https://github.com/fazza-abiyyu/swarm-wave" 
-          target="_blank" 
-          rel="noopener noreferrer"
-          class="inline-flex items-center px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors duration-200"
-        >
-          <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
-          </svg>
-          View on GitHub
-        </a>
-      </div>
+
     </main>
 
     <!-- Footer -->
