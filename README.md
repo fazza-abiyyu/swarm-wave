@@ -10,7 +10,6 @@ Swarm Wave implements bio-inspired optimization techniques to solve complex reso
 
 - **Backend**: Python/Flask REST API implementing ACO and PSO algorithms.
 - **Frontend**: Nuxt 4/Vue 3 web interface for simulation and visualization.
-- **Experiments**: MATLAB/Octave scripts for algorithm research and benchmarking.
 
 > [!IMPORTANT]
 > **DISCLAIMER**: Sistem saat ini baru mendukung dataset spesifik sesuai penelitian dan belum bersifat universal.
