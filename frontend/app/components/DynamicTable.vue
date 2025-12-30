@@ -6,7 +6,7 @@
         </div>
 
         <!-- Controls Section -->
-        <div class="controls-section mb-6 bg-white rounded-lg shadow-md p-4">
+        <div class="controls-section mb-6 bg-white rounded-lg border border-gray-200 shadow-none p-4">
             <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                 <!-- Data Modification Group -->
                 <div class="space-y-2">
@@ -68,13 +68,13 @@
 
         <!-- JSON Input Section (Collapsible) -->
         <div v-if="showJsonEditor"
-            class="json-section mb-6 bg-white rounded-lg shadow-md p-4 transition-all duration-300">
+            class="json-section mb-6 bg-white rounded-lg border border-gray-200 shadow-none p-4 transition-all duration-300">
             <div class="flex justify-between items-center mb-2">
                 <label class="block text-sm font-medium text-gray-700">
                     JSON Input
                 </label>
                 <button @click="loadSampleData" class="text-sm text-blue-600 hover:text-blue-800 font-medium">
-                Load Sample Data (Any Domain)
+                Load Default Dataset
             </button>
             </div>
             <textarea v-model="jsonInput" @input="updateFromJson"
@@ -87,7 +87,7 @@
         </div>
 
         <!-- Dynamic Table -->
-        <div class="table-section bg-white rounded-lg shadow-md overflow-hidden">
+        <div class="table-section bg-white rounded-lg border border-gray-200 shadow-none overflow-hidden">
             <!-- Responsive Table Container -->
             <div class="overflow-x-auto">
                 <table class="min-w-max w-full divide-y divide-gray-200 whitespace-nowrap">
@@ -342,7 +342,7 @@ const props = defineProps({
 const emit = defineEmits(['data-updated', 'run-simulation'])
 
 // Reactive data
-const headers = ref(['TaskID', 'Weight', 'Duration', 'Cost'])
+const headers = ref(['Task_ID', 'CPU_Usage', 'RAM_Usage', 'Priority', 'Execution_Time (s)', 'Dependencies'])
 const cellErrors = ref({}) // Track validation errors for individual cells
 
 // Store data by column index instead of header name
@@ -360,11 +360,9 @@ const initializeData = () => {
     );
   } else {
     // Default sample data
-    const defaultData = [
-      { TaskID: '1', Weight: '10', Duration: '25', Cost: '100' },
-      { TaskID: '2', Weight: '15', Duration: '30', Cost: '150' },
-      { TaskID: '3', Weight: '8', Duration: '20', Cost: '80' }
-    ]
+      // Default sample data (first 5 rows of defaultDataset)
+    const defaultData = defaultDataset.slice(0, 5)
+    
     headers.value = Object.keys(defaultData[0]);
     columnData.value = headers.value.map(header => 
       defaultData.map(row => row[header] || '')
@@ -601,33 +599,18 @@ const validateAllCells = () => {
 }
 
 // Generic sample datasets for different domains
-const sampleDatasets = {
-    cloud: [
-        {"Task_ID": "1", "CPU_Usage (%)": "37", "RAM_Usage (MB)": "2612", "Disk_IO (MB/s)": "55", "Network_IO (MB/s)": "40", "Priority": "2", "VM_ID": "107", "Execution_Time (s)": "1.27", "Target": "1"},
-        {"Task_ID": "2", "CPU_Usage (%)": "86", "RAM_Usage (MB)": "11761", "Disk_IO (MB/s)": "120", "Network_IO (MB/s)": "85", "Priority": "5", "VM_ID": "108", "Execution_Time (s)": "3.71", "Target": "1"},
-        {"Task_ID": "3", "CPU_Usage (%)": "44", "RAM_Usage (MB)": "4610", "Disk_IO (MB/s)": "65", "Network_IO (MB/s)": "25", "Priority": "3", "VM_ID": "109", "Execution_Time (s)": "8.53", "Target": "1"}
-    ],
-    manufacturing: [
-        {"Job_ID": "1", "Processing_Time": "45", "Setup_Time": "5", "Material_Cost": "250", "Labor_Hours": "8", "Priority": "3", "Deadline": "120", "Quality_Score": "95"},
-        {"Job_ID": "2", "Processing_Time": "120", "Setup_Time": "15", "Material_Cost": "800", "Labor_Hours": "20", "Priority": "5", "Deadline": "200", "Quality_Score": "88"},
-        {"Job_ID": "3", "Processing_Time": "30", "Setup_Time": "2", "Material_Cost": "150", "Labor_Hours": "4", "Priority": "2", "Deadline": "72", "Quality_Score": "92"}
-    ],
-    logistics: [
-        {"Order_ID": "1", "Distance_km": "250", "Weight_kg": "1500", "Volume_m3": "8.5", "Urgency": "4", "Fuel_Cost": "180", "Delivery_Time": "4.2", "Customer_Rating": "4.8", "Priority": "3"},
-        {"Order_ID": "2", "Distance_km": "800", "Weight_kg": "3500", "Volume_m3": "15.2", "Urgency": "5", "Fuel_Cost": "420", "Delivery_Time": "12.5", "Customer_Rating": "4.2", "Priority": "5"},
-        {"Order_ID": "3", "Distance_km": "120", "Weight_kg": "800", "Volume_m3": "4.1", "Urgency": "2", "Fuel_Cost": "95", "Delivery_Time": "2.1", "Customer_Rating": "4.9", "Priority": "2"}
-    ],
-    finance: [
-        {"Investment_ID": "1", "Amount": "50000", "Risk_Score": "7.5", "Expected_Return": "12.5", "Duration_Months": "24", "Market_Volatility": "15.2", "Liquidity": "8.5", "Priority": "4"},
-        {"Investment_ID": "2", "Amount": "75000", "Risk_Score": "4.2", "Expected_Return": "8.8", "Duration_Months": "12", "Market_Volatility": "8.7", "Liquidity": "9.2", "Priority": "3"},
-        {"Investment_ID": "3", "Amount": "30000", "Risk_Score": "9.8", "Expected_Return": "18.5", "Duration_Months": "36", "Market_Volatility": "22.3", "Liquidity": "6.8", "Priority": "5"}
-    ],
-    healthcare: [
-        {"Patient_ID": "1", "Age": "45", "Treatment_Duration": "14", "Medication_Cost": "2500", "Severity": "3", "Insurance_Coverage": "0.8", "Recovery_Rate": "0.85", "Risk_Factor": "2.1", "Priority": "2"},
-        {"Patient_ID": "2", "Age": "67", "Treatment_Duration": "28", "Medication_Cost": "7500", "Severity": "5", "Insurance_Coverage": "0.9", "Recovery_Rate": "0.65", "Risk_Factor": "4.2", "Priority": "5"},
-        {"Patient_ID": "3", "Age": "34", "Treatment_Duration": "7", "Medication_Cost": "1200", "Severity": "2", "Insurance_Coverage": "0.7", "Recovery_Rate": "0.95", "Risk_Factor": "1.3", "Priority": "1"}
-    ]
-}
+const defaultDataset = [
+    {"Task_ID": "1", "CPU_Usage": "37", "RAM_Usage": "2612", "Priority": "2", "Execution_Time (s)": "1.27", "Dependencies": ""},
+    {"Task_ID": "2", "CPU_Usage": "86", "RAM_Usage": "11761", "Priority": "3", "Execution_Time (s)": "3.71", "Dependencies": ""},
+    {"Task_ID": "3", "CPU_Usage": "44", "RAM_Usage": "4610", "Priority": "2", "Execution_Time (s)": "8.53", "Dependencies": ""},
+    {"Task_ID": "4", "CPU_Usage": "82", "RAM_Usage": "12604", "Priority": "3", "Execution_Time (s)": "7.31", "Dependencies": "3"},
+    {"Task_ID": "5", "CPU_Usage": "59", "RAM_Usage": "15945", "Priority": "1", "Execution_Time (s)": "1.76", "Dependencies": ""},
+    {"Task_ID": "6", "CPU_Usage": "80", "RAM_Usage": "11333", "Priority": "2", "Execution_Time (s)": "8.14", "Dependencies": ""},
+    {"Task_ID": "7", "CPU_Usage": "90", "RAM_Usage": "16298", "Priority": "2", "Execution_Time (s)": "9.13", "Dependencies": "1"},
+    {"Task_ID": "8", "CPU_Usage": "37", "RAM_Usage": "5935", "Priority": "3", "Execution_Time (s)": "9.15", "Dependencies": ""},
+    {"Task_ID": "9", "CPU_Usage": "30", "RAM_Usage": "11438", "Priority": "3", "Execution_Time (s)": "2.62", "Dependencies": "7"},
+    {"Task_ID": "10", "CPU_Usage": "46", "RAM_Usage": "15947", "Priority": "1", "Execution_Time (s)": "4.78", "Dependencies": ""}
+]
 
 // Methods
 const addRow = () => {
@@ -867,20 +850,15 @@ const updateFromJson = () => {
 }
 
 const loadSampleData = () => {
-  const domains = Object.keys(sampleDatasets)
-  const domain = domains[currentDatasetIndex.value % domains.length]
-  const sampleData = sampleDatasets[domain]
-  
-  headers.value = Object.keys(sampleData[0])
+  headers.value = Object.keys(defaultDataset[0])
   // Convert to column-based structure
   columnData.value = headers.value.map(header => 
-    sampleData.map(row => String(row[header] || ''))
+    defaultDataset.map(row => String(row[header] || ''))
   )
-  currentDatasetIndex.value++
   
   validateAllCells()
   emit('data-updated', getTableData())
-  showToastMessage(`Loaded ${domain} sample data`)
+  showToastMessage('Loaded default dataset')
 }
 
 const toggleJsonEditor = () => {
