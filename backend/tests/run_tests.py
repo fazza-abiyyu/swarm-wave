@@ -2,7 +2,7 @@ import unittest
 import sys
 import os
 
-# Add parent directory to path to import test modules
+# Tambahkan direktori induk ke path untuk mengimpor modul tes
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from tests.test_app import TestFlaskApp
@@ -10,28 +10,28 @@ from tests.test_aco import TestACOAlgorithm
 from tests.test_pso import TestPSOAlgorithm
 
 def create_test_suite():
-    """Create a comprehensive test suite for all backend components"""
+    """Membuat test suite komprehensif untuk semua komponen backend"""
     loader = unittest.TestLoader()
     test_suite = unittest.TestSuite()
     
-    # Add Flask app tests
+    # Tambahkan tes Flask app
     test_suite.addTest(loader.loadTestsFromTestCase(TestFlaskApp))
     
-    # Add ACO algorithm tests
+    # Tambahkan tes algoritma ACO
     test_suite.addTest(loader.loadTestsFromTestCase(TestACOAlgorithm))
     
-    # Add PSO algorithm tests
+    # Tambahkan tes algoritma PSO
     test_suite.addTest(loader.loadTestsFromTestCase(TestPSOAlgorithm))
     
     return test_suite
 
 if __name__ == '__main__':
-    # Create and run the test suite
+    # Buat dan jalankan test suite
     suite = create_test_suite()
     runner = unittest.TextTestRunner(verbosity=2)
     result = runner.run(suite)
     
-    # Print summary
+    # Cetak ringkasan
     print(f"\n{'='*50}")
     print(f"TEST SUMMARY")
     print(f"{'='*50}")
@@ -50,5 +50,5 @@ if __name__ == '__main__':
         for test, traceback in result.errors:
             print(f"- {test}: {traceback}")
             
-    # Exit with appropriate code
+    # Keluar dengan kode yang sesuai
     sys.exit(0 if result.wasSuccessful() else 1)

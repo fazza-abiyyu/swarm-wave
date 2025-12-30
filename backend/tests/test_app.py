@@ -4,20 +4,20 @@ from unittest.mock import patch, MagicMock
 import sys
 import os
 
-# Add parent directory to path to import the app
+# Tambahkan direktori induk ke path untuk mengimpor app
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app import app
 
 class TestFlaskApp(unittest.TestCase):
     def setUp(self):
-        """Set up test fixtures before each test method."""
+        """Menyiapkan perlengkapan tes sebelum setiap metode tes."""
         self.app = app
         self.app.config['TESTING'] = True
         self.client = self.app.test_client()
         
     def test_health_check(self):
-        """Test health check endpoint"""
+        """Menguji endpoint health check"""
         response = self.client.get('/health')
         self.assertEqual(response.status_code, 200)
         
@@ -29,16 +29,16 @@ class TestFlaskApp(unittest.TestCase):
         self.assertIn('algorithms', data)
         
     def test_health_check_structure(self):
-        """Test health check response structure"""
+        """Menguji struktur respons health check"""
         response = self.client.get('/health')
         data = json.loads(response.data)
         
-        # Check algorithms availability
+        # Periksa ketersediaan algoritma
         self.assertIn('algorithms', data)
         self.assertIn('ACO', data['algorithms'])
         self.assertIn('PSO', data['algorithms'])
         
-        # Check algorithm structure
+        # Periksa struktur algoritma
         aco_status = data['algorithms']['ACO']
         pso_status = data['algorithms']['PSO']
         
@@ -48,7 +48,7 @@ class TestFlaskApp(unittest.TestCase):
         self.assertIn('status', pso_status)
 
     def test_stream_scheduling_missing_algorithm(self):
-        """Test stream scheduling with missing algorithm parameter"""
+        """Menguji stream scheduling tanpa parameter algoritma"""
         data = {
             "tasks_data": [
                 {"id": "Task_1", "length": 5, "cost": 10},
@@ -69,7 +69,7 @@ class TestFlaskApp(unittest.TestCase):
         self.assertEqual(data['error'], 'Algorithm not specified')
 
     def test_stream_scheduling_invalid_algorithm(self):
-        """Test stream scheduling with invalid algorithm"""
+        """Menguji stream scheduling dengan algoritma tidak valid"""
         data = {
             "algorithm": "INVALID_ALGO",
             "tasks_data": [
@@ -89,7 +89,7 @@ class TestFlaskApp(unittest.TestCase):
         self.assertIn('error', data)
 
     def test_stream_scheduling_missing_tasks(self):
-        """Test stream scheduling with missing tasks data"""
+        """Menguji stream scheduling tanpa data tugas"""
         data = {
             "algorithm": "ACO",
             "parameters": {

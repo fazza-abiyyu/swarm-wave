@@ -8,54 +8,54 @@ import unittest
 import sys
 import os
 
-# Add parent directory to path
+# Tambahkan direktori induk ke path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 def run_individual_tests():
-    """Interactive menu for running individual test modules"""
+    """Menu interaktif untuk menjalankan modul tes individu"""
     
     test_modules = {
-        '1': ('tests.test_app', 'Flask Application Tests'),
-        '2': ('tests.test_aco', 'ACO Algorithm Tests'),  
-        '3': ('tests.test_pso', 'PSO Algorithm Tests'),
-        '4': ('tests.test_utilities', 'Utility Function Tests'),
-        '5': ('all', 'All Tests (Comprehensive Suite)')
+        '1': ('tests.test_app', 'Tes Aplikasi Flask'),
+        '2': ('tests.test_aco', 'Tes Algoritma ACO'),  
+        '3': ('tests.test_pso', 'Tes Algoritma PSO'),
+        '4': ('tests.test_utilities', 'Tes Fungsi Utilitas'),
+        '5': ('all', 'Semua Tes (Suite Komprehensif)')
     }
     
     print("\n" + "="*50)
     print("BACKEND UNIT TEST RUNNER")  
     print("="*50)
-    print("Select tests to run:")
+    print("Pilih tes yang akan dijalankan:")
     
     for key, (module, description) in test_modules.items():
         print(f"{key}. {description}")
     
-    choice = input("\nEnter your choice (1-5): ").strip()
+    choice = input("\nMasukkan pilihan Anda (1-5): ").strip()
     
     if choice not in test_modules:
-        print(f"Invalid choice: {choice}")
+        print(f"Pilihan tidak valid: {choice}")
         return
         
     module, description = test_modules[choice]
     
-    print(f"\nRunning: {description}")
+    print(f"\nMenjalankan: {description}")
     print("-" * 50)
     
-    if choice == '5':  # All tests
+    if choice == '5':  # Semua tes
         from tests.run_tests import create_test_suite
         suite = create_test_suite()
     else:
-        # Load specific module
+        # Muat modul spesifik
         loader = unittest.TestLoader()
         suite = loader.loadTestsFromName(module)
     
-    # Run tests with verbose output
+    # Jalankan tes dengan output verbose
     runner = unittest.TextTestRunner(verbosity=2, stream=sys.stdout)
     result = runner.run(suite)
     
-    # Print detailed summary
+    # Cetak ringkasan detail
     print(f"\n" + "="*50)
-    print(f"DETAILED TEST RESULTS: {description}")
+    print(f"HASIL TES DETAIL: {description}")
     print("="*50)
     print(f"Tests run: {result.testsRun}")
     print(f"Failures: {len(result.failures)}")
@@ -76,9 +76,9 @@ def run_individual_tests():
             print(f"   {traceback.strip().split()[-1]}")
     
     if result.wasSuccessful():
-        print(f"\n✅ ALL TESTS PASSED!")
+        print(f"\n✅ SEMUA TES BERHASIL!")
     else:
-        print(f"\n❌ Some tests failed. Check output above.")
+        print(f"\n❌ Beberapa tes gagal. Periksa output di atas.")
     
     return result.wasSuccessful()
 
