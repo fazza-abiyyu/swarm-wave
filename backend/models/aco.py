@@ -6,10 +6,32 @@ import time
 from .base import MultiAgentScheduler
 
 class ACO_MultiAgent_Scheduler(MultiAgentScheduler):
-    """Implementasi ACO (Ant Colony Optimization)."""
+    """
+    Implementasi ACO (Ant Colony Optimization) untuk penjadwalan tugas multi-agen.
+    
+    Algoritma ini menggunakan sekumpulan "semut" buatan yang membangun solusi secara iteratif.
+    Semut memilih tugas berdasarkan probabilitas yang dipengaruhi oleh jejak feromon (pengalaman masa lalu)
+    dan nilai heuristik (informasi lokal problem-specific).
+    """
 
     def __init__(self, tasks, cost_function, heuristic_function, agents=None, n_ants=10, n_iterations=100,
                  alpha=0.9, beta=2.0, evaporation_rate=0.5, pheromone_deposit=100, **kwargs):
+        """
+        Inisialisasi Scheduler ACO.
+        
+        Args:
+            tasks (list | pd.DataFrame): Daftar tugas.
+            cost_function (callable): Fungsi biaya untuk evaluasi jadwal.
+            heuristic_function (callable): Fungsi heuristik untuk menghitung ketertarikan antar tugas.
+            agents (list, optional): Daftar agen. Defaults to None (generate default).
+            n_ants (int, optional): Jumlah semut per iterasi. Defaults to 10.
+            n_iterations (int, optional): Jumlah iterasi optimasi. Defaults to 100.
+            alpha (float, optional): Bobot pengaruh feromon. Defaults to 0.9.
+            beta (float, optional): Bobot pengaruh heuristik. Defaults to 2.0.
+            evaporation_rate (float, optional): Tingkat penguapan feromon (0-1). Defaults to 0.5.
+            pheromone_deposit (float, optional): Jumlah feromon yang ditinggalkan semut. Defaults to 100.
+            **kwargs: Argumen tambahan untuk MultiAgentScheduler parent class.
+        """
         super().__init__(tasks, agents, cost_function, **kwargs)
         self.fungsi_heuristik = heuristic_function
         self.jumlah_semut = n_ants if self.jumlah_tugas > 0 else 0
@@ -25,7 +47,16 @@ class ACO_MultiAgent_Scheduler(MultiAgentScheduler):
             self.feromon = self.heuristik = np.array([[]])
 
     def calculate_heuristics(self):
-        """Hitung nilai heuristik untuk semua pasangan tugas."""
+        """
+        Hitung nilai heuristik untuk semua pasangan tugas.
+        
+        Nilai heuristik (eta) biasanya statis dan dihitung di awal.
+        Merepresentasikan "jarak" atau "biaya" invers antara tugas i dan j,
+        atau seberapa bagus memilih tugas j setelah tugas i.
+        
+        Returns:
+            np.ndarray: Matriks heuristik ukuran (jumlah_tugas x jumlah_tugas).
+        """
         heuristik = np.zeros((self.jumlah_tugas, self.jumlah_tugas))
         for i in range(self.jumlah_tugas):
             for j in range(self.jumlah_tugas):
@@ -34,7 +65,18 @@ class ACO_MultiAgent_Scheduler(MultiAgentScheduler):
         return heuristik
 
     def construct_solution(self):
-        """Konstruksi solusi oleh satu semut."""
+        """
+        Konstruksi solusi lengkap oleh satu semut.
+        
+        Semut membangun jadwal langkah demi langkah:
+        1. Identifikasi tugas yang siap (dependensi terpenuhi).
+        2. Jika tidak ada yang siap tapi ada tugas tersisa (deadlock), paksa pilih tugas dengan unmet dependencies paling sedikit.
+        3. Pilih tugas berikutnya secara probabilistik (Roulette Wheel Selection) atau acak jika belum ada rute.
+        4. Update state (tugas selesai, posisi semut).
+        
+        Returns:
+            list: Urutan indeks tugas yang merepresentasikan jadwal/solusi.
+        """
         if self.jumlah_tugas == 0:
             return []
         rute, tersisa = [], set(range(self.jumlah_tugas))
@@ -75,7 +117,21 @@ class ACO_MultiAgent_Scheduler(MultiAgentScheduler):
         return rute
 
     def calculate_probabilities(self, saat_ini, belum_dikunjungi):
-        """Hitung probabilitas pemilihan tugas berikutnya."""
+        """
+        Hitung probabilitas pemilihan tugas berikutnya.
+        
+        Probabilitas P(i,j) = [tau(i,j)^alpha] * [eta(i,j)^beta] / Sigma(...)
+        Dimana:
+        - tau: intensitas feromon
+        - eta: nilai heuristik
+        
+        Args:
+            saat_ini (int): Indeks tugas tempat semut berada sekarang.
+            belum_dikunjungi (list): List indeks tugas kandidat yang bisa dikunjungi.
+            
+        Returns:
+            np.ndarray: Array probabilitas untuk setiap tugas kandidat.
+        """
         if not belum_dikunjungi:
             return np.array([])
         phero = self.feromon[saat_ini, belum_dikunjungi] ** self.alpha
@@ -85,7 +141,18 @@ class ACO_MultiAgent_Scheduler(MultiAgentScheduler):
         return keinginan / total if total > 0 else np.ones(len(belum_dikunjungi)) / len(belum_dikunjungi)
 
     def update_pheromones(self, rute_list, biaya_list):
-        """Update matriks feromon berdasarkan solusi."""
+        """
+        Update matriks feromon berdasarkan kumpulan solusi dari semut-semut.
+        
+        Langkah:
+        1. Evaporasi: Kurangi semua feromon dengan faktor evaporation_rate.
+        2. Deposit: Tambahkan feromon pada jalur yang dilewati semut, proporsional dengan kualitas solusi (1/biaya).
+           Jalur yang menghasilkan biaya lebih rendah mendapat lebih banyak feromon.
+           
+        Args:
+            rute_list (list): List dari list urutan tugas (solusi).
+            biaya_list (list): List biaya (makespan/penalty) untuk setiap solusi.
+        """
         if not rute_list or self.jumlah_tugas == 0:
             return
         self.feromon *= (1 - self.tingkat_penguapan)
@@ -99,7 +166,23 @@ class ACO_MultiAgent_Scheduler(MultiAgentScheduler):
                 self.feromon[rute[-1], rute[0]] += tambah
 
     def optimize(self, show_progress=True, progress_callback=None):
-        """Optimasi menggunakan ACO."""
+        """
+        Jalankan algoritma optimasi ACO utama.
+        
+        Iterasi sebanyak n_iterations. Pada setiap iterasi:
+        1. Setiap semut membangun solusi.
+        2. Evaluasi solusi (hitung makespan & load balance).
+        3. Perbarui solusi terbaik global jika ditemukan yang lebih baik.
+        4. Update feromon berdasarkan hasil iterasi ini.
+        5. Log progress & stream update jika ada callback.
+        
+        Args:
+            show_progress (bool): Print progress ke console.
+            progress_callback (callable): Fungsi untuk mengirim update progress real-time.
+            
+        Returns:
+            dict: Laporan hasil optimasi lengkap.
+        """
         urutan_awal = list(range(self.jumlah_tugas))
         jadwal_awal, waktu_agen_awal, keseimbangan_awal = self.assign_to_agents(urutan_awal)
         durasi_total_awal = max(waktu_agen_awal.values(), default=0)

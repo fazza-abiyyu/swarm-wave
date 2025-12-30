@@ -6,10 +6,30 @@ import time
 from .base import MultiAgentScheduler
 
 class PSO_MultiAgent_Scheduler(MultiAgentScheduler):
-    """Implementasi PSO (Particle Swarm Optimization)."""
+    """
+    Implementasi PSO (Particle Swarm Optimization) untuk penjadwalan tugas multi-agen.
+    
+    Algoritma ini merepresentasikan solusi sebagai "partikel" dalam ruang pencarian kontinu.
+    Posisi partikel dikonversi menjadi urutan tugas diskrit. Partikel bergerak menuju posisi terbaik
+    pribadi (pbest) dan global (gbest) untuk menemukan jadwal optimal.
+    """
 
     def __init__(self, tasks, agents, cost_function, n_particles=30, n_iterations=100, 
                  w=0.5, c1=1.5, c2=1.5, **kwargs):
+        """
+        Inisialisasi Scheduler PSO.
+        
+        Args:
+            tasks (list | pd.DataFrame): Daftar tugas.
+            agents (list, optional): Daftar agen.
+            cost_function (callable): Fungsi biaya.
+            n_particles (int, optional): Jumlah partikel. Defaults to 30.
+            n_iterations (int, optional): Jumlah iterasi. Defaults to 100.
+            w (float, optional): Bobot inersia (mempertahankan kecepatan sebelumnya). Defaults to 0.5.
+            c1 (float, optional): Koefisien kognitif (menuju pbest). Defaults to 1.5.
+            c2 (float, optional): Koefisien sosial (menuju gbest). Defaults to 1.5.
+            **kwargs: Argumen tambahan untuk MultiAgentScheduler.
+        """
         super().__init__(tasks, agents, cost_function, **kwargs)
         self.jumlah_partikel = n_particles if self.jumlah_tugas > 0 else 0
         self.jumlah_iterasi = n_iterations if self.jumlah_tugas > 0 else 0
@@ -43,7 +63,20 @@ class PSO_MultiAgent_Scheduler(MultiAgentScheduler):
             self.posisi_gbest = None
 
     def position_to_sequence(self, posisi):
-        """Konversi posisi partikel ke urutan tugas."""
+        """
+        Konversi posisi partikel (kontinu) ke urutan tugas (diskrit).
+        
+        Mengurutkan indeks tugas berdasarkan nilai posisi (priority value).
+        Jika dependensi aktif, dilakukan koreksi validitas urutan:
+        - Memberi penalti pada tugas yang dependensinya belum terpenuhi.
+        - Memilih tugas siap (ready) dengan nilai penalti tertinggi (prioritas terkoreksi).
+        
+        Args:
+            posisi (np.ndarray): Array posisi partikel (float).
+            
+        Returns:
+            np.ndarray: Array urutan indeks tugas yang valid.
+        """
         if self.jumlah_tugas == 0:
             return []
         if not self.enable_dependencies:
@@ -85,13 +118,40 @@ class PSO_MultiAgent_Scheduler(MultiAgentScheduler):
         return np.array(terkoreksi)
 
     def position_to_schedule(self, posisi):
-        """Konversi posisi ke jadwal."""
+        """
+        Konversi posisi partikel langsung menjadi jadwal lengkap.
+        
+        Wrapper yang menggabungkan `position_to_sequence` dan `assign_to_agents`.
+        
+        Args:
+            posisi (np.ndarray): Array posisi partikel.
+            
+        Returns:
+            tuple: (jadwal, waktu_selesai_agen)
+        """
         urutan = self.position_to_sequence(posisi)
         jadwal, waktu_selesai_agen, keseimbangan_beban = self.assign_to_agents(urutan)
         return jadwal, waktu_selesai_agen
 
     def optimize(self, show_progress=True, progress_callback=None):
-        """Optimasi menggunakan PSO."""
+        """
+        Jalankan algoritma optimasi PSO utama.
+        
+        Proses:
+        1. Inisialisasi posisi dan kecepatan partikel (dilakukan di __init__).
+        2. Evaluasi posisi awal (pbest global & personal).
+        3. Loop iterasi:
+           - Update kecepatan & posisi partikel berdasarkan w, c1, c2.
+           - Evaluasi posisi baru.
+           - Update pbest dan gbest jika ditemukan solusi lebih baik.
+        
+        Args:
+            show_progress (bool): Print progress ke console.
+            progress_callback (callable): Fungsi callback progress.
+            
+        Returns:
+            dict: Laporan hasil optimasi.
+        """
         if self.jumlah_partikel == 0 or self.jumlah_tugas == 0:
             return super().optimize(show_progress=False, progress_callback=progress_callback)
 

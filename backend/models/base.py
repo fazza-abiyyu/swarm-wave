@@ -17,10 +17,28 @@ from models.utils import (
 
 
 class MultiAgentScheduler:
-    """Kelas dasar untuk penjadwalan tugas multi-agen dengan utilitas bersama."""
+    """
+    Kelas dasar untuk penjadwalan tugas multi-agen dengan utilitas bersama.
+    
+    Menyediakan kerangka kerja umum untuk implementasi algoritma optimasi seperti ACO dan PSO,
+    termasuk manajemen tugas, agen, dependensi, dan fungsi evaluasi.
+    """
 
     def __init__(self, tasks, agents, cost_function, task_id_col='id', agent_id_col='id',
                  enable_dependencies=False, random_seed=None, num_default_agents=3):
+        """
+        Inisialisasi Multi-Agent Scheduler.
+        
+        Args:
+            tasks (list | pd.DataFrame): Daftar tugas yang akan dijadwalkan.
+            agents (list | pd.DataFrame | None): Daftar agen. Jika None/kosong, akan generate default.
+            cost_function (callable): Fungsi untuk menghitung biaya jadwal.
+            task_id_col (str, optional): Nama kolom ID tugas. Defaults to 'id'.
+            agent_id_col (str, optional): Nama kolom ID agen. Defaults to 'id'.
+            enable_dependencies (bool, optional): Apakah mengaktifkan dependensi tugas. Defaults to False.
+            random_seed (int, optional): Seed untuk random number generator. Defaults to None.
+            num_default_agents (int, optional): Jumlah agen default jika agents kosong. Defaults to 3.
+        """
         # Konversi input ke list jika DataFrame
         self.tugas = tasks.to_dict('records') if isinstance(tasks, pd.DataFrame) else tasks
         
@@ -61,11 +79,31 @@ class MultiAgentScheduler:
         self.riwayat_iterasi = []
 
     def _generate_default_agents(self, jumlah_agen, agent_id_col):
-        """Generate default agents - delegasi ke utils."""
+        """
+        Generate daftar agen default dengan karakteristik heterogen.
+        
+        Menggunakan fungsi utilitas `generate_agen_default` untuk membuat agen
+        dengan tipe, kapasitas, dan efisiensi yang bervariasi.
+        
+        Args:
+            jumlah_agen (int): Jumlah agen yang akan dibuat.
+            agent_id_col (str): Nama kolom untuk ID agen.
+            
+        Returns:
+            list: Daftar dictionary yang merepresentasikan agen.
+        """
         return generate_agen_default(jumlah_agen, agent_id_col)
 
     def parse_dependencies(self):
-        """Parse dependensi secara robust."""
+        """
+        Parse dependensi tugas dari data input secara robust.
+        
+        Mencari kolom dependensi dengan berbagai kemungkinan nama (dependencies, depends_on, dll)
+        dan menormalisasi formatnya menjadi list of strings.
+        
+        Returns:
+            dict: Mapping ID tugas ke list ID dependensinya.
+        """
         dependensi = {}
         for tugas in self.tugas:
             id_tugas = str(tugas[self.task_id_col])
@@ -85,31 +123,87 @@ class MultiAgentScheduler:
         return dependensi
 
     def build_dependency_graph(self):
-        """Membangun graf dependensi."""
+        """
+        Membangun representasi graf dari dependensi tugas.
+        
+        Returns:
+            dict: Graf dependensi di mana key adalah ID tugas dan value adalah list ID tugas yang menjadi dependensinya.
+        """
         return {id_tugas: self.dependensi[id_tugas] for id_tugas in self.dependensi}
 
     def detect_circular_dependencies(self):
-        """Deteksi siklus - delegasi ke utils."""
+        """
+        Mendeteksi apakah terdapat siklus (circular dependency) dalam graf tugas.
+        
+        Delegasi ke fungsi utilitas `ada_dependensi_sirkular`.
+        
+        Returns:
+            bool: True jika terdeteksi siklus, False jika tidak.
+        """
         if not self.enable_dependencies or self.jumlah_tugas == 0:
             return False
         return ada_dependensi_sirkular(self.dependensi)
 
     def is_dependency_satisfied(self, id_tugas, tugas_selesai):
-        """Cek apakah dependensi terpenuhi."""
+        """
+        Memeriksa apakah semua dependensi untuk suatu tugas telah selesai dikerjakan.
+        
+        Args:
+            id_tugas (str): ID tugas yang akan dicek.
+            tugas_selesai (set | list): Kumpulan ID tugas yang sudah selesai.
+            
+        Returns:
+            bool: True jika semua dependensi terpenuhi, False jika belum.
+        """
         return all(dep_id in tugas_selesai for dep_id in self.dependensi.get(id_tugas, []))
 
     def get_ready_tasks(self, tugas_tersisa, tugas_selesai):
-        """Dapatkan tugas yang siap dijalankan."""
+        """
+        Mendapatkan daftar tugas yang siap dijalankan (dependensi terpenuhi).
+        
+        Args:
+            tugas_tersisa (list): List indeks tugas yang belum dijadwalkan.
+            tugas_selesai (set): Set ID tugas yang sudah selesai.
+            
+        Returns:
+            list: List indeks tugas yang siap untu dijadwalkan.
+        """
         if not self.enable_dependencies:
             return tugas_tersisa
         return [idx for idx in tugas_tersisa if self.is_dependency_satisfied(self.peta_tugas_terbalik[idx], tugas_selesai)]
 
     def calculate_load_balance_index(self, waktu_selesai_agen):
-        """Hitung indeks keseimbangan beban - delegasi ke utils."""
+        """
+        Menghitung indeks keseimbangan beban antar agen.
+        
+        Menggunakan Coefficient of Variation (CV) dari waktu selesai agen.
+        Semakin kecil nilainya, semakin seimbang beban kerjanya.
+        
+        Args:
+            waktu_selesai_agen (dict): Mapping ID agen ke waktu selesai tugas terakhirnya.
+            
+        Returns:
+            float: Indeks load balance (0.0 = sempurna).
+        """
         return hitung_load_balance_index(waktu_selesai_agen)
 
     def find_best_agent(self, waktu_selesai_agen, durasi_tugas, id_tugas=None, waktu_selesai_tugas=None, prioritize_balance=True):
-        """Temukan agen terbaik untuk tugas."""
+        """
+        Menemukan agen terbaik untuk mengerjakan tugas tertentu.
+        
+        Mempertimbangkan waktu penyelesaian agen saat ini, durasi tugas, dan opsional keseimbangan beban.
+        Jika dependensi diaktifkan, juga memperhitungkan waktu selesai dependensi (task start time).
+        
+        Args:
+            waktu_selesai_agen (dict): Mapping ID agen ke waktu finish saat ini.
+            durasi_tugas (float): Estimasi durasi tugas.
+            id_tugas (str, optional): ID tugas (diperlukan untuk cek dependensi).
+            waktu_selesai_tugas (dict, optional): Mapping ID tugas ke waktu finishnya (untuk cek dependensi).
+            prioritize_balance (bool, optional): Jika True, pertimbangkan load balance dalam scoring. Defaults to True.
+            
+        Returns:
+            str: ID agen terbaik untuk tugas tersebut.
+        """
         if not waktu_selesai_agen:
             return self.agen[0][self.agent_id_col] if self.agen else None
 
@@ -143,7 +237,20 @@ class MultiAgentScheduler:
         return agen_terbaik or min(waktu_selesai_agen, key=waktu_selesai_agen.get, default=self.agen[0][self.agent_id_col] if self.agen else None)
 
     def assign_to_agents(self, urutan_indeks_tugas):
-        """Assign tugas ke agen."""
+        """
+        Menugaskan tugas ke agen berdasarkan urutan tertentu.
+        
+        Melakukan simulasi penjadwalan greedy berdasarkan urutan tugas yang diberikan.
+        
+        Args:
+            urutan_indeks_tugas (list): List indeks tugas yang menentukan urutan penjadwalan.
+            
+        Returns:
+            tuple:
+                - jadwal (list): List dictionary detail penugasan (task_id, agent_id, start_time, finish_time).
+                - waktu_selesai_agen (dict): Mapping ID agen ke waktu finish terakhir.
+                - keseimbangan_beban (float): Nilai indeks load balance dari jadwal ini.
+        """
         if not self.agen or (isinstance(urutan_indeks_tugas, np.ndarray) and urutan_indeks_tugas.size == 0) or (isinstance(urutan_indeks_tugas, list) and not urutan_indeks_tugas):
             return [], {}, 0.0
 
@@ -177,7 +284,19 @@ class MultiAgentScheduler:
         return jadwal, waktu_selesai_agen, keseimbangan_beban
 
     def optimize(self, n_iterations=100, show_progress=True, progress_callback=None):
-        """Metode optimasi utama."""
+        """
+        Metode utama untuk menjalankan optimasi penjadwalan.
+        
+        Method ini harus di-override oleh kelas turunan (misal: ACO atau PSO).
+        
+        Args:
+            n_iterations (int, optional): Jumlah iterasi optimasi. Defaults to 100.
+            show_progress (bool, optional): Tampilkan print progress ke stdout. Defaults to True.
+            progress_callback (callable, optional): Fungsi callback untuk pelaporan progress real-time.
+            
+        Returns:
+            dict: Dictionary hasil optimasi lengkap berisi jadwal, metrik performa, dan riwayat iterasi.
+        """
         if self.jumlah_tugas == 0 or self.jumlah_agen == 0:
             if show_progress:
                 print("Tidak dapat berjalan: Tidak ada tugas atau agen.")
@@ -220,7 +339,15 @@ class MultiAgentScheduler:
         }
 
     def run(self):
-        """Jalankan optimasi dengan yield progress secara real-time menggunakan threading."""
+        """
+        Menjalankan proses optimasi dalam thread terpisah dan memberikan progress stream generator.
+        
+        Berguna untuk integrasi dengan API streaming, mengirimkan update progress secara real-time
+        kepada klien saat optimasi sedang berjalan.
+        
+        Yields:
+            str: JSON string berisi update progress (tipe 'iteration') atau hasil akhir (tipe 'done').
+        """
         import json
         import threading
         import queue
