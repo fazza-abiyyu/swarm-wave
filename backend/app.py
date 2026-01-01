@@ -320,6 +320,16 @@ def stream_scheduling():
                     if task_length > 0: break
             if task_length is None or task_length <= 0: task_length = 1.0
             
+            # Mendukung faktor kompleksitas CPU & RAM jika bobot dikonfigurasi
+            # Default bobot 0.0 agar simulasi baseline tetap stabil hanya berdasarkan durasi
+            cpu_weight = float(parameters.get('cpu_weight', 0.0))
+            ram_weight = float(parameters.get('ram_weight', 0.0))
+            
+            cpu_val = safe_convert_to_float(task.get('cpu_usage', 0))
+            ram_val = safe_convert_to_float(task.get('ram_usage', 0))
+            
+            task_length += (cpu_val * cpu_weight) + (ram_val * ram_weight)
+            
             cost = 0.0
             for field in ['Cost', 'cost', 'price', 'Price']:
                 if field in task:
@@ -416,6 +426,9 @@ def stream_scheduling():
             priority = max(task.get('priority', 1), 1.0)
             return (1.0 / duration) * priority
         
+        # Helper parameter untuk validasi klaim heterogenitas (default 0.0)
+        heterogeneity_weight = float(parameters.get('heterogeneity_weight', 0.0))
+
         # Inisialisasi Scheduler
         scheduler = None
         if algorithm == 'ACO':
@@ -426,7 +439,8 @@ def stream_scheduling():
                 evaporation_rate=evaporation_rate, pheromone_deposit=pheromone_deposit,
                 task_id_col=task_id_col_for_scheduler, agent_id_col=agent_id_col_for_scheduler,
                 enable_dependencies=enable_dependencies, random_seed=random_seed,
-                num_default_agents=num_default_agents
+                num_default_agents=num_default_agents,
+                heterogeneity_weight=heterogeneity_weight
             )
         elif algorithm == 'PSO':
             scheduler = PSOScheduler(
@@ -434,7 +448,8 @@ def stream_scheduling():
                 n_particles=n_particles, n_iterations=n_iterations, w=w, c1=c1, c2=c2,
                 task_id_col=task_id_col_for_scheduler, agent_id_col=agent_id_col_for_scheduler,
                 enable_dependencies=enable_dependencies, random_seed=random_seed,
-                num_default_agents=num_default_agents
+                num_default_agents=num_default_agents,
+                heterogeneity_weight=heterogeneity_weight
             )
         else:
             return jsonify({"error": f"Unsupported algorithm: {algorithm}"}), 400
