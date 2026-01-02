@@ -118,7 +118,6 @@ def generate_agen_default(jumlah_agen, agent_id_col='id'):
         return []
     
     # Gunakan MODULO agar agen selalu identik di setiap run (deterministik)
-    # UPDATED: Semua agen dibuat seragam (Homogen) 1.0
     return [{
         agent_id_col: f'Agent-{i+1}',
         'type': 'Standard',
