@@ -271,8 +271,6 @@ def stream_scheduling():
         num_default_agents = parameters.get('num_default_agents', 10)
         n_iterations = parameters.get('n_iterations', 100)
         task_id_col_for_scheduler = parameters.get('task_id_col', 'id')
-        task_id_col_for_scheduler = parameters.get('task_id_col', 'id')
-        agent_id_col_for_scheduler = parameters.get('agent_id_col', 'id')
         dependency_col_for_scheduler = parameters.get('dependency_col', '')
         
         # Pengaturan Random Seed
@@ -320,16 +318,6 @@ def stream_scheduling():
                     if task_length > 0: break
             if task_length is None or task_length <= 0: task_length = 1.0
             
-            # Mendukung faktor kompleksitas CPU & RAM jika bobot dikonfigurasi
-            # Default bobot 0.0 agar simulasi baseline tetap stabil hanya berdasarkan durasi
-            cpu_weight = float(parameters.get('cpu_weight', 0.0))
-            ram_weight = float(parameters.get('ram_weight', 0.0))
-            
-            cpu_val = safe_convert_to_float(task.get('cpu_usage', 0))
-            ram_val = safe_convert_to_float(task.get('ram_usage', 0))
-            
-            task_length += (cpu_val * cpu_weight) + (ram_val * ram_weight)
-            
             cost = 0.0
             for field in ['Cost', 'cost', 'price', 'Price']:
                 if field in task:
@@ -337,8 +325,6 @@ def stream_scheduling():
                     if cost >= 0: break
             
             priority = safe_convert_to_float(task.get('Priority', task.get('priority', 1)), 1)
-            cpu_usage = safe_convert_to_float(task.get('CPU_Usage', task.get('cpu_usage', 0)), 0)
-            ram_usage = safe_convert_to_float(task.get('RAM_Usage', task.get('ram_usage', 0)), 0)
             
             # Normalisasi Dependensi (menggunakan utils)
             dependencies = None
@@ -371,8 +357,6 @@ def stream_scheduling():
                 'length': task_length, 
                 'cost': cost,
                 'priority': priority,
-                'cpu_usage': cpu_usage,
-                'ram_usage': ram_usage,
                 'dependencies': normalized_deps
             }
             
@@ -413,7 +397,7 @@ def stream_scheduling():
         agents = parameters.get('agents')
         
         if not agents:
-            agents = generate_agen_default(num_default_agents, agent_id_col_for_scheduler)
+            agents = generate_agen_default(num_default_agents, 'id')
             print(f"DEBUG: Generated {len(agents)} deterministic agents.")
         
         # Fungsi Biaya (menggunakan utils)
@@ -426,9 +410,6 @@ def stream_scheduling():
             priority = max(task.get('priority', 1), 1.0)
             return (1.0 / duration) * priority
         
-        # Helper parameter untuk validasi klaim heterogenitas (default 0.0)
-        heterogeneity_weight = float(parameters.get('heterogeneity_weight', 0.0))
-
         # Inisialisasi Scheduler
         scheduler = None
         if algorithm == 'ACO':
@@ -437,19 +418,17 @@ def stream_scheduling():
                 heuristic_function=heuristic_function, agents=agents,
                 n_ants=n_ants, n_iterations=n_iterations, alpha=alpha, beta=beta,
                 evaporation_rate=evaporation_rate, pheromone_deposit=pheromone_deposit,
-                task_id_col=task_id_col_for_scheduler, agent_id_col=agent_id_col_for_scheduler,
+                task_id_col=task_id_col_for_scheduler,
                 enable_dependencies=enable_dependencies, random_seed=random_seed,
-                num_default_agents=num_default_agents,
-                heterogeneity_weight=heterogeneity_weight
+                num_default_agents=num_default_agents
             )
         elif algorithm == 'PSO':
             scheduler = PSOScheduler(
                 tasks=formatted_tasks, agents=agents, cost_function=cost_function,
                 n_particles=n_particles, n_iterations=n_iterations, w=w, c1=c1, c2=c2,
-                task_id_col=task_id_col_for_scheduler, agent_id_col=agent_id_col_for_scheduler,
+                task_id_col=task_id_col_for_scheduler,
                 enable_dependencies=enable_dependencies, random_seed=random_seed,
-                num_default_agents=num_default_agents,
-                heterogeneity_weight=heterogeneity_weight
+                num_default_agents=num_default_agents
             )
         else:
             return jsonify({"error": f"Unsupported algorithm: {algorithm}"}), 400
@@ -511,7 +490,7 @@ def stream_scheduling():
                 }
                 
                 for agent in agents:
-                    agent_id = agent.get(agent_id_col_for_scheduler)
+                    agent_id = agent.get('id')
                     agent_tasks = [s for s in schedule_data if s.get('agent_id') == agent_id]
                     agent_info_table["data"].append([
                         agent_id,
