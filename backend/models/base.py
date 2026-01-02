@@ -8,10 +8,6 @@ from models.utils import (
     generate_agen_default,
     parse_dependensi,
     hitung_load_balance_index,
-    dapatkan_id_tugas,
-    dapatkan_durasi_tugas,
-    dapatkan_efisiensi_agen,
-    coba_ambil_nilai,
     validasi_dependensi,
     ada_dependensi_sirkular,
     filter_ghost_dependencies
@@ -27,8 +23,7 @@ class MultiAgentScheduler:
     """
 
     def __init__(self, tasks, agents, cost_function, task_id_col='id', agent_id_col='id',
-                 enable_dependencies=False, random_seed=None, num_default_agents=3, 
-                 heterogeneity_weight=0.0):
+                 enable_dependencies=False, random_seed=None, num_default_agents=3):
         """
         Inisialisasi Multi-Agent Scheduler.
         
@@ -41,25 +36,20 @@ class MultiAgentScheduler:
             enable_dependencies (bool, optional): Apakah mengaktifkan dependensi tugas. Defaults to False.
             random_seed (int, optional): Seed untuk random number generator. Defaults to None.
             num_default_agents (int, optional): Jumlah agen default jika agents kosong. Defaults to 3.
-            heterogeneity_weight (float, optional): Bobot pengaruh heterogenitas agen (0.0 - 1.0). Defaults to 0.0.
         """
         # Konversi input ke list jika DataFrame
         self.tugas = tasks.to_dict('records') if isinstance(tasks, pd.DataFrame) else tasks
         
-        # Generate default agents dengan heterogenitas (seperti notebook)
+        # Generate default agents (Uniform/Homogen)
         if agents is None or (isinstance(agents, list) and len(agents) == 0):
             self.agen = self._generate_default_agents(num_default_agents, agent_id_col)
         else:
             self.agen = agents.to_dict('records') if isinstance(agents, pd.DataFrame) else agents
-            
-        # Map agen untuk lookup cepat O(1)
-        self.agent_map = {str(a.get(agent_id_col, a.get('id', ''))): a for a in self.agen}
 
         self.fungsi_biaya = cost_function
         self.task_id_col = task_id_col
         self.agent_id_col = agent_id_col
         self.enable_dependencies = enable_dependencies
-        self.heterogeneity_weight = float(heterogeneity_weight)
         self.jumlah_tugas = len(self.tugas)
         self.jumlah_agen = len(self.agen)
 
@@ -86,44 +76,12 @@ class MultiAgentScheduler:
         self.indeks_keseimbangan_terbaik = float('inf')
         self.riwayat_iterasi = []
 
-    def _calculate_effective_duration(self, raw_duration, agent):
-        """
-        Menghitung durasi efektif tugas berdasarkan kapabilitas agen.
-        
-        Formula Feature Flag:
-        Multiplier = 1.0 + ((Capacity * Efficiency) - 1.0) * Weight
-        
-        Jika Weight = 0.0 (Default): Multiplier = 1.0 -> Durasi Efektif = Durasi Asli
-        Jika Weight = 1.0 (Full): Multiplier = Cap * Eff -> Durasi Efektif dipengaruhi Agen
-        """
-        if not agent:
-            return raw_duration
-            
-        weight = self.heterogeneity_weight
-        if weight <= 0.0001:
-            return raw_duration
-            
-        eff = dapatkan_efisiensi_agen(agent)
-        cap = float(coba_ambil_nilai(agent, ['capacity', 'Capacity'], 1.0))
-        
-        # Heterogeneity Multiplier
-        # Semakin tinggi Cap * Eff, semakin cepat tugas selesai (Multiplier > 1)
-        performance_factor = eff * cap
-        
-        # Interpolasi antara 1.0 (Uniform) dan performance_factor (Heterogen)
-        final_multiplier = 1.0 + (performance_factor - 1.0) * weight
-        
-        # Hindari pembagian dengan nol atau negatif
-        final_multiplier = max(final_multiplier, 0.1)
-        
-        return raw_duration / final_multiplier
-
     def _generate_default_agents(self, jumlah_agen, agent_id_col):
         """
-        Generate daftar agen default dengan karakteristik heterogen.
+        Generate daftar agen default dengan karakteristik seragam (Homogen).
         
         Menggunakan fungsi utilitas `generate_agen_default` untuk membuat agen
-        dengan tipe, kapasitas, dan efisiensi yang bervariasi.
+        dengan tipe standar dan nilai kapasitas/efisiensi = 1.0 (Uniform).
         
         Args:
             jumlah_agen (int): Jumlah agen yang akan dibuat.
@@ -259,12 +217,8 @@ class MultiAgentScheduler:
         for agen in self.agen:
             id_agen = agen[self.agent_id_col]
             waktu_temp = waktu_selesai_agen.copy()
-            
-            # Hitung durasi efektif berdasarkan bobot heterogenitas
-            durasi_efektif = self._calculate_effective_duration(durasi_tugas, agen)
-            
             waktu_mulai = max(waktu_temp.get(id_agen, 0), waktu_dep_selesai)
-            waktu_temp[id_agen] = waktu_mulai + durasi_efektif
+            waktu_temp[id_agen] = waktu_mulai + durasi_tugas
             durasi_total_baru = max(waktu_temp.values())
 
             if prioritize_balance:
@@ -315,13 +269,9 @@ class MultiAgentScheduler:
             if self.enable_dependencies and id_tugas in self.dependensi:
                 dep_finish_times = [waktu_selesai_tugas.get(dep_id, 0) for dep_id in self.dependensi[id_tugas]]
                 waktu_dep_selesai = max(dep_finish_times) if dep_finish_times else 0
-            
-            # Hitung waktu selesai ACTUAL dengan memperhitungkan heterogenitas agen terpilih
-            agen_obj = self.agent_map.get(agen_terbaik)
-            durasi_efektif = self._calculate_effective_duration(durasi, agen_obj)
 
             waktu_mulai = max(waktu_selesai_agen[agen_terbaik], waktu_dep_selesai)
-            waktu_akhir = waktu_mulai + durasi_efektif
+            waktu_akhir = waktu_mulai + durasi
             waktu_selesai_agen[agen_terbaik] = waktu_akhir
             waktu_selesai_tugas[id_tugas] = waktu_akhir
 

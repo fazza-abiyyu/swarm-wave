@@ -154,7 +154,7 @@ const expandedTasks = ref({ ACO: {}, PSO: {} });
 const abortControllers = ref(new Map());
 
 const parameters = reactive({
-  num_default_agents: 10, n_iterations: 100, task_id_col: '', agent_id_col: '', dependency_col: '',
+  num_default_agents: 10, n_iterations: 100, task_id_col: '', dependency_col: '',
   random_seed: 42, n_ants: 50, alpha: 0.9, beta: 2.0, evaporation_rate: 0.3, pheromone_deposit: 100,
   n_particles: 50, w: 0.3, c1: 0.3, c2: 0.4, enable_dependencies: false
 });
