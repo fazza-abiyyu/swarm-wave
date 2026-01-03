@@ -8,27 +8,12 @@ from .base import MultiAgentScheduler
 class PSO_MultiAgent_Scheduler(MultiAgentScheduler):
     """
     Implementasi PSO (Particle Swarm Optimization) untuk penjadwalan tugas multi-agen.
-    
-    Algoritma ini merepresentasikan solusi sebagai "partikel" dalam ruang pencarian kontinu.
-    Posisi partikel dikonversi menjadi urutan tugas diskrit. Partikel bergerak menuju posisi terbaik
-    pribadi (pbest) dan global (gbest) untuk menemukan jadwal optimal.
     """
 
     def __init__(self, tasks, agents, cost_function, n_particles=30, n_iterations=100, 
                  w=0.5, c1=1.5, c2=1.5, **kwargs):
         """
-        Inisialisasi Scheduler PSO.
-        
-        Args:
-            tasks (list | pd.DataFrame): Daftar tugas.
-            agents (list, optional): Daftar agen.
-            cost_function (callable): Fungsi biaya.
-            n_particles (int, optional): Jumlah partikel. Defaults to 30.
-            n_iterations (int, optional): Jumlah iterasi. Defaults to 100.
-            w (float, optional): Bobot inersia (mempertahankan kecepatan sebelumnya). Defaults to 0.5.
-            c1 (float, optional): Koefisien kognitif (menuju pbest). Defaults to 1.5.
-            c2 (float, optional): Koefisien sosial (menuju gbest). Defaults to 1.5.
-            **kwargs: Argumen tambahan untuk MultiAgentScheduler.
+        Inisialisasi Scheduler PSO dengan parameter partikel, inerisa, dan koefisien kognitif/sosial.
         """
         super().__init__(tasks, agents, cost_function, **kwargs)
         self.jumlah_partikel = n_particles if self.jumlah_tugas > 0 else 0
@@ -38,14 +23,13 @@ class PSO_MultiAgent_Scheduler(MultiAgentScheduler):
         if self.jumlah_tugas > 0 and self.jumlah_partikel > 0:
             self.posisi = np.random.rand(self.jumlah_partikel, self.jumlah_tugas)
             
-            # Soft priority bias (probabilistic, not deterministic)
+            # Bias prioritas (agar tugas penting cenderung di depan)
             for i, task in enumerate(self.tugas):
                 priority = task.get('priority', 1)
-                # Small additive bias: priority 5 → +0.1, priority 1 → +0.0
-                priority_bias = (priority - 1) * 0.025  # Subtle influence
+                priority_bias = (priority - 1) * 0.025 
                 self.posisi[:, i] += priority_bias
             
-            # Clip to avoid extreme values
+            # Batasi nilai posisi agar tetap rasional
             self.posisi = np.clip(self.posisi, 0, 2)
             
             self.kecepatan = np.random.rand(self.jumlah_partikel, self.jumlah_tugas) * 0.1
@@ -64,18 +48,7 @@ class PSO_MultiAgent_Scheduler(MultiAgentScheduler):
 
     def position_to_sequence(self, posisi):
         """
-        Konversi posisi partikel (kontinu) ke urutan tugas (diskrit).
-        
-        Mengurutkan indeks tugas berdasarkan nilai posisi (priority value).
-        Jika dependensi aktif, dilakukan koreksi validitas urutan:
-        - Memberi penalti pada tugas yang dependensinya belum terpenuhi.
-        - Memilih tugas siap (ready) dengan nilai penalti tertinggi (prioritas terkoreksi).
-        
-        Args:
-            posisi (np.ndarray): Array posisi partikel (float).
-            
-        Returns:
-            np.ndarray: Array urutan indeks tugas yang valid.
+        Konversi posisi partikel (kontinu) ke urutan tugas (diskrit) dengan perbaikan dependensi.
         """
         if self.jumlah_tugas == 0:
             return []
@@ -92,23 +65,29 @@ class PSO_MultiAgent_Scheduler(MultiAgentScheduler):
 
         daftar_id_tugas = [str(tugas[self.task_id_col]) for tugas in self.tugas]
 
+        # Hitung Penalti Awal
         for indeks_tugas in urutan:
             tid = daftar_id_tugas[indeks_tugas]
             prioritas_dasar = posisi[indeks_tugas]
             dep_tidak_terpenuhi = sum(1 for dep in self.dependensi.get(tid, []) if dep not in selesai)
+            # Beri penalti jika ada dependensi yang belum terpenuhi
             penalti[indeks_tugas] = prioritas_dasar - (dep_tidak_terpenuhi * 0.5)
 
         hitung_iterasi = 0
         while tersedia and hitung_iterasi < iterasi_maks:
             hitung_iterasi += 1
+            
+            # Cari tugas yang siap (dependensi lunas)
             siap = [idx for idx in tersedia if self.is_dependency_satisfied(daftar_id_tugas[idx], selesai)]
+            
             if siap:
+                # Pilih yang prioritasnya (nilai posisi) paling tinggi
                 terbaik = max(siap, key=lambda t: penalti[t])
                 terkoreksi.append(terbaik)
                 tersedia.remove(terbaik)
                 selesai.add(daftar_id_tugas[terbaik])
             else:
-                # Fallback: min deps (SAMA DENGAN NOTEBOOK)
+                # Fallback: Ambil tugas dengan sisa dependensi paling sedikit (Deadlock)
                 fallback = min(tersedia, key=lambda t: len(self.dependensi.get(daftar_id_tugas[t], [])))
                 terkoreksi.append(fallback)
                 tersedia.remove(fallback)
@@ -119,15 +98,7 @@ class PSO_MultiAgent_Scheduler(MultiAgentScheduler):
 
     def position_to_schedule(self, posisi):
         """
-        Konversi posisi partikel langsung menjadi jadwal lengkap.
-        
-        Wrapper yang menggabungkan `position_to_sequence` dan `assign_to_agents`.
-        
-        Args:
-            posisi (np.ndarray): Array posisi partikel.
-            
-        Returns:
-            tuple: (jadwal, waktu_selesai_agen)
+        Konversi posisi partikel langsung menjadi jadwal lengkap (Wrapper).
         """
         urutan = self.position_to_sequence(posisi)
         jadwal, waktu_selesai_agen, keseimbangan_beban = self.assign_to_agents(urutan)
@@ -135,22 +106,7 @@ class PSO_MultiAgent_Scheduler(MultiAgentScheduler):
 
     def optimize(self, show_progress=True, progress_callback=None):
         """
-        Jalankan algoritma optimasi PSO utama.
-        
-        Proses:
-        1. Inisialisasi posisi dan kecepatan partikel (dilakukan di __init__).
-        2. Evaluasi posisi awal (pbest global & personal).
-        3. Loop iterasi:
-           - Update kecepatan & posisi partikel berdasarkan w, c1, c2.
-           - Evaluasi posisi baru.
-           - Update pbest dan gbest jika ditemukan solusi lebih baik.
-        
-        Args:
-            show_progress (bool): Print progress ke console.
-            progress_callback (callable): Fungsi callback progress.
-            
-        Returns:
-            dict: Laporan hasil optimasi.
+        Jalankan loop utama optimasi PSO.
         """
         if self.jumlah_partikel == 0 or self.jumlah_tugas == 0:
             return super().optimize(show_progress=False, progress_callback=progress_callback)
@@ -171,24 +127,28 @@ class PSO_MultiAgent_Scheduler(MultiAgentScheduler):
             ada_terbaik_baru = False
 
             for p in range(self.jumlah_partikel):
+                # Evaluasi Partikel
                 jadwal, waktu_agen = self.position_to_schedule(self.posisi[p])
                 durasi_total = max(waktu_agen.values(), default=0)
                 indeks_keseimbangan = self.calculate_load_balance_index(waktu_agen)
                 biaya = self.fungsi_biaya(jadwal, durasi_total)
 
+                # Update Personal Best (PBest)
                 if biaya < self.biaya_pbest[p]:
                     self.biaya_pbest[p] = biaya
                     self.durasi_pbest[p] = durasi_total
                     self.posisi_pbest[p] = self.posisi[p].copy()
 
+                # Update Global Best (GBest)
                 if biaya < self.biaya_terbaik or (biaya == self.biaya_terbaik and indeks_keseimbangan < self.indeks_keseimbangan_terbaik):
                     self.biaya_terbaik = biaya
-                    self.durasi_terbaik = durasi_total  # Simpan makespan aktual
+                    self.durasi_terbaik = durasi_total
                     self.jadwal_terbaik = jadwal
                     self.indeks_keseimbangan_terbaik = indeks_keseimbangan
                     self.posisi_gbest = self.posisi[p].copy()
                     ada_terbaik_baru = True
 
+            # Update Kecepatan dan Posisi Partikel
             if self.posisi_gbest is not None:
                 for p in range(self.jumlah_partikel):
                     r1, r2 = np.random.rand(self.jumlah_tugas), np.random.rand(self.jumlah_tugas)

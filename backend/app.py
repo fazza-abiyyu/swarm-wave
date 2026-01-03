@@ -30,20 +30,7 @@ app.start_time = time.time()
 @app.after_request
 def add_security_headers(response):
     """
-    Menambahkan header keamanan ke setiap respons HTTP.
-    
-    Header yang ditambahkan meliputi:
-    - Content-Security-Policy (CSP): Mengontrol sumber daya yang diizinkan dimuat.
-    - X-Frame-Options: Mencegah clickjacking (SAMEORIGIN).
-    - X-Content-Type-Options: Mencegah MIME sniffing.
-    - Strict-Transport-Security (HSTS): Memaksa HTTPS (jika di production).
-    - Cache-Control: Mengatur caching berdasarkan endpoint (no-cache untuk simulasi).
-    
-    Args:
-        response (Response): Objek respons Flask.
-        
-    Returns:
-        Response: Objek respons yang telah dimodifikasi dengan header keamanan.
+    Menambahkan header keamanan (CSP, X-Frame-Options, HSTS) ke setiap respons HTTP.
     """
     # Content Security Policy (CSP) Header
     response.headers['Content-Security-Policy'] = (
@@ -113,13 +100,7 @@ CORS(app,
 @app.before_request
 def handle_preflight():
     """
-    Menangani request OPTIONS untuk keperluan CORS Preflight.
-    
-    Browser modern mengirim request OPTIONS sebelum request actual (POST/PUT/DELETE)
-    untuk memverifikasi izin CORS.
-    
-    Returns:
-        Response: Respons kosong dengan header Access-Control-Allow-* yang sesuai.
+    Menangani request OPTIONS (Preflight) untuk verifikasi CORS sebelum request actual.
     """
     if request.method == "OPTIONS":
         response = Response()
@@ -132,16 +113,7 @@ def handle_preflight():
 @app.errorhandler(Exception)
 def handle_cors_error(e):
     """
-    Global Error Handler yang tetap menyertakan header CORS.
-    
-    Memastikan bahwa jika terjadi error 500/400, browser tetap menerima header CORS
-    sehingga pesan error bisa dibaca oleh frontend (tidak terblokir CORS policy).
-    
-    Args:
-        e (Exception): Exception yang terjadi.
-        
-    Returns:
-        tuple: (JSON Response, HTTP Status Code)
+    Global Error Handler yang memastikan header CORS tetap terkirim saat error 400/500.
     """
     response = jsonify({
         "error": "Internal server error",
@@ -160,25 +132,14 @@ def handle_cors_error(e):
 @app.route('/')
 def home():
     """
-    Endpoint root untuk pengecekan sederhana apakah server berjalan.
-    
-    Returns:
-        JSON: Pesan status server.
+    Endpoint root untuk cek status server sederhana.
     """
     return jsonify({"message": "Multi-Agent Task Scheduling API is running"})
 
 @app.route('/health')
 def health_check():
     """
-    Endpoint Health Check untuk monitoring status sistem.
-    
-    Memberikan informasi mendalam tentang:
-    - Status server & Uptime.
-    - Info Sistem (OS, Python version).
-    - Status ketersediaan algoritma (ACO, PSO) dengan melakukan test run dummy.
-    
-    Returns:
-        JSON: Laporan kesehatan sistem lengkap.
+    Endpoint monitoring lengkap (Uptime, System Info, Algorithm Availability).
     """
     try:
         current_time = time.time()
@@ -234,25 +195,7 @@ def health_check():
 @app.route('/stream_scheduling', methods=['POST'])
 def stream_scheduling():
     """
-    Endpoint utama untuk menjalankan simulasi penjadwalan dengan Streaming Response (SSE).
-    
-    Menerima data tugas dan parameter, melakukan normalisasi, validasi dependensi,
-    dan menjalankan algoritma optimasi (ACO/PSO) secara real-time.
-    
-    Proses:
-    1. Parsing Input: Normalisasi nama kolom dan tipe data.
-    2. Auto-Detect Dependencies: Mengaktifkan mode dependensi jika data ditemukan.
-    3. Validasi Dependensi: Cek circular dependency (return 400 jika ada).
-    4. Inisialisasi Scheduler: Setup ACO atau PSO dengan parameter yang sesuai.
-    5. Streaming: Mengirim update progress per iterasi ke klien menggunakan generator.
-    
-    Args (JSON Body):
-        tasks (list): Daftar tugas (task_id, duration, priority, dependencies, dll).
-        parameters (dict): Konfigurasi simulasi (num_agents, n_iterations, algorithm-specific params).
-        algorithm (str): 'ACO' atau 'PSO'.
-        
-    Returns:
-        Response: Stream text/event-stream berisi update JSON per baris.
+    Endpoint utama simulasi penjadwalan real-time (SSE).
     """
     try:
         data = request.get_json()
@@ -333,7 +276,6 @@ def stream_scheduling():
             if dependency_col_for_scheduler and dependency_col_for_scheduler in task:
                  dependencies = task[dependency_col_for_scheduler]
             
-            # Alternatif: Cari otomatis jika belum ketemu
             # Alternatif: Cari otomatis jika belum ketemu, TAPI hanya jika user tidak mematikan dependensi
             if dependencies is None and enable_dependencies is not False:
                 for field in ['dependencies', 'Dependencies', 'depends_on', 'prerequisites', 'requires', 'dependensi', 'Dependensi']:
@@ -371,7 +313,7 @@ def stream_scheduling():
             formatted_tasks.append(formatted_task)
         
         # --- DETEKSI OTOMATIS DEPENDENSI ---
-        # Jika ada data dependensi, kita PAKSA nyalakan, karena user sudah memilih kolomnya.
+        # Paksa nyalakan dependensi jika data ditemukan
         has_dependencies = any(len(t['dependencies']) > 0 for t in formatted_tasks)
         
         if has_dependencies:
@@ -405,17 +347,12 @@ def stream_scheduling():
         bobot_keseimbangan_beban = parameters.get('bobot_keseimbangan_beban', 1.0)
         cost_function = buat_cost_function_untuk_scheduler(bobot_waktu, bobot_keseimbangan_beban)
 
-        def heuristic_function(task):
-            duration = max(task.get('length', 1), 0.1)
-            priority = max(task.get('priority', 1), 1.0)
-            return (1.0 / duration) * priority
-        
         # Inisialisasi Scheduler
         scheduler = None
         if algorithm == 'ACO':
             scheduler = ACOScheduler(
                 tasks=formatted_tasks, cost_function=cost_function,
-                heuristic_function=heuristic_function, agents=agents,
+                agents=agents, # Heuristic function is now default in class
                 n_ants=n_ants, n_iterations=n_iterations, alpha=alpha, beta=beta,
                 evaporation_rate=evaporation_rate, pheromone_deposit=pheromone_deposit,
                 task_id_col=task_id_col_for_scheduler,
