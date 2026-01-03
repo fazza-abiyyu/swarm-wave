@@ -1,8 +1,3 @@
-"""
-Utility functions untuk Multi-Agent Task Scheduling.
-Berisi fungsi helper untuk parsing, validasi, dan kalkulasi biaya.
-"""
-
 import pandas as pd
 import random
 import numpy as np
@@ -11,14 +6,7 @@ import numpy as np
 # ========== FUNGSI PARSING & CONVERSION ==========
 def safe_convert_to_float(value, default=0.0):
     """
-    Mengkonversi nilai ke float dengan penanganan error yang aman.
-    
-    Args:
-        value (any): Nilai input.
-        default (float, optional): Nilai default jika konversi gagal. Defaults to 0.0.
-        
-    Returns:
-        float: Hasil konversi atau nilai default.
+    Mengkonversi nilai ke float dengan penanganan error yang aman (default: 0.0).
     """
     if value is None or value == '':
         return default
@@ -32,16 +20,7 @@ def safe_convert_to_float(value, default=0.0):
 
 def normalize_id(val):
     """
-    Menormalisasi nilai ID menjadi string yang konsisten.
-    
-    Mengubah float 1.0 menjadi "1" untuk menghindari ketidakkonsistenan ID
-    antara integer dan float.
-    
-    Args:
-        val (any): Nilai ID input.
-        
-    Returns:
-        str | None: String ID yang ternormalisasi atau None jika input None.
+    Menormalisasi nilai ID menjadi string yang konsisten (hilangkan .0 pada float).
     """
     if val is None:
         return None
@@ -57,15 +36,7 @@ def normalize_id(val):
 
 def parse_dependensi(string_dep):
     """
-    Memparse string yang berisi daftar dependensi menjadi list of strings.
-    
-    Mendukung pemisah koma (,) atau titik koma (;).
-    
-    Args:
-        string_dep (str | any): String input representasi dependensi.
-        
-    Returns:
-        list[str]: List ID dependensi yang valid.
+    Memparse string dependensi (misal: "1,2;3") menjadi list string.
     """
     if not string_dep:
         return []
@@ -106,18 +77,10 @@ def parse_dependensi(string_dep):
 def generate_agen_default(jumlah_agen, agent_id_col='id'):
     """
     Membuat daftar agen default dengan karakteristik seragam (Homogen).
-    
-    Args:
-        jumlah_agen (int): Jumlah agen yang ingin dibuat.
-        agent_id_col (str, optional): Key untuk menyimpan ID agen. Defaults to 'id'.
-        
-    Returns:
-        list[dict]: List dictionary yang merepresentasikan agen-agen.
     """
     if jumlah_agen <= 0:
         return []
     
-    # Gunakan MODULO agar agen selalu identik di setiap run (deterministik)
     return [{
         agent_id_col: f'Agent-{i+1}',
         'type': 'Standard',
@@ -129,15 +92,7 @@ def generate_agen_default(jumlah_agen, agent_id_col='id'):
 # ========== COST & VALIDATION FUNCTIONS ==========
 def hitung_load_balance_index(waktu_selesai_agen):
     """
-    Menghitung indeks keseimbangan beban kerja antar agen.
-    
-    Menggunakan Coefficient of Variation (CV) dari waktu penyelesaian agen.
-    
-    Args:
-        waktu_selesai_agen (dict): Mapping ID agen ke waktu selesai tugas terakhirnya.
-        
-    Returns:
-        float: Indeks ketidakseimbangan (0.0 = seimbang sempurna).
+    Menghitung indeks keseimbangan beban kerja antar agen (Coef. of Variation).
     """
     if not waktu_selesai_agen:
         return 0.0
@@ -156,19 +111,7 @@ def hitung_load_balance_index(waktu_selesai_agen):
 
 def fungsi_biaya_jadwal(jadwal, durasi_total, bobot_waktu=1.0, bobot_keseimbangan_beban=1.0):
     """
-    Mengevaluasi kualitas keseluruhan jadwal (schedule) yang dihasilkan.
-    
-    Fungsi objektif ini menggabungkan total waktu penyelesaian (makespan)
-    dan keseimbangan beban kerja antar agen.
-    
-    Args:
-        jadwal (list[dict]): List penugasan yang berisi 'agent_id' dan 'finish_time'.
-        durasi_total (float): Total waktu penyelesaian jadwal (makespan).
-        bobot_waktu (float, optional): Bobot kepentingan waktu penyelesaian. Defaults to 1.0.
-        bobot_keseimbangan_beban (float, optional): Bobot kepentingan keseimbangan beban. Defaults to 1.0.
-        
-    Returns:
-        float: Nilai fitness/biaya jadwal (semakin kecil semakin baik).
+    Hitung biaya total jadwal berdasarkan Makespan dan Load Balance.
     """
     if not jadwal:
         return float('inf')
@@ -196,14 +139,7 @@ def fungsi_biaya_jadwal(jadwal, durasi_total, bobot_waktu=1.0, bobot_keseimbanga
 
 def buat_cost_function_untuk_scheduler(bobot_waktu=1.0, bobot_keseimbangan_beban=1.0):
     """
-    Factory pattern untuk membuat fungsi biaya yang dikustomisasi dengan bobot tertentu.
-    
-    Args:
-        bobot_waktu (float, optional): Bobot untuk makespan. Defaults to 1.0.
-        bobot_keseimbangan_beban (float, optional): Bobot untuk load balance. Defaults to 1.0.
-        
-    Returns:
-        callable: Fungsi cost yang menerima (jadwal, durasi_total).
+    Buat fungsi biaya dengan bobot kustom.
     """
     def cost_function(jadwal, durasi_total):
         return fungsi_biaya_jadwal(jadwal, durasi_total, bobot_waktu, bobot_keseimbangan_beban)
@@ -212,15 +148,7 @@ def buat_cost_function_untuk_scheduler(bobot_waktu=1.0, bobot_keseimbangan_beban
 
 def ada_dependensi_sirkular(graf):
     """
-    Mendeteksi apakah terdapat siklus (circular dependency) dalam graf tugas.
-    
-    Menggunakan algoritma DFS (Depth First Search) untuk melacak siklus.
-    
-    Args:
-        graf (dict): Representasi graf adjacency list {node: [neighbors]}.
-        
-    Returns:
-        bool: True jika ada siklus, False jika aman (DAG).
+    Deteksi siklus dependensi dalam graf menggunakan DFS.
     """
     visited = set()
     recursion_stack = set()
@@ -248,19 +176,7 @@ def ada_dependensi_sirkular(graf):
 
 def validasi_dependensi(daftar_tugas, task_id_col='id'):
     """
-    Memvalidasi konsistensi dependensi antar tugas.
-    
-    Pemeriksaan meliputi:
-    1. Dependensi ke tugas yang tidak ada (missing tasks).
-    2. Self-dependency (tugas bergantung pada dirinya sendiri).
-    3. Circular dependency (siklus A -> B -> A).
-    
-    Args:
-        daftar_tugas (list[dict]): List data tugas.
-        task_id_col (str, optional): Key untuk ID tugas. Defaults to 'id'.
-        
-    Returns:
-        tuple[bool, list[str]]: (isValid, daftar_masalah).
+    Validasi konsistensi dependensi (missing tasks, self-dep, circular).
     """
     id_tugas_set = {str(tugas.get(task_id_col, tugas.get('id', ''))) for tugas in daftar_tugas}
     masalah = []
@@ -294,17 +210,7 @@ def validasi_dependensi(daftar_tugas, task_id_col='id'):
 
 def filter_ghost_dependencies(daftar_tugas, task_id_col='id'):
     """
-    Membersihkan dependensi yang tidak valid (ghost dependencies) dari daftar tugas.
-    
-    Menghapus dependensi yang menunjuk ke ID yang tidak ada dalam daftar tugas,
-    serta menghapus self-dependencies. Modifikasi dilakukan secara in-place.
-    
-    Args:
-        daftar_tugas (list[dict]): List data tugas yang akan dibersihkan.
-        task_id_col (str, optional): Key untuk ID tugas. Defaults to 'id'.
-        
-    Returns:
-        int: Jumlah dependensi invalid yang dihapus.
+    Hapus dependensi tidak valid (ghost) atau self-dependency secara in-place.
     """
     valid_ids = {str(t.get(task_id_col, t.get('id', ''))) for t in daftar_tugas}
     count_removed = 0

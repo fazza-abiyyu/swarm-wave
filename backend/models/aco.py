@@ -8,32 +8,24 @@ from .base import MultiAgentScheduler
 class ACO_MultiAgent_Scheduler(MultiAgentScheduler):
     """
     Implementasi ACO (Ant Colony Optimization) untuk penjadwalan tugas multi-agen.
-    
-    Algoritma ini menggunakan sekumpulan "semut" buatan yang membangun solusi secara iteratif.
-    Semut memilih tugas berdasarkan probabilitas yang dipengaruhi oleh jejak feromon (pengalaman masa lalu)
-    dan nilai heuristik (informasi lokal problem-specific).
     """
 
-    def __init__(self, tasks, cost_function, heuristic_function, agents=None, n_ants=10, n_iterations=100,
+    @staticmethod
+    def default_heuristic_function(task):
+        """
+        Fungsi heuristik default: (1.0 / Durasi) * Prioritas.
+        """
+        duration = max(task.get('length', 1), 0.1)
+        priority = max(task.get('priority', 1), 1.0)
+        return (1.0 / duration) * priority
+
+    def __init__(self, tasks, cost_function, heuristic_function=None, agents=None, n_ants=10, n_iterations=100,
                  alpha=0.9, beta=2.0, evaporation_rate=0.5, pheromone_deposit=100, **kwargs):
         """
-        Inisialisasi Scheduler ACO.
-        
-        Args:
-            tasks (list | pd.DataFrame): Daftar tugas.
-            cost_function (callable): Fungsi biaya untuk evaluasi jadwal.
-            heuristic_function (callable): Fungsi heuristik untuk menghitung ketertarikan antar tugas.
-            agents (list, optional): Daftar agen. Defaults to None (generate default).
-            n_ants (int, optional): Jumlah semut per iterasi. Defaults to 10.
-            n_iterations (int, optional): Jumlah iterasi optimasi. Defaults to 100.
-            alpha (float, optional): Bobot pengaruh feromon. Defaults to 0.9.
-            beta (float, optional): Bobot pengaruh heuristik. Defaults to 2.0.
-            evaporation_rate (float, optional): Tingkat penguapan feromon (0-1). Defaults to 0.5.
-            pheromone_deposit (float, optional): Jumlah feromon yang ditinggalkan semut. Defaults to 100.
-            **kwargs: Argumen tambahan untuk MultiAgentScheduler parent class.
+        Inisialisasi Scheduler ACO dengan parameter koloni semut, feromon, dan heuristik.
         """
         super().__init__(tasks, agents, cost_function, **kwargs)
-        self.fungsi_heuristik = heuristic_function
+        self.fungsi_heuristik = heuristic_function if heuristic_function else self.default_heuristic_function
         self.jumlah_semut = n_ants if self.jumlah_tugas > 0 else 0
         self.jumlah_iterasi = n_iterations if self.jumlah_tugas > 0 else 0
         self.alpha, self.beta = alpha, beta
@@ -48,14 +40,7 @@ class ACO_MultiAgent_Scheduler(MultiAgentScheduler):
 
     def calculate_heuristics(self):
         """
-        Hitung nilai heuristik untuk semua pasangan tugas.
-        
-        Nilai heuristik (eta) biasanya statis dan dihitung di awal.
-        Merepresentasikan "jarak" atau "biaya" invers antara tugas i dan j,
-        atau seberapa bagus memilih tugas j setelah tugas i.
-        
-        Returns:
-            np.ndarray: Matriks heuristik ukuran (jumlah_tugas x jumlah_tugas).
+        Hitung nilai heuristik statis untuk semua pasangan tugas (jarak/biaya invers).
         """
         heuristik = np.zeros((self.jumlah_tugas, self.jumlah_tugas))
         for i in range(self.jumlah_tugas):
@@ -66,19 +51,11 @@ class ACO_MultiAgent_Scheduler(MultiAgentScheduler):
 
     def construct_solution(self):
         """
-        Konstruksi solusi lengkap oleh satu semut.
-        
-        Semut membangun jadwal langkah demi langkah:
-        1. Identifikasi tugas yang siap (dependensi terpenuhi).
-        2. Jika tidak ada yang siap tapi ada tugas tersisa (deadlock), paksa pilih tugas dengan unmet dependencies paling sedikit.
-        3. Pilih tugas berikutnya secara probabilistik (Roulette Wheel Selection) atau acak jika belum ada rute.
-        4. Update state (tugas selesai, posisi semut).
-        
-        Returns:
-            list: Urutan indeks tugas yang merepresentasikan jadwal/solusi.
+        Konstruksi solusi lengkap oleh satu semut, langkah demi langkah.
         """
         if self.jumlah_tugas == 0:
             return []
+        
         rute, tersisa = [], set(range(self.jumlah_tugas))
         selesai = set()
         saat_ini = None
@@ -87,8 +64,11 @@ class ACO_MultiAgent_Scheduler(MultiAgentScheduler):
 
         while tersisa and hitung_iterasi < iterasi_maks:
             hitung_iterasi += 1
+            
+            # Identifikasi tugas yang siap (Hard Constraint: Dependensi)
             siap = self.get_ready_tasks(list(tersisa), selesai)
 
+            # Deadlock Handling: Paksa pilih tugas dengan dependensi yang belum terpenuhi paling sedikit
             if not siap:
                 min_tidak_terpenuhi = float('inf')
                 tugas_paksa = None
@@ -102,12 +82,14 @@ class ACO_MultiAgent_Scheduler(MultiAgentScheduler):
             if not siap:
                 break
 
+            # Pilih tugas berikutnya (Roulette Wheel Selection)
             if saat_ini is None or saat_ini not in siap:
                 tugas_berikutnya = random.choice(siap)
             else:
                 probabilitas = self.calculate_probabilities(saat_ini, siap)
                 tugas_berikutnya = np.random.choice(siap, p=probabilitas) if len(siap) > 1 else siap[0]
 
+            # Update State
             rute.append(tugas_berikutnya)
             tersisa.remove(tugas_berikutnya)
             selesai.add(self.peta_tugas_terbalik[tugas_berikutnya])
@@ -118,19 +100,7 @@ class ACO_MultiAgent_Scheduler(MultiAgentScheduler):
 
     def calculate_probabilities(self, saat_ini, belum_dikunjungi):
         """
-        Hitung probabilitas pemilihan tugas berikutnya.
-        
-        Probabilitas P(i,j) = [tau(i,j)^alpha] * [eta(i,j)^beta] / Sigma(...)
-        Dimana:
-        - tau: intensitas feromon
-        - eta: nilai heuristik
-        
-        Args:
-            saat_ini (int): Indeks tugas tempat semut berada sekarang.
-            belum_dikunjungi (list): List indeks tugas kandidat yang bisa dikunjungi.
-            
-        Returns:
-            np.ndarray: Array probabilitas untuk setiap tugas kandidat.
+        Hitung probabilitas pemilihan (Feromon^Alpha * Heuristik^Beta).
         """
         if not belum_dikunjungi:
             return np.array([])
@@ -142,16 +112,7 @@ class ACO_MultiAgent_Scheduler(MultiAgentScheduler):
 
     def update_pheromones(self, rute_list, biaya_list):
         """
-        Update matriks feromon berdasarkan kumpulan solusi dari semut-semut.
-        
-        Langkah:
-        1. Evaporasi: Kurangi semua feromon dengan faktor evaporation_rate.
-        2. Deposit: Tambahkan feromon pada jalur yang dilewati semut, proporsional dengan kualitas solusi (1/biaya).
-           Jalur yang menghasilkan biaya lebih rendah mendapat lebih banyak feromon.
-           
-        Args:
-            rute_list (list): List dari list urutan tugas (solusi).
-            biaya_list (list): List biaya (makespan/penalty) untuk setiap solusi.
+        Update feromon: Evaporasi lama, lalu deposit baru berdasarkan kualitas solusi.
         """
         if not rute_list or self.jumlah_tugas == 0:
             return
@@ -167,21 +128,7 @@ class ACO_MultiAgent_Scheduler(MultiAgentScheduler):
 
     def optimize(self, show_progress=True, progress_callback=None):
         """
-        Jalankan algoritma optimasi ACO utama.
-        
-        Iterasi sebanyak n_iterations. Pada setiap iterasi:
-        1. Setiap semut membangun solusi.
-        2. Evaluasi solusi (hitung makespan & load balance).
-        3. Perbarui solusi terbaik global jika ditemukan yang lebih baik.
-        4. Update feromon berdasarkan hasil iterasi ini.
-        5. Log progress & stream update jika ada callback.
-        
-        Args:
-            show_progress (bool): Print progress ke console.
-            progress_callback (callable): Fungsi untuk mengirim update progress real-time.
-            
-        Returns:
-            dict: Laporan hasil optimasi lengkap.
+        Jalankan loop utama optimasi ACO.
         """
         urutan_awal = list(range(self.jumlah_tugas))
         jadwal_awal, waktu_agen_awal, keseimbangan_awal = self.assign_to_agents(urutan_awal)
