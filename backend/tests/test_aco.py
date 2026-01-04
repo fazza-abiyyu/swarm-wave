@@ -25,11 +25,7 @@ class TestACOAlgorithm(unittest.TestCase):
         def cost_function(schedule, makespan):
             return makespan
             
-        def heuristic_function(task):
-            return 1.0 / task.get('length', 1)  # Inverse of task length
-            
         self.cost_function = cost_function
-        self.heuristic_function = heuristic_function
         
     def test_aco_initialization(self):
         """Menguji inisialisasi penjadwal ACO"""
@@ -37,7 +33,6 @@ class TestACOAlgorithm(unittest.TestCase):
             tasks=self.tasks,
             agents=self.agents,
             cost_function=self.cost_function,
-            heuristic_function=self.heuristic_function,
             n_ants=5,
             n_iterations=10
         )
@@ -60,7 +55,6 @@ class TestACOAlgorithm(unittest.TestCase):
             tasks=tasks_with_deps,
             agents=self.agents,
             cost_function=self.cost_function,
-            heuristic_function=self.heuristic_function,
             enable_dependencies=True
         )
         
@@ -86,7 +80,6 @@ class TestACOAlgorithm(unittest.TestCase):
             tasks=tasks_with_deps,
             agents=self.agents,
             cost_function=self.cost_function,
-            heuristic_function=self.heuristic_function,
             enable_dependencies=True
         )
         
@@ -106,8 +99,7 @@ class TestACOAlgorithm(unittest.TestCase):
         aco = ACO_MultiAgent_Scheduler(
             tasks=self.tasks,
             agents=self.agents,
-            cost_function=self.cost_function,
-            heuristic_function=self.heuristic_function
+            cost_function=self.cost_function
         )
         
         # Mock matriks feromon untuk pengujian deterministik
@@ -125,8 +117,7 @@ class TestACOAlgorithm(unittest.TestCase):
         aco = ACO_MultiAgent_Scheduler(
             tasks=self.tasks,
             agents=self.agents,
-            cost_function=self.cost_function,
-            heuristic_function=self.heuristic_function
+            cost_function=self.cost_function
         )
         
         # Menguji skenario seimbang

@@ -50,7 +50,6 @@ class MultiAgentScheduler:
         self.peta_tugas = {str(task[self.task_id_col]): i for i, task in enumerate(self.tugas)}
         self.peta_tugas_terbalik = {i: str(task[self.task_id_col]) for i, task in enumerate(self.tugas)}
         self.dependensi = self.parse_dependencies() if enable_dependencies and self.jumlah_tugas > 0 else {}
-        self.graf_dependensi = self.build_dependency_graph() if enable_dependencies and self.jumlah_tugas > 0 else None
 
         if enable_dependencies and self.jumlah_tugas > 0 and self.detect_circular_dependencies():
             print("Peringatan: Dependensi sirkular terdeteksi. Menggunakan fallback.")
@@ -93,12 +92,6 @@ class MultiAgentScheduler:
                     deps = [str(deps).strip()] if str(deps).strip() and str(deps).lower() not in ['null', 'nan', 'none'] else []
             dependensi[id_tugas] = deps or []
         return dependensi
-
-    def build_dependency_graph(self):
-        """
-        Membangun representasi graf dari dependensi tugas.
-        """
-        return {id_tugas: self.dependensi[id_tugas] for id_tugas in self.dependensi}
 
     def detect_circular_dependencies(self):
         """
@@ -210,51 +203,6 @@ class MultiAgentScheduler:
         durasi_total = max(waktu_selesai_agen.values(), default=0)
         keseimbangan_beban = self.calculate_load_balance_index(waktu_selesai_agen)
         return jadwal, waktu_selesai_agen, keseimbangan_beban
-
-    def optimize(self, n_iterations=100, show_progress=True, progress_callback=None):
-        """
-        Metode utama optimasi (Override di subclass).
-        """
-        if self.jumlah_tugas == 0 or self.jumlah_agen == 0:
-            if show_progress:
-                print("Tidak dapat berjalan: Tidak ada tugas atau agen.")
-            return {
-                'schedule': pd.DataFrame(), 'makespan': 0.0, 'load_balance_index': 0.0,
-                'agent_finish_times': {}, 'computation_time': 0.0,
-                'iteration_history': pd.DataFrame(), 'algorithm': self.__class__.__name__
-            }
-
-        waktu_mulai = time.time()
-        if show_progress:
-            print(f"Memulai optimasi {self.__class__.__name__}...")
-
-        # Inisialisasi jadwal dan biaya terbaik
-        urutan_awal = list(range(self.jumlah_tugas))
-        jadwal_awal, waktu_agen_awal, keseimbangan_awal = self.assign_to_agents(urutan_awal)
-        durasi_total_awal = max(waktu_agen_awal.values(), default=0)
-        self.biaya_terbaik = self.fungsi_biaya(jadwal_awal, durasi_total_awal)
-        self.jadwal_terbaik = jadwal_awal
-        self.indeks_keseimbangan_terbaik = keseimbangan_awal
-
-        for i in range(n_iterations):
-            # Subclass mengimplementasikan logika spesifik di sini
-            pass
-
-        waktu_komputasi = time.time() - waktu_mulai
-        waktu_akhir_agen = {}
-        if self.jadwal_terbaik:
-            for penugasan in self.jadwal_terbaik:
-                waktu_akhir_agen[penugasan['agent_id']] = max(waktu_akhir_agen.get(penugasan['agent_id'], 0), penugasan['finish_time'])
-
-        return {
-            'schedule': pd.DataFrame(self.jadwal_terbaik) if self.jadwal_terbaik else pd.DataFrame(),
-            'makespan': self.biaya_terbaik if self.biaya_terbaik != float('inf') else 0.0,
-            'load_balance_index': self.indeks_keseimbangan_terbaik if self.indeks_keseimbangan_terbaik != float('inf') else 0.0,
-            'agent_finish_times': waktu_akhir_agen,
-            'computation_time': waktu_komputasi,
-            'iteration_history': pd.DataFrame(self.riwayat_iterasi),
-            'algorithm': self.__class__.__name__
-        }
 
     def run(self):
         """
