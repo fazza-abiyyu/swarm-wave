@@ -25,5 +25,5 @@ USER appuser
 # Expose port
 EXPOSE 5000
 
-# Start the application with Gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "--timeout", "300", "app:app"]
+# Start the application with Gunicorn using config
+CMD ["gunicorn", "--config", "gunicorn_config.py", "app:app"]

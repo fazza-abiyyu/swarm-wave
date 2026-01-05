@@ -19,13 +19,13 @@ class ACO_MultiAgent_Scheduler(MultiAgentScheduler):
         priority = max(task.get('priority', 1), 1.0)
         return (1.0 / duration) * priority
 
-    def __init__(self, tasks, cost_function, heuristic_function=None, agents=None, n_ants=10, n_iterations=100,
+    def __init__(self, tasks, agents, cost_function, n_ants=10, n_iterations=100,
                  alpha=0.9, beta=2.0, evaporation_rate=0.5, pheromone_deposit=100, **kwargs):
         """
         Inisialisasi Scheduler ACO dengan parameter koloni semut, feromon, dan heuristik.
         """
         super().__init__(tasks, agents, cost_function, **kwargs)
-        self.fungsi_heuristik = heuristic_function if heuristic_function else self.default_heuristic_function
+        self.fungsi_heuristik = self.default_heuristic_function
         self.jumlah_semut = n_ants if self.jumlah_tugas > 0 else 0
         self.jumlah_iterasi = n_iterations if self.jumlah_tugas > 0 else 0
         self.alpha, self.beta = alpha, beta
@@ -130,6 +130,7 @@ class ACO_MultiAgent_Scheduler(MultiAgentScheduler):
         """
         Jalankan loop utama optimasi ACO.
         """
+        # Inisialisasi solusi awal (Sequential sederhana)
         urutan_awal = list(range(self.jumlah_tugas))
         jadwal_awal, waktu_agen_awal, keseimbangan_awal = self.assign_to_agents(urutan_awal)
         durasi_total_awal = max(waktu_agen_awal.values(), default=0)
@@ -144,18 +145,21 @@ class ACO_MultiAgent_Scheduler(MultiAgentScheduler):
             rute_list, biaya_list = [], []
             ada_terbaik_baru = False
 
+            # Konstruksi Solusi oleh Semut
             for _ in range(self.jumlah_semut):
                 urutan = self.construct_solution()
                 if urutan:
+                    # Evaluasi oleh Greedy
                     jadwal, waktu_agen, indeks_keseimbangan = self.assign_to_agents(urutan)
                     durasi_total = max(waktu_agen.values(), default=0)
                     biaya = self.fungsi_biaya(jadwal, durasi_total)
                     rute_list.append(urutan)
                     biaya_list.append(biaya)
 
+                    # Simpan solusi terbaik (Elitisme)
                     if biaya < self.biaya_terbaik or (biaya == self.biaya_terbaik and indeks_keseimbangan < self.indeks_keseimbangan_terbaik):
                         self.biaya_terbaik = biaya
-                        self.durasi_terbaik = durasi_total  # Simpan makespan aktual
+                        self.durasi_terbaik = durasi_total
                         self.jadwal_terbaik = jadwal
                         self.indeks_keseimbangan_terbaik = indeks_keseimbangan
                         ada_terbaik_baru = True
@@ -163,8 +167,10 @@ class ACO_MultiAgent_Scheduler(MultiAgentScheduler):
                     rute_list.append([])
                     biaya_list.append(float('inf'))
 
+            # Update Feromon Global
             self.update_pheromones(rute_list, biaya_list)
 
+            # Tracking Riwayat
             self.riwayat_iterasi.append({
                 'iteration': i + 1,
                 'best_makespan': self.durasi_terbaik if self.durasi_terbaik != float('inf') else 0.0,
@@ -184,6 +190,7 @@ class ACO_MultiAgent_Scheduler(MultiAgentScheduler):
             elif show_progress:
                 print(f"Iterasi {i+1}: Makespan Terbaik: {self.durasi_terbaik:.2f}, Load Balance: {self.indeks_keseimbangan_terbaik:.4f}")
 
+        # Rekap hasil akhir
         waktu_akhir_agen_final = {}
         if self.jadwal_terbaik:
             for penugasan in self.jadwal_terbaik:

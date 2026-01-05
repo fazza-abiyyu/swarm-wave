@@ -21,21 +21,27 @@ class PSO_MultiAgent_Scheduler(MultiAgentScheduler):
         self.w, self.c1, self.c2 = w, c1, c2
 
         if self.jumlah_tugas > 0 and self.jumlah_partikel > 0:
+            # Inisialisasi posisi partikel dengan nilai acak antara 0.0 dan 1.0
             self.posisi = np.random.rand(self.jumlah_partikel, self.jumlah_tugas)
             
             # Bias prioritas (agar tugas penting cenderung di depan)
             for i, task in enumerate(self.tugas):
                 priority = task.get('priority', 1)
-                priority_bias = (priority - 1) * 0.025 
+                priority_bias = (priority - 1) * 0.025
                 self.posisi[:, i] += priority_bias
             
             # Batasi nilai posisi agar tetap rasional
             self.posisi = np.clip(self.posisi, 0, 2)
             
+            # Inisialisasi kecepatan partikel
             self.kecepatan = np.random.rand(self.jumlah_partikel, self.jumlah_tugas) * 0.1
+            
+            # Inisialisasi pbest
             self.posisi_pbest = self.posisi.copy()
             self.biaya_pbest = np.full(self.jumlah_partikel, float('inf'))
             self.durasi_pbest = np.full(self.jumlah_partikel, float('inf'))
+            
+            # Inisialisasi gbest
             self.posisi_gbest = None
 
             if self.jumlah_partikel > 0:
@@ -119,7 +125,7 @@ class PSO_MultiAgent_Scheduler(MultiAgentScheduler):
         jadwal_awal, waktu_agen_awal, keseimbangan_awal = self.assign_to_agents(urutan_awal)
         durasi_total_awal = max(waktu_agen_awal.values(), default=0)
         self.biaya_terbaik = self.fungsi_biaya(jadwal_awal, durasi_total_awal)
-        self.durasi_terbaik = durasi_total_awal  # Simpan makespan aktual
+        self.durasi_terbaik = durasi_total_awal
         self.jadwal_terbaik = jadwal_awal
         self.indeks_keseimbangan_terbaik = keseimbangan_awal
 

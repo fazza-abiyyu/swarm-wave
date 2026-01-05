@@ -271,7 +271,10 @@ const runSimulation = async () => {
         body: JSON.stringify({ algorithm, tasks: filteredTasks.value, parameters: { ...parameters } }),
         signal: controller.signal
       });
-      if (!response.ok) throw new Error(response.statusText);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || response.statusText);
+      }
       if (!response.body) throw new Error('No response body');
 
       status.value[algorithm] = 'Running...';
