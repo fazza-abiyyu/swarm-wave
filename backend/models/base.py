@@ -246,7 +246,7 @@ class MultiAgentScheduler:
         while True:
             try:
                 # Timeout untuk menghindari blocking forever
-                item = progress_queue.get(timeout=1.0)
+                item = progress_queue.get(timeout=100)
                 
                 if item is None:
                     # Sinyal selesai

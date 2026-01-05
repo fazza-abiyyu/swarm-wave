@@ -27,7 +27,7 @@ class PSO_MultiAgent_Scheduler(MultiAgentScheduler):
             # Bias prioritas (agar tugas penting cenderung di depan)
             for i, task in enumerate(self.tugas):
                 priority = task.get('priority', 1)
-                priority_bias = (priority - 1) * 0.025 
+                priority_bias = (priority - 1) * 0.025
                 self.posisi[:, i] += priority_bias
             
             # Batasi nilai posisi agar tetap rasional
