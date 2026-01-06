@@ -19,11 +19,12 @@ from models.utils import (
     filter_ghost_dependencies,
     fungsi_biaya_jadwal,
     validasi_dependensi,
-    ada_dependensi_sirkular
+    ada_dependensi_sirkular,
 )
 
 app = Flask(__name__)
 app.start_time = time.time()
+
 
 # Middleware: Header Keamanan
 @app.after_request
@@ -32,7 +33,7 @@ def add_security_headers(response):
     Menambahkan header keamanan (CSP, X-Frame-Options, HSTS) ke setiap respons HTTP.
     """
     # Content Security Policy (CSP) Header
-    response.headers['Content-Security-Policy'] = (
+    response.headers["Content-Security-Policy"] = (
         "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https:; "
         "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com https://*.vercel.app https://*.vanila.app; "
         "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com https://*.vercel.app https://*.vanila.app; "
@@ -45,56 +46,73 @@ def add_security_headers(response):
         "form-action 'self' https:; "
         "frame-ancestors 'self'"
     )
-    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
-    response.headers.pop('Server', None)
-    response.headers.pop('X-Powered-By', None)
-    response.headers['Server'] = 'nginx'
-    response.headers['X-Content-Type-Options'] = 'nosniff'
-    response.headers['X-XSS-Protection'] = '1; mode=block'
-    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
-    response.headers['Permissions-Policy'] = 'geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=()'
-    
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    response.headers.pop("Server", None)
+    response.headers.pop("X-Powered-By", None)
+    response.headers["Server"] = "nginx"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = (
+        "geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=()"
+    )
+
     if request.endpoint:
-        if 'health' in request.endpoint or request.endpoint == 'home':
-            response.headers['Cache-Control'] = 'public, max-age=300'
-        elif 'simulate' in request.endpoint or 'algorithm' in request.endpoint:
-            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, private'
-            response.headers['Pragma'] = 'no-cache'
-            response.headers['Expires'] = '0'
+        if "health" in request.endpoint or request.endpoint == "home":
+            response.headers["Cache-Control"] = "public, max-age=300"
+        elif "simulate" in request.endpoint or "algorithm" in request.endpoint:
+            response.headers["Cache-Control"] = (
+                "no-cache, no-store, must-revalidate, private"
+            )
+            response.headers["Pragma"] = "no-cache"
+            response.headers["Expires"] = "0"
         else:
-            response.headers['Cache-Control'] = 'public, max-age=60, must-revalidate'
+            response.headers["Cache-Control"] = "public, max-age=60, must-revalidate"
     else:
-        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, private'
-        response.headers['Pragma'] = 'no-cache'
-        response.headers['Expires'] = '0'
-    
+        response.headers["Cache-Control"] = (
+            "no-cache, no-store, must-revalidate, private"
+        )
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+
     return response
 
+
 # Konfigurasi CORS global
-CORS(app, 
-     origins=[
-         'http://localhost:3000', 
-         'http://127.0.0.1:3000', 
-         'http://0.0.0.0:3000',
-         'http://frontend:3000',
-         'http://127.0.0.1:3001', 
-         'http://localhost:5000', 
-         'http://127.0.0.1:5000',
-         'http://localhost:5001', 
-         'http://127.0.0.1:5001',
-         'https://swarmwave.vercel.app',
-         'https://swarmwave.vanila.app',
-         'https://*.vanila.app',
-         'https://*.vercel.app',
-         'https://swarmwave.app',
-         'https://www.swarmwave.app'
-     ], 
-     supports_credentials=True, 
-     allow_headers=['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With', 'Access-Control-Request-Method', 'Access-Control-Request-Headers'], 
-     methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-     expose_headers=['Content-Range', 'X-Content-Range'],
-     max_age=86400
+CORS(
+    app,
+    origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://0.0.0.0:3000",
+        "http://frontend:3000",
+        "http://127.0.0.1:3001",
+        "http://localhost:5000",
+        "http://127.0.0.1:5000",
+        "http://localhost:5001",
+        "http://127.0.0.1:5001",
+        "https://swarmwave.vercel.app",
+        "https://swarmwave.vanila.app",
+        "https://*.vanila.app",
+        "https://*.vercel.app",
+        "https://swarmwave.app",
+        "https://www.swarmwave.app",
+    ],
+    supports_credentials=True,
+    allow_headers=[
+        "Content-Type",
+        "Authorization",
+        "Accept",
+        "Origin",
+        "X-Requested-With",
+        "Access-Control-Request-Method",
+        "Access-Control-Request-Headers",
+    ],
+    methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    expose_headers=["Content-Range", "X-Content-Range"],
+    max_age=86400,
 )
+
 
 @app.before_request
 def handle_preflight():
@@ -103,53 +121,69 @@ def handle_preflight():
     """
     if request.method == "OPTIONS":
         response = Response()
-        response.headers.add("Access-Control-Allow-Origin", request.headers.get('Origin', '*'))
-        response.headers.add('Access-Control-Allow-Headers', "Content-Type, Authorization, Accept, Origin, X-Requested-With")
-        response.headers.add('Access-Control-Allow-Methods', "GET, POST, PUT, DELETE, OPTIONS, PATCH")
-        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        response.headers.add(
+            "Access-Control-Allow-Origin", request.headers.get("Origin", "*")
+        )
+        response.headers.add(
+            "Access-Control-Allow-Headers",
+            "Content-Type, Authorization, Accept, Origin, X-Requested-With",
+        )
+        response.headers.add(
+            "Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+        )
+        response.headers.add("Access-Control-Allow-Credentials", "true")
         return response
+
 
 @app.errorhandler(Exception)
 def handle_cors_error(e):
     """
     Global Error Handler yang memastikan header CORS tetap terkirim saat error 400/500.
     """
-    response = jsonify({
-        "error": "Internal server error",
-        "message": "An error occurred while processing your request",
-        "status": "error"
-    })
-    origin = request.headers.get('Origin')
+    response = jsonify(
+        {
+            "error": "Internal server error",
+            "message": "An error occurred while processing your request",
+            "status": "error",
+        }
+    )
+    origin = request.headers.get("Origin")
     allowed_origins = [
-        'http://localhost:3000', 'http://127.0.0.1:3000', 'http://0.0.0.0:3000',
-        'http://frontend:3000', 'https://swarmwave.vercel.app', 'https://swarmwave.vanila.app'
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://0.0.0.0:3000",
+        "http://frontend:3000",
+        "https://swarmwave.vercel.app",
+        "https://swarmwave.vanila.app",
     ]
     if origin in allowed_origins:
         response.headers.add("Access-Control-Allow-Origin", origin)
     return response, 500
 
-@app.route('/')
+
+@app.route("/")
 def home():
     """
     Endpoint root untuk cek status server sederhana.
     """
     return jsonify({"message": "Multi-Agent Task Scheduling API is running"})
 
-@app.route('/health')
+
+@app.route("/health")
 def health_check():
     """
     Endpoint monitoring lengkap (Uptime, System Info, Algorithm Availability).
     """
     try:
         current_time = time.time()
-        uptime = current_time - app.start_time if hasattr(app, 'start_time') else 0
-        
+        uptime = current_time - app.start_time if hasattr(app, "start_time") else 0
+
         system_info = {
             "platform": platform.system(),
             "architecture": platform.machine(),
             "python_version": platform.python_version()[:3],
         }
-        
+
         app_info = {
             "name": "Swarm Wave Backend API",
             "version": "1.0.0",
@@ -157,86 +191,109 @@ def health_check():
             "timestamp": current_time,
             "datetime": datetime.fromtimestamp(current_time).isoformat(),
             "uptime_seconds": round(uptime, 2),
-            "environment": os.getenv('FLASK_ENV', 'production'),
+            "environment": os.getenv("FLASK_ENV", "production"),
         }
-        
+
         algorithms_status = {}
         try:
             test_tasks = [{"id": "test", "length": 1}]
             test_agents = [{"id": "test-agent"}]
-            ACOScheduler(tasks=test_tasks, agents=test_agents, cost_function=lambda x, y: y, heuristic_function=lambda x: 1.0, n_iterations=1)
+            ACOScheduler(
+                tasks=test_tasks,
+                agents=test_agents,
+                cost_function=lambda x, y: y,
+                heuristic_function=lambda x: 1.0,
+                n_iterations=1,
+            )
             algorithms_status["ACO"] = {"available": True, "status": "operational"}
         except Exception as e:
             algorithms_status["ACO"] = {"available": False, "error": str(e)}
-        
+
         try:
-            PSOScheduler(tasks=test_tasks, agents=test_agents, cost_function=lambda x, y: y, n_iterations=1)
+            PSOScheduler(
+                tasks=test_tasks,
+                agents=test_agents,
+                cost_function=lambda x, y: y,
+                n_iterations=1,
+            )
             algorithms_status["PSO"] = {"available": True, "status": "operational"}
         except Exception as e:
             algorithms_status["PSO"] = {"available": False, "error": str(e)}
-        
+
         response_data = {
             "status": "healthy",
             "health_score": 100,
             "timestamp": current_time,
             "application": app_info,
             "system": system_info,
-            "algorithms": algorithms_status
+            "algorithms": algorithms_status,
         }
-        
+
         response = jsonify(response_data)
         response.headers.add("Access-Control-Allow-Origin", "*")
         return response
-        
+
     except Exception as e:
         return jsonify({"status": "error", "error": str(e)}), 500
 
-@app.route('/stream_scheduling', methods=['POST'])
+
+@app.route("/stream_scheduling", methods=["POST"])
 def stream_scheduling():
     """
     Endpoint utama simulasi penjadwalan real-time (SSE).
     """
     try:
         data = request.get_json()
-        if not data: return jsonify({"error": "No data provided"}), 400
-        
-        tasks = data.get('tasks', data.get('tasks_data', []))
-        parameters = data.get('parameters', {})
-        if not tasks: return jsonify({"error": "No tasks provided"}), 400
-        
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+
+        tasks = data.get("tasks", data.get("tasks_data", []))
+        parameters = data.get("parameters", {})
+        if not tasks:
+            return jsonify({"error": "No tasks provided"}), 400
+
         print(f"🔍 DEBUG: Received {len(tasks)} tasks from frontend")
-        
-        algorithm = data.get('algorithm', '').upper()
-        if not algorithm: return jsonify({"error": "Algorithm not specified"}), 400
+
+        algorithm = data.get("algorithm", "").upper()
+        if not algorithm:
+            return jsonify({"error": "Algorithm not specified"}), 400
 
         # Ekstraksi Parameter
-        num_default_agents = parameters.get('num_default_agents', 10)
-        n_iterations = parameters.get('n_iterations', 100)
-        task_id_col_for_scheduler = parameters.get('task_id_col', 'id')
-        dependency_col_for_scheduler = parameters.get('dependency_col', '')
-        
+        num_default_agents = parameters.get("num_default_agents", 10)
+        n_iterations = parameters.get("n_iterations", 100)
+        task_id_col_for_scheduler = parameters.get("task_id_col", "id")
+        dependency_col_for_scheduler = parameters.get("dependency_col", "")
+
         # Pengaturan Random Seed
-        random_seed = parameters.get('random_seed', 42)
+        random_seed = parameters.get("random_seed", 42)
         random.seed(random_seed)
         np.random.seed(random_seed)
-        
+
         # Parameter Spesifik Algoritma
-        n_ants = parameters.get('n_ants', 50)
-        alpha = parameters.get('alpha', 0.9)
-        beta = parameters.get('beta', 2)
-        evaporation_rate = parameters.get('evaporation_rate', 0.3)
-        pheromone_deposit = parameters.get('pheromone_deposit', 100)
-        
-        n_particles = parameters.get('n_particles', 50)
-        w = parameters.get('w', 0.3)
-        c1 = parameters.get('c1', 0.3)
-        c2 = parameters.get('c2', 0.4)
-        
-        enable_dependencies = parameters.get('enable_dependencies', None)
+        n_ants = parameters.get("n_ants", 50)
+        alpha = parameters.get("alpha", 0.9)
+        beta = parameters.get("beta", 2)
+        evaporation_rate = parameters.get("evaporation_rate", 0.3)
+        pheromone_deposit = parameters.get("pheromone_deposit", 100)
+
+        n_particles = parameters.get("n_particles", 50)
+        w = parameters.get("w", 0.3)
+        c1 = parameters.get("c1", 0.3)
+        c2 = parameters.get("c2", 0.4)
+
+        enable_dependencies = parameters.get("enable_dependencies", None)
 
         # Normalisasi data tugas
         formatted_tasks = []
-        flexible_task_id_candidates = ['Task_ID', 'TaskID', 'task_id', 'id', 'ID', 'name', 'Name']
+        flexible_task_id_candidates = [
+            "Task_ID",
+            "TaskID",
+            "task_id",
+            "id",
+            "ID",
+            "name",
+            "Name",
+        ]
 
         for i, task in enumerate(tasks):
             # Normalisasi ID
@@ -247,121 +304,166 @@ def stream_scheduling():
                     if str(raw_val).strip():
                         task_id_value = normalize_id(raw_val)
                         break
-            
+
             # Fallback ID
-            if not task_id_value: 
+            if not task_id_value:
                 task_id_value = str(i + 1)
 
             # Ekstrak field numerik
             task_length = None
-            for field in ['Duration', 'duration', 'length', 'Length', 'Weight', 'weight', 'execution_time', 'Execution_Time (s)']:
+            for field in [
+                "Duration",
+                "duration",
+                "length",
+                "Length",
+                "Weight",
+                "weight",
+                "execution_time",
+                "Execution_Time (s)",
+            ]:
                 if field in task:
                     task_length = safe_convert_to_float(task[field])
-                    if task_length > 0: break
-            if task_length is None or task_length <= 0: task_length = 1.0
-            
+                    if task_length > 0:
+                        break
+            if task_length is None or task_length <= 0:
+                task_length = 1.0
+
             cost = 0.0
-            for field in ['Cost', 'cost', 'price', 'Price']:
+            for field in ["Cost", "cost", "price", "Price"]:
                 if field in task:
                     cost = safe_convert_to_float(task[field])
-                    if cost >= 0: break
-            
-            priority = safe_convert_to_float(task.get('Priority', task.get('priority', 1)), 1)
-            
+                    if cost >= 0:
+                        break
+
+            priority = safe_convert_to_float(
+                task.get("Priority", task.get("priority", 1)), 1
+            )
+
             # Normalisasi dependensi
             dependencies = None
-            
+
             # Gunakan kolom dependensi dari user jika ada
             if dependency_col_for_scheduler and dependency_col_for_scheduler in task:
-                 dependencies = task[dependency_col_for_scheduler]
-            
+                dependencies = task[dependency_col_for_scheduler]
+
             # Cari otomatis jika belum ketemu
             if dependencies is None and enable_dependencies is not False:
-                for field in ['dependencies', 'Dependencies', 'depends_on', 'prerequisites', 'requires', 'dependensi', 'Dependensi']:
+                for field in [
+                    "dependencies",
+                    "Dependencies",
+                    "depends_on",
+                    "prerequisites",
+                    "requires",
+                    "dependensi",
+                    "Dependensi",
+                ]:
                     if field in task and task[field] is not None:
                         dependencies = task[field]
                         break
-            
+
             # Parse dependensi ke list
             if isinstance(dependencies, str):
                 normalized_deps = parse_dependensi(dependencies)
             elif isinstance(dependencies, (list, tuple)):
-                normalized_deps = [normalize_id(d) for d in dependencies 
-                                   if d is not None and str(d).lower() not in ['null', 'nan', 'none', '']]
+                normalized_deps = [
+                    normalize_id(d)
+                    for d in dependencies
+                    if d is not None
+                    and str(d).lower() not in ["null", "nan", "none", ""]
+                ]
             elif isinstance(dependencies, (int, float)):
                 normalized_deps = [normalize_id(dependencies)]
             else:
                 normalized_deps = []
-            
+
             formatted_task = {
                 task_id_col_for_scheduler: task_id_value,
-                'length': task_length, 
-                'cost': cost,
-                'priority': priority,
-                'dependencies': normalized_deps
+                "length": task_length,
+                "cost": cost,
+                "priority": priority,
+                "dependencies": normalized_deps,
             }
-            
+
             # Salin field tambahan
             for key, value in task.items():
                 if key not in formatted_task:
                     if isinstance(value, (int, float)):
                         formatted_task[key] = safe_convert_to_float(value, 0)
                     else:
-                        formatted_task[key] = str(value).strip() if value else ''
-            
+                        formatted_task[key] = str(value).strip() if value else ""
+
             formatted_tasks.append(formatted_task)
-        
+
         # Auto-enable dependensi jika data ditemukan
-        has_dependencies = any(len(t['dependencies']) > 0 for t in formatted_tasks)
-        
+        has_dependencies = any(len(t["dependencies"]) > 0 for t in formatted_tasks)
+
         if has_dependencies:
             if not enable_dependencies:
-                print("Auto-enabling dependencies (Force) because dependency data was found.")
+                print(
+                    "Auto-enabling dependencies (Force) because dependency data was found."
+                )
             enable_dependencies = True
-        
+
         # Konversi ke boolean
         enable_dependencies = bool(enable_dependencies)
-        
+
         # Filter ghost dependencies
         if enable_dependencies and len(formatted_tasks) > 0:
-            count_removed = filter_ghost_dependencies(formatted_tasks, task_id_col_for_scheduler)
+            count_removed = filter_ghost_dependencies(
+                formatted_tasks, task_id_col_for_scheduler
+            )
 
             # Validasi dependensi sirkular
-            is_valid, masalah_dependensi = validasi_dependensi(formatted_tasks, task_id_col_for_scheduler)
+            is_valid, masalah_dependensi = validasi_dependensi(
+                formatted_tasks, task_id_col_for_scheduler
+            )
             if not is_valid:
                 error_msg = "Dependency Error: " + "; ".join(masalah_dependensi)
                 print(f"{error_msg}")
                 return jsonify({"error": error_msg}), 400
-        
+
         # Generate agen default jika tidak ada
-        agents = parameters.get('agents')
-        
+        agents = parameters.get("agents")
+
         if not agents:
-            agents = generate_agen_default(num_default_agents, 'id')
+            agents = generate_agen_default(num_default_agents, "id")
             print(f"DEBUG: Generated {len(agents)} deterministic agents.")
-        
+
         # Buat fungsi biaya
         cost_function = fungsi_biaya_jadwal
 
         # Inisialisasi scheduler berdasarkan algoritma
         scheduler = None
-        if algorithm == 'ACO':
+        if algorithm == "ACO":
             scheduler = ACOScheduler(
-                tasks=formatted_tasks, cost_function=cost_function,
-                agents=agents, # Heuristic function is now default in class
-                n_ants=n_ants, n_iterations=n_iterations, alpha=alpha, beta=beta,
-                evaporation_rate=evaporation_rate, pheromone_deposit=pheromone_deposit,
+                tasks=formatted_tasks,
+                cost_function=cost_function,
+                agents=agents,  # Heuristic function is now default in class
+                n_ants=n_ants,
+                n_iterations=n_iterations,
+                alpha=alpha,
+                beta=beta,
+                evaporation_rate=evaporation_rate,
+                pheromone_deposit=pheromone_deposit,
                 task_id_col=task_id_col_for_scheduler,
-                enable_dependencies=enable_dependencies, random_seed=random_seed,
-                num_default_agents=num_default_agents
+                enable_dependencies=enable_dependencies,
+                random_seed=random_seed,
+                num_default_agents=num_default_agents,
             )
-        elif algorithm == 'PSO':
+        elif algorithm == "PSO":
             scheduler = PSOScheduler(
-                tasks=formatted_tasks, agents=agents, cost_function=cost_function,
-                n_particles=n_particles, n_iterations=n_iterations, w=w, c1=c1, c2=c2,
+                tasks=formatted_tasks,
+                agents=agents,
+                cost_function=cost_function,
+                n_particles=n_particles,
+                n_iterations=n_iterations,
+                w=w,
+                c1=c1,
+                c2=c2,
                 task_id_col=task_id_col_for_scheduler,
-                enable_dependencies=enable_dependencies, random_seed=random_seed,
-                num_default_agents=num_default_agents
+                enable_dependencies=enable_dependencies,
+                random_seed=random_seed,
+                num_default_agents=num_default_agents,
             )
         else:
             return jsonify({"error": f"Unsupported algorithm: {algorithm}"}), 400
@@ -372,25 +474,30 @@ def stream_scheduling():
             final_result = None
             algorithm_computation_time = 0
             cancelled = False
-            
+
             try:
-                initial_data = {"type": "start", "message": f"Starting {algorithm} simulation..."}
+                initial_data = {
+                    "type": "start",
+                    "message": f"Starting {algorithm} simulation...",
+                }
                 yield f"data: {json.dumps(initial_data)}\n\n"
-                
+
                 iteration_count = 0
 
                 for data_chunk in scheduler.run():
                     yield f"data: {data_chunk}\n\n"
-                    
+
                     iteration_count += 1
                     if iteration_count % 10 == 0:
                         yield f": keepalive {iteration_count}\n\n"
-                    
+
                     try:
                         chunk_obj = json.loads(data_chunk)
                         if chunk_obj.get("type") == "done":
                             final_result = chunk_obj
-                            algorithm_computation_time = chunk_obj.get('computation_time', 0)
+                            algorithm_computation_time = chunk_obj.get(
+                                "computation_time", 0
+                            )
                     except json.JSONDecodeError:
                         continue
             except GeneratorExit:
@@ -398,43 +505,59 @@ def stream_scheduling():
                 cancelled = True
                 print(f"[INFO] Client disconnected, stopping {algorithm} simulation")
                 return
-            
+
             if cancelled:
                 return
-            
+
             try:
                 total_execution_time = time.time() - start_time
-                load_balance_index = final_result.get('load_balance_index', 0)
+                load_balance_index = final_result.get("load_balance_index", 0)
 
-                schedule_data = final_result.get('schedule', [])
+                schedule_data = final_result.get("schedule", [])
                 full_schedule_table = {
                     "columns": ["task_id", "agent_id", "start_time", "finish_time"],
-                    "data": [[item.get('task_id'), item.get('agent_id'), 
-                             round(item.get('start_time', 0), 2), 
-                             round(item.get('finish_time', 0), 2)] 
-                            for item in schedule_data],
-                    "total_rows": len(schedule_data)
+                    "data": [
+                        [
+                            item.get("task_id"),
+                            item.get("agent_id"),
+                            round(item.get("start_time", 0), 2),
+                            round(item.get("finish_time", 0), 2),
+                        ]
+                        for item in schedule_data
+                    ],
+                    "total_rows": len(schedule_data),
                 }
-                
-                agent_finish_times = final_result.get('agent_finish_times', {})
+
+                agent_finish_times = final_result.get("agent_finish_times", {})
                 agent_info_table = {
-                    "columns": ["agent_id", "type", "capacity", "efficiency", "total_tasks", "finish_time"],
-                    "data": []
+                    "columns": [
+                        "agent_id",
+                        "type",
+                        "capacity",
+                        "efficiency",
+                        "total_tasks",
+                        "finish_time",
+                    ],
+                    "data": [],
                 }
-                
+
                 for agent in agents:
-                    agent_id = agent.get('id')
-                    agent_tasks = [s for s in schedule_data if s.get('agent_id') == agent_id]
-                    agent_info_table["data"].append([
-                        agent_id,
-                        agent.get('type', 'N/A'),
-                        round(agent.get('capacity', 1.0), 2),
-                        round(agent.get('efficiency', 1.0), 2),
-                        len(agent_tasks),
-                        round(agent_finish_times.get(agent_id, 0), 2)
-                    ])
+                    agent_id = agent.get("id")
+                    agent_tasks = [
+                        s for s in schedule_data if s.get("agent_id") == agent_id
+                    ]
+                    agent_info_table["data"].append(
+                        [
+                            agent_id,
+                            agent.get("type", "N/A"),
+                            round(agent.get("capacity", 1.0), 2),
+                            round(agent.get("efficiency", 1.0), 2),
+                            len(agent_tasks),
+                            round(agent_finish_times.get(agent_id, 0), 2),
+                        ]
+                    )
                 agent_info_table["total_rows"] = len(agent_info_table["data"])
-                
+
                 final_metrics = {
                     "type": "final_metrics",
                     "total_execution_time": round(total_execution_time * 1000, 2),
@@ -445,62 +568,80 @@ def stream_scheduling():
                     "full_result": {
                         "algorithm": algorithm,
                         "schedule": schedule_data,
-                        "makespan": final_result.get('makespan', 0),
+                        "makespan": final_result.get("makespan", 0),
                         "load_balance_index": load_balance_index,
                         "computation_time": algorithm_computation_time,
-                        "agent_finish_times": final_result.get('agent_finish_times', {}),
-                        "iteration_history": final_result.get('iteration_history', []),
+                        "agent_finish_times": final_result.get(
+                            "agent_finish_times", {}
+                        ),
+                        "iteration_history": final_result.get("iteration_history", []),
                         "total_tasks": len(schedule_data),
-                        "total_agents": len(final_result.get('agent_finish_times', {})),
+                        "total_agents": len(final_result.get("agent_finish_times", {})),
                         "timestamp": datetime.now().isoformat(),
                         "parameters": {
                             "enable_dependencies": enable_dependencies,
                             "random_seed": random_seed,
                             "n_iterations": n_iterations,
-                            "num_agents": num_default_agents
-                        }
-                    }
+                            "num_agents": num_default_agents,
+                        },
+                    },
                 }
-                
-                if algorithm == 'ACO':
-                    final_metrics["full_result"]["parameters"].update({
-                        "n_ants": n_ants, "alpha": alpha, "beta": beta,
-                        "evaporation_rate": evaporation_rate, "pheromone_deposit": pheromone_deposit
-                    })
-                elif algorithm == 'PSO':
-                    final_metrics["full_result"]["parameters"].update({
-                        "n_particles": n_particles, "w": w, "c1": c1, "c2": c2
-                    })
-                
+
+                if algorithm == "ACO":
+                    final_metrics["full_result"]["parameters"].update(
+                        {
+                            "n_ants": n_ants,
+                            "alpha": alpha,
+                            "beta": beta,
+                            "evaporation_rate": evaporation_rate,
+                            "pheromone_deposit": pheromone_deposit,
+                        }
+                    )
+                elif algorithm == "PSO":
+                    final_metrics["full_result"]["parameters"].update(
+                        {"n_particles": n_particles, "w": w, "c1": c1, "c2": c2}
+                    )
+
                 yield f"data: {json.dumps(final_metrics)}\n\n"
             except GeneratorExit:
                 print(f"[INFO] Client disconnected during final metrics")
                 return
 
-        response = Response(generate(), mimetype='text/event-stream')
-        response.headers['Cache-Control'] = 'no-cache, no-transform'
-        response.headers['X-Accel-Buffering'] = 'no'
-        response.headers['Connection'] = 'keep-alive'
+        response = Response(generate(), mimetype="text/event-stream")
+        response.headers["Cache-Control"] = "no-cache, no-transform"
+        response.headers["X-Accel-Buffering"] = "no"
+        response.headers["Connection"] = "keep-alive"
         return response
 
     except Exception as e:
-        error_details = {"type": "error", "message": str(e), "traceback": traceback.format_exc()}
-        return Response(f"data: {json.dumps(error_details)}\n\n", mimetype='text/event-stream')
+        error_details = {
+            "type": "error",
+            "message": str(e),
+            "traceback": traceback.format_exc(),
+        }
+        return Response(
+            f"data: {json.dumps(error_details)}\n\n", mimetype="text/event-stream"
+        )
 
-@app.route('/health/simple')
+
+@app.route("/health/simple")
 def simple_health_check():
     return jsonify({"status": "ok", "timestamp": time.time()})
 
-@app.route('/algorithms', methods=['GET'])
-def get_algorithms():
-    return jsonify({
-        "algorithms": ["ACO", "PSO"],
-        "descriptions": {
-            "ACO": "Ant Colony Optimization for task scheduling",
-            "PSO": "Particle Swarm Optimization for task scheduling"
-        }
-    })
 
-if __name__ == '__main__':
-    port = int(os.getenv('PORT', 5001))
-    app.run(debug=True, host='0.0.0.0', port=port, threaded=True)
+@app.route("/algorithms", methods=["GET"])
+def get_algorithms():
+    return jsonify(
+        {
+            "algorithms": ["ACO", "PSO"],
+            "descriptions": {
+                "ACO": "Ant Colony Optimization for task scheduling",
+                "PSO": "Particle Swarm Optimization for task scheduling",
+            },
+        }
+    )
+
+
+if __name__ == "__main__":
+    port = int(os.getenv("PORT", 5001))
+    app.run(debug=True, host="0.0.0.0", port=port, threaded=True)
