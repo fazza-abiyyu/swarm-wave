@@ -3,7 +3,6 @@ import random
 import numpy as np
 
 
-# ========== FUNGSI PARSING & CONVERSION ==========
 def safe_convert_to_float(value, default=0.0):
     """
     Mengkonversi nilai ke float dengan penanganan error yang aman (default: 0.0).
@@ -71,9 +70,6 @@ def parse_dependensi(string_dep):
     return hasil
 
 
-
-
-# ========== GENERATE AGEN ==========
 def generate_agen_default(jumlah_agen, agent_id_col='id'):
     """
     Membuat daftar agen default dengan karakteristik seragam (Homogen).
@@ -82,14 +78,10 @@ def generate_agen_default(jumlah_agen, agent_id_col='id'):
         return []
     
     return [{
-        agent_id_col: f'Agent-{i+1}',
-        'type': 'Standard',
-        'capacity': 1.0,
-        'efficiency': 1.0
+        agent_id_col: f'Agent-{i+1}'
     } for i in range(jumlah_agen)]
 
 
-# ========== COST & VALIDATION FUNCTIONS ==========
 def hitung_load_balance_index(waktu_selesai_agen):
     """
     Menghitung indeks keseimbangan beban kerja antar agen (Coef. of Variation).
@@ -109,9 +101,9 @@ def hitung_load_balance_index(waktu_selesai_agen):
     return std_dev / mean_time
 
 
-def fungsi_biaya_jadwal(jadwal, durasi_total, bobot_waktu=1.0, bobot_keseimbangan_beban=1.0):
+def fungsi_biaya_jadwal(jadwal, durasi_total):
     """
-    Hitung biaya total jadwal berdasarkan Makespan dan Load Balance.
+    Hitung biaya: Makespan × (1 + Load Balance Index).
     """
     if not jadwal:
         return float('inf')
@@ -132,18 +124,9 @@ def fungsi_biaya_jadwal(jadwal, durasi_total, bobot_waktu=1.0, bobot_keseimbanga
     # Hitung load balance
     keseimbangan = hitung_load_balance_index(waktu_selesai)
     
-    # Hitung biaya total
-    biaya = durasi_total * (bobot_waktu + bobot_keseimbangan_beban * keseimbangan)
+    # Biaya = Makespan × (1 + LBI)
+    biaya = durasi_total * (1 + keseimbangan)
     return max(0.1, biaya)
-
-
-def buat_cost_function_untuk_scheduler(bobot_waktu=1.0, bobot_keseimbangan_beban=1.0):
-    """
-    Buat fungsi biaya dengan bobot kustom.
-    """
-    def cost_function(jadwal, durasi_total):
-        return fungsi_biaya_jadwal(jadwal, durasi_total, bobot_waktu, bobot_keseimbangan_beban)
-    return cost_function
 
 
 def ada_dependensi_sirkular(graf):
