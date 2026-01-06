@@ -18,7 +18,6 @@ from models.utils import (
     parse_dependensi,
     filter_ghost_dependencies,
     fungsi_biaya_jadwal,
-    buat_cost_function_untuk_scheduler,
     validasi_dependensi,
     ada_dependensi_sirkular
 )
@@ -26,7 +25,7 @@ from models.utils import (
 app = Flask(__name__)
 app.start_time = time.time()
 
-# Middleware Header Keamanan
+# Middleware: Header Keamanan
 @app.after_request
 def add_security_headers(response):
     """
@@ -71,7 +70,7 @@ def add_security_headers(response):
     
     return response
 
-# Konfigurasi CORS
+# Konfigurasi CORS global
 CORS(app, 
      origins=[
          'http://localhost:3000', 
@@ -235,7 +234,7 @@ def stream_scheduling():
         
         enable_dependencies = parameters.get('enable_dependencies', None)
 
-        # --- NORMALISASI DATA TUGAS ---
+        # Normalisasi data tugas
         formatted_tasks = []
         flexible_task_id_candidates = ['Task_ID', 'TaskID', 'task_id', 'id', 'ID', 'name', 'Name']
 
@@ -249,11 +248,11 @@ def stream_scheduling():
                         task_id_value = normalize_id(raw_val)
                         break
             
-            # Fallback ID (Pakai index+1 agar lebih aman untuk dataset numerik)
+            # Fallback ID
             if not task_id_value: 
                 task_id_value = str(i + 1)
 
-            # Field Numerik
+            # Ekstrak field numerik
             task_length = None
             for field in ['Duration', 'duration', 'length', 'Length', 'Weight', 'weight', 'execution_time', 'Execution_Time (s)']:
                 if field in task:
@@ -269,21 +268,21 @@ def stream_scheduling():
             
             priority = safe_convert_to_float(task.get('Priority', task.get('priority', 1)), 1)
             
-            # Normalisasi Dependensi (menggunakan utils)
+            # Normalisasi dependensi
             dependencies = None
             
-            # Prioritas Utama: Gunakan kolom yang dipilih user
+            # Gunakan kolom dependensi dari user jika ada
             if dependency_col_for_scheduler and dependency_col_for_scheduler in task:
                  dependencies = task[dependency_col_for_scheduler]
             
-            # Alternatif: Cari otomatis jika belum ketemu, TAPI hanya jika user tidak mematikan dependensi
+            # Cari otomatis jika belum ketemu
             if dependencies is None and enable_dependencies is not False:
                 for field in ['dependencies', 'Dependencies', 'depends_on', 'prerequisites', 'requires', 'dependensi', 'Dependensi']:
                     if field in task and task[field] is not None:
                         dependencies = task[field]
                         break
             
-            # Gunakan parse_dependensi untuk list, atau handle langsung
+            # Parse dependensi ke list
             if isinstance(dependencies, str):
                 normalized_deps = parse_dependensi(dependencies)
             elif isinstance(dependencies, (list, tuple)):
@@ -302,7 +301,7 @@ def stream_scheduling():
                 'dependencies': normalized_deps
             }
             
-            # Salin field yang tersisa
+            # Salin field tambahan
             for key, value in task.items():
                 if key not in formatted_task:
                     if isinstance(value, (int, float)):
@@ -312,8 +311,7 @@ def stream_scheduling():
             
             formatted_tasks.append(formatted_task)
         
-        # --- DETEKSI OTOMATIS DEPENDENSI ---
-        # Paksa nyalakan dependensi jika data ditemukan
+        # Auto-enable dependensi jika data ditemukan
         has_dependencies = any(len(t['dependencies']) > 0 for t in formatted_tasks)
         
         if has_dependencies:
@@ -321,33 +319,31 @@ def stream_scheduling():
                 print("Auto-enabling dependencies (Force) because dependency data was found.")
             enable_dependencies = True
         
-        # Pastikan boolean
+        # Konversi ke boolean
         enable_dependencies = bool(enable_dependencies)
         
-        # Filter ghost dependencies menggunakan fungsi dari utils
+        # Filter ghost dependencies
         if enable_dependencies and len(formatted_tasks) > 0:
             count_removed = filter_ghost_dependencies(formatted_tasks, task_id_col_for_scheduler)
 
-            # --- VALIDASI DEPENDENSI SIRKULAR ---
+            # Validasi dependensi sirkular
             is_valid, masalah_dependensi = validasi_dependensi(formatted_tasks, task_id_col_for_scheduler)
             if not is_valid:
                 error_msg = "Dependency Error: " + "; ".join(masalah_dependensi)
                 print(f"{error_msg}")
                 return jsonify({"error": error_msg}), 400
         
-        # --- GENERASI AGEN DETERMINISTIK ---
+        # Generate agen default jika tidak ada
         agents = parameters.get('agents')
         
         if not agents:
             agents = generate_agen_default(num_default_agents, 'id')
             print(f"DEBUG: Generated {len(agents)} deterministic agents.")
         
-        # Fungsi Biaya (menggunakan utils)
-        bobot_waktu = parameters.get('bobot_waktu', 1.0)
-        bobot_keseimbangan_beban = parameters.get('bobot_keseimbangan_beban', 1.0)
-        cost_function = buat_cost_function_untuk_scheduler(bobot_waktu, bobot_keseimbangan_beban)
+        # Buat fungsi biaya
+        cost_function = fungsi_biaya_jadwal
 
-        # Inisialisasi Scheduler
+        # Inisialisasi scheduler berdasarkan algoritma
         scheduler = None
         if algorithm == 'ACO':
             scheduler = ACOScheduler(
@@ -370,7 +366,7 @@ def stream_scheduling():
         else:
             return jsonify({"error": f"Unsupported algorithm: {algorithm}"}), 400
 
-        # Fungsi Generator dengan penanganan diskoneksi klien
+        # Generator untuk SSE streaming
         def generate():
             start_time = time.time()
             final_result = None
@@ -398,7 +394,7 @@ def stream_scheduling():
                     except json.JSONDecodeError:
                         continue
             except GeneratorExit:
-                # Klien terputus - hentikan proses
+                # Klien terputus
                 cancelled = True
                 print(f"[INFO] Client disconnected, stopping {algorithm} simulation")
                 return
