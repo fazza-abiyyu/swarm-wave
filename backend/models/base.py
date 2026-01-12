@@ -2,7 +2,6 @@ import numpy as np
 import random
 import json
 import pandas as pd
-import time
 
 from models.utils import (
     generate_agen_default,
@@ -113,7 +112,7 @@ class MultiAgentScheduler:
                 "depends_on",
                 "prerequisites",
                 "requires",
-                "Dependencies",
+                "Depends_On_Task_ID",
             ]:
                 if field in tugas and tugas[field] is not None:
                     deps = tugas[field]
@@ -371,9 +370,7 @@ class MultiAgentScheduler:
         hasil = result_container["result"]
         if hasil:
             final_makespan = float(hasil["makespan"])
-            computation_time = (
-                float(hasil.get("computation_time", 0)) * 1000
-            )  # Convert to ms
+            time_complexity = hasil.get("time_complexity", "N/A")
 
             # Convert iteration_history from DataFrame to list of records
             iteration_history = []
@@ -387,8 +384,8 @@ class MultiAgentScheduler:
                     "makespan": final_makespan,
                     "load_balance_index": float(hasil["load_balance_index"]),
                     "agent_finish_times": hasil["agent_finish_times"],
-                    "computation_time": computation_time,
+                    "time_complexity": time_complexity,
                     "iteration_history": iteration_history,
-                    "log_message": f"Optimization complete! Best Makespan: {final_makespan:.2f}s (computed in {computation_time:.2f}ms)",
+                    "log_message": f"Optimization complete! Best Makespan: {final_makespan:.2f}s | Time Complexity: {time_complexity}",
                 }
             )

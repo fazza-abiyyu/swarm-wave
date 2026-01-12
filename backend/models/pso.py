@@ -1,8 +1,8 @@
 import numpy as np
 import random
 import json
-import pandas as pd
 import time
+import pandas as pd
 from .base import MultiAgentScheduler
 
 
@@ -18,9 +18,9 @@ class PSO_MultiAgent_Scheduler(MultiAgentScheduler):
         cost_function,
         n_particles=30,
         n_iterations=100,
-        w=0.5,
-        c1=1.5,
-        c2=1.5,
+        w=0.3,
+        c1=0.3,
+        c2=0.4,
         **kwargs,
     ):
         """
@@ -136,12 +136,13 @@ class PSO_MultiAgent_Scheduler(MultiAgentScheduler):
         """
         Jalankan loop utama optimasi PSO.
         """
+        waktu_mulai = time.time()
         if self.jumlah_partikel == 0 or self.jumlah_tugas == 0:
             return super().optimize(
                 show_progress=False, progress_callback=progress_callback
             )
 
-        waktu_mulai = time.time()
+
         if show_progress:
             print(f"Memulai optimasi {self.__class__.__name__}...")
 
@@ -236,7 +237,8 @@ class PSO_MultiAgent_Scheduler(MultiAgentScheduler):
                 self.posisi_gbest
             )
 
-        waktu_komputasi = time.time() - waktu_mulai
+        # Time Complexity: O(T × N × D × E)
+        time_complexity = f"O({self.jumlah_iterasi} × {self.jumlah_partikel} × {self.jumlah_tugas} × {len(self.agen)})"
 
         return {
             "schedule": pd.DataFrame(self.jadwal_terbaik)
@@ -249,7 +251,8 @@ class PSO_MultiAgent_Scheduler(MultiAgentScheduler):
             if self.indeks_keseimbangan_terbaik != float("inf")
             else 0.0,
             "agent_finish_times": waktu_akhir_agen_final,
-            "computation_time": waktu_komputasi,
+            "computation_time": time.time() - waktu_mulai,
+            "time_complexity": time_complexity,
             "iteration_history": pd.DataFrame(self.riwayat_iterasi),
             "algorithm": self.__class__.__name__,
         }

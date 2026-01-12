@@ -10,7 +10,7 @@
             <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Best Makespan (s)</th>
             <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total Execution Time (ms)</th>
             <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Load Balancing Index</th>
-            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Computation Time (ms)</th>
+            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Time Complexity</th>
           </tr>
         </thead>
         <tbody class="bg-white divide-y divide-gray-200">
@@ -26,7 +26,7 @@
               {{ loadBalanceIndex.ACO ? parseFloat(loadBalanceIndex.ACO).toFixed(4) : "N/A" }}
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-mono" :class="{ 'font-bold': isWinner.ACO }">
-              {{ computationTime.ACO ? parseFloat(computationTime.ACO).toFixed(2) : "N/A" }}
+              {{ timeComplexity.ACO || "N/A" }}
             </td>
           </tr>
           <tr :class="[isWinner.PSO ? 'bg-blue-50 text-blue-700 font-bold' : 'text-gray-900']">
@@ -41,7 +41,7 @@
               {{ loadBalanceIndex.PSO ? parseFloat(loadBalanceIndex.PSO).toFixed(4) : "N/A" }}
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-mono" :class="{ 'font-bold': isWinner.PSO }">
-              {{ computationTime.PSO ? parseFloat(computationTime.PSO).toFixed(2) : "N/A" }}
+              {{ timeComplexity.PSO || "N/A" }}
             </td>
           </tr>
         </tbody>
@@ -68,7 +68,7 @@ defineProps({
   bestMakespan: { type: Object, default: () => ({ ACO: null, PSO: null }) },
   executionTime: { type: Object, default: () => ({ ACO: null, PSO: null }) },
   loadBalanceIndex: { type: Object, default: () => ({ ACO: null, PSO: null }) },
-  computationTime: { type: Object, default: () => ({ ACO: null, PSO: null }) },
+  timeComplexity: { type: Object, default: () => ({ ACO: null, PSO: null }) },
   winner: { type: String, default: 'Pending' },
   isWinner: { type: Object, default: () => ({ ACO: false, PSO: false }) }
 });

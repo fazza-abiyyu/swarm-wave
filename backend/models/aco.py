@@ -29,7 +29,7 @@ class ACO_MultiAgent_Scheduler(MultiAgentScheduler):
         n_iterations=100,
         alpha=0.9,
         beta=2.0,
-        evaporation_rate=0.5,
+        evaporation_rate=0.3,
         pheromone_deposit=100,
         **kwargs,
     ):
@@ -77,21 +77,20 @@ class ACO_MultiAgent_Scheduler(MultiAgentScheduler):
         iterasi_maks = self.jumlah_tugas * 2
         hitung_iterasi = 0
 
+        # Pilih tugas berikutnya (Hybrid: 50% Strategy / 50% Random)
+        # Ini untuk mencegah ACO terjebak di jalur deterministik saat dependensi ketat
+        epsilon = 0.5 # 50% exploration
+
         while tersisa and hitung_iterasi < iterasi_maks:
             hitung_iterasi += 1
-
-            # Identifikasi tugas yang siap (Hard Constraint: Dependensi)
             siap = self.get_ready_tasks(list(tersisa), selesai)
 
-            # Deadlock Handling: Paksa pilih tugas dengan dependensi yang belum terpenuhi paling sedikit
             if not siap:
-                min_tidak_terpenuhi = float("inf")
+                min_tidak_terpenuhi = float('inf')
                 tugas_paksa = None
                 for idx in tersisa:
                     tid = self.peta_tugas_terbalik[idx]
-                    tidak_terpenuhi = len(
-                        [d for d in self.dependensi.get(tid, []) if d not in selesai]
-                    )
+                    tidak_terpenuhi = len([d for d in self.dependensi.get(tid, []) if d not in selesai])
                     if tidak_terpenuhi < min_tidak_terpenuhi:
                         min_tidak_terpenuhi, tugas_paksa = tidak_terpenuhi, idx
                 siap = [tugas_paksa] if tugas_paksa is not None else []
@@ -99,14 +98,23 @@ class ACO_MultiAgent_Scheduler(MultiAgentScheduler):
             if not siap:
                 break
 
-            # Pilih tugas berikutnya (Roulette Wheel Selection)
-            if saat_ini is None or saat_ini not in siap:
+            if len(siap) == 1:
+                tugas_berikutnya = siap[0]
+            elif random.random() < epsilon:
+                # Eksplorasi: Pilih acak murni
                 tugas_berikutnya = random.choice(siap)
             else:
-                probabilitas = self.calculate_probabilities(saat_ini, siap)
-                tugas_berikutnya = (
-                    np.random.choice(siap, p=probabilitas) if len(siap) > 1 else siap[0]
-                )
+                # Eksploitasi: Gunakan Probabilitas (Feromon x Heuristik)
+                if saat_ini is None:
+                     # Jika langkah pertama, gunakan random choice sederhana
+                     tugas_berikutnya = random.choice(siap)
+                else:
+                    try:
+                        probabilitas = self.calculate_probabilities(saat_ini, siap)
+                        tugas_berikutnya = np.random.choice(siap, p=probabilitas) if len(siap) > 1 else siap[0]
+                    except ValueError:
+                         # Fallback jika probabilitas tidak valid
+                         tugas_berikutnya = random.choice(siap)
 
             # Update State
             rute.append(tugas_berikutnya)
@@ -258,6 +266,7 @@ class ACO_MultiAgent_Scheduler(MultiAgentScheduler):
             else 0.0,
             "agent_finish_times": waktu_akhir_agen_final,
             "computation_time": time.time() - waktu_mulai,
+            "time_complexity": f"O({self.jumlah_iterasi} x {self.jumlah_semut} x {self.jumlah_tugas} x {self.jumlah_agen})", 
             "iteration_history": pd.DataFrame(self.riwayat_iterasi),
             "algorithm": self.__class__.__name__,
         }

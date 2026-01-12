@@ -77,7 +77,7 @@
       <!-- Overall Best Result -->
       <OverallBestResult v-if="selectedAlgorithms.includes('ACO') && selectedAlgorithms.includes('PSO')"
         :bestMakespan="bestMakespan" :executionTime="executionTime" :loadBalanceIndex="loadBalanceIndex"
-        :computationTime="computationTime" :winner="winner" :isWinner="isWinner" />
+        :timeComplexity="timeComplexity" :winner="winner" :isWinner="isWinner" />
 
       <!-- AI Chat -->
       <AIChatWindow :simulationData="simulationData" :selectedAlgorithms="selectedAlgorithms" @show-toast="showToast" />
@@ -139,7 +139,7 @@ const logs = ref({ ACO: [], PSO: [] });
 const bestMakespan = ref({ ACO: null, PSO: null });
 const executionTime = ref({ ACO: null, PSO: null });
 const loadBalanceIndex = ref({ ACO: null, PSO: null });
-const computationTime = ref({ ACO: null, PSO: null });
+const timeComplexity = ref({ ACO: null, PSO: null });
 const status = ref({ ACO: 'Idle', PSO: 'Idle' });
 const acoFinalAssignment = ref([]);
 const psoFinalAssignment = ref([]);
@@ -228,7 +228,7 @@ const resetSimulationStateForAlgo = (algo) => {
   bestMakespan.value[algo] = null;
   executionTime.value[algo] = null;
   loadBalanceIndex.value[algo] = null;
-  computationTime.value[algo] = null;
+  timeComplexity.value[algo] = null;
   if (algo === 'ACO') { acoFinalAssignment.value = []; if (acoResultsRef.value) acoResultsRef.value.resetChart(); }
   if (algo === 'PSO') { psoFinalAssignment.value = []; if (psoResultsRef.value) psoResultsRef.value.resetChart(); }
 };
@@ -327,7 +327,7 @@ const handleStreamEvent = (algorithm, data) => {
     case 'done':
       if (data.log_message) logs.value[algorithm].push(data.log_message);
       if (typeof data.makespan === 'number') bestMakespan.value[algorithm] = data.makespan;
-      if (typeof data.computation_time === 'number') computationTime.value[algorithm] = data.computation_time;
+      if (data.time_complexity) timeComplexity.value[algorithm] = data.time_complexity;
       if (data.schedule && Array.isArray(data.schedule)) {
         const assignments = transformAssignmentData(data.schedule);
         if (algorithm === 'ACO') acoFinalAssignment.value = assignments;
@@ -336,7 +336,7 @@ const handleStreamEvent = (algorithm, data) => {
       break;
     case 'final_metrics':
       if (typeof data.total_execution_time === 'number') executionTime.value[algorithm] = data.total_execution_time;
-      if (typeof data.computation_time === 'number') computationTime.value[algorithm] = data.computation_time;
+      if (data.time_complexity) timeComplexity.value[algorithm] = data.time_complexity;
       if (typeof data.load_balance_index === 'number') loadBalanceIndex.value[algorithm] = data.load_balance_index;
       if (data.full_schedule_table) fullScheduleTable.value[algorithm.toLowerCase()] = data.full_schedule_table;
       if (data.full_result) fullResultData.value[algorithm.toLowerCase()] = data.full_result;

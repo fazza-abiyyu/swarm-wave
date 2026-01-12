@@ -18,7 +18,7 @@ interface SimulationResults {
     bestMakespan?: string | number;
     executionTime?: string | number;
     loadBalanceIndex?: string | number;
-    computationTime?: string | number;
+    timeComplexity?: string;
     finalAssignment?: any[];
     convergenceData?: number[];
     ganttChartHtml?: string;
@@ -36,7 +36,7 @@ interface SimulationResults {
     bestMakespan?: string | number;
     executionTime?: string | number;
     loadBalanceIndex?: string | number;
-    computationTime?: string | number;
+    timeComplexity?: string;
     finalAssignment?: any[];
     convergenceData?: number[];
     ganttChartHtml?: string;
@@ -238,9 +238,8 @@ function buildSystemMessage(
     const originalRows = ds.dataLimitations?.originalRows || ds.totalRows || 0;
 
     context += `| Property | Value |\n|----------|-------|`;
-    context += `\n| **Dataset Rows** | ${filteredRows}${
-      originalRows !== filteredRows ? ` (filtered from ${originalRows})` : ""
-    } |`;
+    context += `\n| **Dataset Rows** | ${filteredRows}${originalRows !== filteredRows ? ` (filtered from ${originalRows})` : ""
+      } |`;
     context += `\n| **Dataset Columns** | ${ds.totalColumns || 0} |`;
     context += `\n| **Column Headers** | ${ds.columns?.join(", ") || "N/A"} |`;
 
@@ -252,9 +251,8 @@ function buildSystemMessage(
 
     if (ds.sampleData && ds.sampleData.length > 0) {
       context += `\n\n**Sample Data (first 3 rows):**\n`;
-      context += `| ${ds.columns?.join(" | ") || ""} |\n|${
-        ds.columns?.map(() => "---").join("|") || ""
-      }|`;
+      context += `| ${ds.columns?.join(" | ") || ""} |\n|${ds.columns?.map(() => "---").join("|") || ""
+        }|`;
       ds.sampleData.slice(0, 3).forEach((row) => {
         const values =
           ds.columns?.map((col) => row[col] || "N/A").join(" | ") || "";
@@ -274,9 +272,8 @@ function buildSystemMessage(
       context += `\n| **Agents** | ${ap.common.num_default_agents || "N/A"} |`;
       context += `\n| **Iterations** | ${ap.common.n_iterations || "N/A"} |`;
       context += `\n| **Task ID Column** | ${ap.common.task_id_col || "N/A"} |`;
-      context += `\n| **Agent ID Column** | ${
-        ap.common.agent_id_col || "N/A"
-      } |`;
+      context += `\n| **Agent ID Column** | ${ap.common.agent_id_col || "N/A"
+        } |`;
     }
 
     if (ap.aco && swarmType.includes("ACO")) {
@@ -284,12 +281,10 @@ function buildSystemMessage(
       context += `| Parameter | Value |\n|-----------|-------|`;
       context += `\n| **Alpha (Pheromone)** | ${ap.aco.alpha || "N/A"} |`;
       context += `\n| **Beta (Heuristic)** | ${ap.aco.beta || "N/A"} |`;
-      context += `\n| **Evaporation Rate** | ${
-        ap.aco.evaporation_rate || "N/A"
-      } |`;
-      context += `\n| **Pheromone Deposit** | ${
-        ap.aco.pheromone_deposit || "N/A"
-      } |`;
+      context += `\n| **Evaporation Rate** | ${ap.aco.evaporation_rate || "N/A"
+        } |`;
+      context += `\n| **Pheromone Deposit** | ${ap.aco.pheromone_deposit || "N/A"
+        } |`;
       context += `\n| **Number of Ants** | ${ap.aco.n_ants || "N/A"} |`;
     }
 
@@ -321,20 +316,17 @@ function buildSystemMessage(
     context += `\n| **Load Balance Index** | ${Number(
       sim.aco?.loadBalanceIndex || 0
     ).toFixed(4)} |`;
-    context += `\n| **Agents** | ${
-      sim.aco?.totalAgents ??
+    context += `\n| **Agents** | ${sim.aco?.totalAgents ??
       sim.algorithmParameters?.common?.num_default_agents ??
       0
-    } |`;
-    context += `\n| **Tasks Processed** | ${
-      sim.aco?.totalTasks ??
+      } |`;
+    context += `\n| **Tasks Processed** | ${sim.aco?.totalTasks ??
       sim.dataSpecification?.dataLimitations?.filteredRows ??
       sim.dataSpecification?.totalRows ??
       0
-    } |`;
-    context += `\n| **Final Assignments** | ${
-      sim.aco?.finalAssignment?.length ?? 0
-    } agent groups |`;
+      } |`;
+    context += `\n| **Final Assignments** | ${sim.aco?.finalAssignment?.length ?? 0
+      } agent groups |`;
   }
 
   if (hasPso) {
@@ -349,20 +341,17 @@ function buildSystemMessage(
     context += `\n| **Load Balance Index** | ${Number(
       sim.pso?.loadBalanceIndex || 0
     ).toFixed(4)} |`;
-    context += `\n| **Agents** | ${
-      sim.pso?.totalAgents ??
+    context += `\n| **Agents** | ${sim.pso?.totalAgents ??
       sim.algorithmParameters?.common?.num_default_agents ??
       0
-    } |`;
-    context += `\n| **Tasks Processed** | ${
-      sim.pso?.totalTasks ??
+      } |`;
+    context += `\n| **Tasks Processed** | ${sim.pso?.totalTasks ??
       sim.dataSpecification?.dataLimitations?.filteredRows ??
       sim.dataSpecification?.totalRows ??
       0
-    } |`;
-    context += `\n| **Final Assignments** | ${
-      sim.pso?.finalAssignment?.length ?? 0
-    } agent groups |`;
+      } |`;
+    context += `\n| **Final Assignments** | ${sim.pso?.finalAssignment?.length ?? 0
+      } agent groups |`;
   }
 
   if (hasAco && hasPso) {

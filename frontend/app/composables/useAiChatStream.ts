@@ -20,7 +20,7 @@ interface SimulationResults {
     bestMakespan?: string | number
     executionTime?: string | number
     loadBalanceIndex?: string | number
-    computationTime?: string | number
+    timeComplexity?: string
     finalAssignment?: any[]
     convergenceData?: number[]
     ganttChartHtml?: string
@@ -38,7 +38,7 @@ interface SimulationResults {
     bestMakespan?: string | number
     executionTime?: string | number
     loadBalanceIndex?: string | number
-    computationTime?: string | number
+    timeComplexity?: string
     finalAssignment?: any[]
     convergenceData?: number[]
     ganttChartHtml?: string
@@ -88,11 +88,11 @@ export function useAiChatStream() {
 
     // Add user message to history
     chatHistory.value.push({ role: 'user', content: userMessage })
-    
+
     // Add empty assistant message that will be populated via streaming
     const assistantMessageIndex = chatHistory.value.length
     chatHistory.value.push({ role: 'assistant', content: '', isStreaming: true })
-    
+
     aiLoading.value = true
     aiError.value = null
     isStreaming.value = true
@@ -130,7 +130,7 @@ export function useAiChatStream() {
       try {
         while (true) {
           const { value, done } = await reader.read()
-          
+
           if (done) {
             // Ensure streaming state is cleaned up
             if (chatHistory.value[assistantMessageIndex]) {
@@ -147,25 +147,25 @@ export function useAiChatStream() {
 
           for (const line of lines) {
             if (line.trim() === '' || !line.startsWith('data: ')) continue
-            
+
             try {
               const jsonStr = line.replace(/^data: /, '').trim()
               if (!jsonStr) continue
-              
+
               const event = JSON.parse(jsonStr)
-              
+
               switch (event.type) {
                 case 'start':
                   console.log('Stream started:', event.data)
                   break
-                  
+
                 case 'chunk':
                   // Add chunk to the assistant message
                   if (chatHistory.value[assistantMessageIndex]) {
                     chatHistory.value[assistantMessageIndex].content += event.data
                   }
                   break
-                  
+
                 case 'done':
                   // Stream completed
                   if (chatHistory.value[assistantMessageIndex]) {
@@ -174,7 +174,7 @@ export function useAiChatStream() {
                   isStreaming.value = false
                   console.log('Stream completed')
                   return
-                  
+
                 case 'error':
                   throw new Error(event.data)
               }
@@ -197,16 +197,16 @@ export function useAiChatStream() {
 
     } catch (error: any) {
       console.error('AI Chat Stream Error:', error)
-      
+
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
       aiError.value = errorMessage
-      
+
       // Update the assistant message with error
       if (chatHistory.value[assistantMessageIndex]) {
         chatHistory.value[assistantMessageIndex].content = `Sorry, an error occurred: ${errorMessage}`
         chatHistory.value[assistantMessageIndex].isStreaming = false
       }
-      
+
     } finally {
       aiLoading.value = false
       isStreaming.value = false
@@ -219,11 +219,11 @@ export function useAiChatStream() {
 
     // Add user message to history
     chatHistory.value.push({ role: 'user', content: input })
-    
+
     // Add empty assistant message that will be populated via streaming
     const assistantMessageIndex = chatHistory.value.length
     chatHistory.value.push({ role: 'assistant', content: '', isStreaming: true })
-    
+
     aiLoading.value = true
     aiError.value = null
     isStreaming.value = true
@@ -259,7 +259,7 @@ export function useAiChatStream() {
 
       while (true) {
         const { value, done } = await reader.read()
-        
+
         if (done) break
 
         buffer += decoder.decode(value, { stream: true })
@@ -268,34 +268,34 @@ export function useAiChatStream() {
 
         for (const line of lines) {
           if (line.trim() === '' || !line.startsWith('data: ')) continue
-          
+
           try {
             const jsonStr = line.replace(/^data: /, '').trim()
             if (!jsonStr) continue
-            
+
             const event = JSON.parse(jsonStr)
-            
+
             switch (event.type) {
               case 'start':
                 console.log('Stream started')
                 break
-                
+
               case 'chunk':
                 const chunk = event.data || ''
                 fullContent += chunk
-                
+
                 // Update the assistant message
                 if (chatHistory.value[assistantMessageIndex]) {
                   chatHistory.value[assistantMessageIndex].content = fullContent
                 }
-                
+
                 // Auto-scroll saat streaming update - trigger multiple times for long messages
                 if (typeof window !== 'undefined') {
                   setTimeout(() => {
                     const event = new CustomEvent('chat-scroll');
                     window.dispatchEvent(event);
                   }, 50);
-                  
+
                   // Scroll lagi setelah sedikit delay untuk memastikan pesan panjang ter-scroll
                   setTimeout(() => {
                     const event = new CustomEvent('chat-scroll');
@@ -303,7 +303,7 @@ export function useAiChatStream() {
                   }, 200);
                 }
                 break
-                
+
               case 'done':
                 // Stream completed
                 if (chatHistory.value[assistantMessageIndex]) {
@@ -311,7 +311,7 @@ export function useAiChatStream() {
                 }
                 isStreaming.value = false
                 return fullContent
-                
+
               case 'error':
                 throw new Error(event.data)
             }
@@ -326,21 +326,21 @@ export function useAiChatStream() {
       if (chatHistory.value[assistantMessageIndex]) {
         chatHistory.value[assistantMessageIndex].isStreaming = false
       }
-      
+
       return fullContent
 
     } catch (error: any) {
       console.error('Stream Message Error:', error)
-      
+
       const errorMessage = error instanceof Error ? error.message : 'Unknown streaming error'
       aiError.value = errorMessage
-      
+
       // Update the assistant message with error
       if (chatHistory.value[assistantMessageIndex]) {
         chatHistory.value[assistantMessageIndex].content = `Error: ${errorMessage}`
         chatHistory.value[assistantMessageIndex].isStreaming = false
       }
-      
+
       throw error
     } finally {
       aiLoading.value = false
@@ -359,15 +359,15 @@ export function useAiChatStream() {
   const testStreamConnection = async (): Promise<{ success: boolean; message: string }> => {
     try {
       const result = await streamMessage('Hello, test streaming connection', {}, 'both')
-      return { 
-        success: true, 
+      return {
+        success: true,
         message: 'Streaming connection works! Response: ' + (result.substring(0, 100) + (result.length > 100 ? '...' : ''))
       }
     } catch (error: any) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      return { 
-        success: false, 
-        message: `Streaming test failed: ${errorMessage}` 
+      return {
+        success: false,
+        message: `Streaming test failed: ${errorMessage}`
       }
     }
   }
@@ -378,7 +378,7 @@ export function useAiChatStream() {
 
     // Add user message to history
     chatHistory.value.push({ role: 'user', content: userMessage })
-    
+
     aiLoading.value = true
     aiError.value = null
 
@@ -403,18 +403,18 @@ export function useAiChatStream() {
       }
 
       const data = await response.json()
-      
+
       // Add assistant response to history
       chatHistory.value.push({ role: 'assistant', content: data.response })
 
     } catch (error: any) {
       console.error('AI Chat Fallback Error:', error)
       aiError.value = error.message
-      
+
       // Add error message to chat
-      chatHistory.value.push({ 
-        role: 'assistant', 
-        content: `Error: ${error.message}` 
+      chatHistory.value.push({
+        role: 'assistant',
+        content: `Error: ${error.message}`
       })
     } finally {
       aiLoading.value = false

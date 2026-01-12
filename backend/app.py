@@ -350,7 +350,7 @@ def stream_scheduling():
             if dependencies is None and enable_dependencies is not False:
                 for field in [
                     "dependencies",
-                    "Dependencies",
+                    "Depends_On_Task_ID",
                     "depends_on",
                     "prerequisites",
                     "requires",
