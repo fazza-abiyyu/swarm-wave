@@ -95,7 +95,7 @@ const props = defineProps({ initialData: { type: Array, default: () => [] } });
 const emit = defineEmits(['data-updated', 'run-simulation']);
 
 // State
-const headers = ref(['Task_ID', 'CPU_Usage', 'RAM_Usage', 'Priority', 'Execution_Time (s)', 'Dependencies']);
+const headers = ref(['Task_ID', 'CPU_Usage', 'RAM_Usage', 'Priority', 'Execution_Time (s)', 'Depends_On_Task_ID']);
 const columnData = ref([]);
 const cellErrors = ref({});
 const jsonInput = ref('');
@@ -114,11 +114,11 @@ const showFloatingButton = ref(false);
 
 // Default dataset
 const defaultDataset = [
-  {"Task_ID": "1", "CPU_Usage": "37", "RAM_Usage": "2612", "Priority": "2", "Execution_Time (s)": "1.27", "Dependencies": ""},
-  {"Task_ID": "2", "CPU_Usage": "86", "RAM_Usage": "11761", "Priority": "3", "Execution_Time (s)": "3.71", "Dependencies": ""},
-  {"Task_ID": "3", "CPU_Usage": "44", "RAM_Usage": "4610", "Priority": "2", "Execution_Time (s)": "8.53", "Dependencies": ""},
-  {"Task_ID": "4", "CPU_Usage": "82", "RAM_Usage": "12604", "Priority": "3", "Execution_Time (s)": "7.31", "Dependencies": "3"},
-  {"Task_ID": "5", "CPU_Usage": "59", "RAM_Usage": "15945", "Priority": "1", "Execution_Time (s)": "1.76", "Dependencies": ""}
+  {"Task_ID": "1", "CPU_Usage": "37", "RAM_Usage": "2612", "Priority": "2", "Execution_Time (s)": "1.27", "Depends_On_Task_ID": ""},
+  {"Task_ID": "2", "CPU_Usage": "86", "RAM_Usage": "11761", "Priority": "3", "Execution_Time (s)": "3.71", "Depends_On_Task_ID": ""},
+  {"Task_ID": "3", "CPU_Usage": "44", "RAM_Usage": "4610", "Priority": "2", "Execution_Time (s)": "8.53", "Depends_On_Task_ID": ""},
+  {"Task_ID": "4", "CPU_Usage": "82", "RAM_Usage": "12604", "Priority": "3", "Execution_Time (s)": "7.31", "Depends_On_Task_ID": "3"},
+  {"Task_ID": "5", "CPU_Usage": "59", "RAM_Usage": "15945", "Priority": "1", "Execution_Time (s)": "1.76", "Depends_On_Task_ID": ""}
 ];
 
 // Computed

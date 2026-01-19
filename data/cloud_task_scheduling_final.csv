@@ -1,4 +1,4 @@
-Task_ID,CPU_Usage,RAM_Usage,Priority,Execution_Time (s),Dependencies
+Task_ID,CPU_Usage,RAM_Usage,Priority,Execution_Time (s),Depends_On_Task_ID
 1,37,2612,2,1.27,
 2,86,11761,3,3.71,
 3,44,4610,2,8.53,
